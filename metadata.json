@@ -1,0 +1,5 @@
+{
+  "name": "Pietra Viva Menu",
+  "description": "Digital menu app for Pietra Viva restaurant, allowing users to browse categories like Cucina, Pizza, Vino e Drinks, and Menu del Giorno.",
+  "requestFramePermissions": []
+}
