@@ -5,6 +5,34 @@ import db from '../db';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 
+const FadeImage = ({ src, alt }: { src: string, alt: string }) => {
+  const [displaySrc, setDisplaySrc] = useState(src);
+  const [fade, setFade] = useState(false);
+
+  useEffect(() => {
+    if (src !== displaySrc) {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        setFade(true);
+        setTimeout(() => {
+          setDisplaySrc(src);
+          setFade(false);
+        }, 300);
+      };
+    }
+  }, [src, displaySrc]);
+
+  return (
+    <img
+      src={displaySrc}
+      alt={alt}
+      className={`w-full h-full object-cover transition-all duration-500 hover:duration-500 ${fade ? 'opacity-0' : 'opacity-60 group-hover:opacity-50 group-hover:scale-105'
+        }`}
+    />
+  );
+};
+
 export default function Home() {
   const [images, setImages] = useState({
     home_image_cucina: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=800&h=400&fit=crop',
@@ -40,7 +68,7 @@ export default function Home() {
         <div className="space-y-4">
           <Link to="/menu/Cucina" className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
             <div className="absolute inset-0 bg-gray-900">
-              <img alt="Chefs cooking" className="w-full h-full object-cover opacity-60 group-hover:opacity-50 group-hover:scale-105 transition-all duration-500" src={images.home_image_cucina} />
+              <FadeImage alt="Chefs cooking" src={images.home_image_cucina} />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
             <div className="relative h-full flex items-end justify-between p-6">
@@ -53,7 +81,7 @@ export default function Home() {
 
           <Link to="/menu/Pizza" className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
             <div className="absolute inset-0 bg-gray-900">
-              <img alt="Pizza" className="w-full h-full object-cover opacity-60 group-hover:opacity-50 group-hover:scale-105 transition-all duration-500" src={images.home_image_pizza} />
+              <FadeImage alt="Pizza" src={images.home_image_pizza} />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
             <div className="relative h-full flex items-end justify-between p-6">
@@ -66,7 +94,7 @@ export default function Home() {
 
           <Link to="/menu/Vino e Drinks" className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
             <div className="absolute inset-0 bg-gray-900">
-              <img alt="Wine" className="w-full h-full object-cover opacity-60 group-hover:opacity-50 group-hover:scale-105 transition-all duration-500" src={images.home_image_vino} />
+              <FadeImage alt="Wine" src={images.home_image_vino} />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
             <div className="relative h-full flex items-end justify-between p-6">
@@ -79,7 +107,7 @@ export default function Home() {
 
           <Link to="/menu-del-giorno" className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
             <div className="absolute inset-0 bg-gray-900">
-              <img alt="Menu" className="w-full h-full object-cover opacity-60 group-hover:opacity-50 group-hover:scale-105 transition-all duration-500" src={images.home_image_menu} />
+              <FadeImage alt="Menu" src={images.home_image_menu} />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
             <div className="relative h-full flex items-end justify-between p-6">
