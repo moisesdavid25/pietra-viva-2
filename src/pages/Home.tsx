@@ -34,6 +34,7 @@ const FadeImage = ({ src, alt }: { src: string, alt: string }) => {
 };
 
 export default function Home() {
+  const [loading, setLoading] = useState(true);
   const [images, setImages] = useState({
     home_image_cucina: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=800&h=400&fit=crop',
     home_image_pizza: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=400&fit=crop',
@@ -51,9 +52,21 @@ export default function Home() {
         }, {});
         setImages(prev => ({ ...prev, ...settingsObj }));
       }
+      setLoading(false);
     }
     fetchSettings();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] font-sans min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#008080] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-serif italic">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-800 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
