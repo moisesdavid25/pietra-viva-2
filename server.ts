@@ -9,93 +9,106 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  app.get('/api/settings', (req, res) => {
-    const settings = db.prepare('SELECT * FROM settings').all() as any[];
-    const settingsObj = settings.reduce((acc: any, curr: any) => {
+  app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    const { data: user, error } = await db.from('admin_users').select('*').eq('email', email).eq('password', password).single();
+    if (error || !user) {
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+    res.json({ success: true, email: user.email });
+  });
+
+  app.get('/api/settings', async (req, res) => {
+    const { data: settings, error } = await db.from('settings').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    const settingsObj = (settings || []).reduce((acc: any, curr: any) => {
       acc[curr.key] = curr.value;
       return acc;
     }, {});
     res.json(settingsObj);
   });
 
-  app.put('/api/settings', (req, res) => {
+  app.put('/api/settings', async (req, res) => {
     const settings = req.body;
-    const stmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
-    const insertStmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
-    
-    db.transaction(() => {
-      for (const [key, value] of Object.entries(settings)) {
-        const info = stmt.run(value, key);
-        if (info.changes === 0) {
-          insertStmt.run(key, value);
-        }
-      }
-    })();
+    for (const [key, value] of Object.entries(settings)) {
+      await db.from('settings').upsert({ key, value });
+    }
     res.json({ success: true });
   });
 
-  app.get('/api/menu/:section', (req, res) => {
+  app.get('/api/menu/:section', async (req, res) => {
     const section = req.params.section;
-    const categories = db.prepare('SELECT * FROM categories WHERE section = ?').all(section);
-    
-    const menu = categories.map((cat: any) => {
-      const products = db.prepare('SELECT * FROM products WHERE category_id = ?').all(cat.id);
-      return {
+    const { data: categories, error: catError } = await db.from('categories').select('*').eq('section', section).order('id');
+    if (catError) return res.status(500).json({ error: catError.message });
+
+    const menu = [];
+    for (const cat of (categories || [])) {
+      const { data: products } = await db.from('products').select('*').eq('category_id', cat.id).order('sort_order', { ascending: true }).order('id');
+      menu.push({
         ...cat,
-        products
-      };
-    });
+        products: products || []
+      });
+    }
 
     res.json(menu);
   });
 
-  app.get('/api/menus', (req, res) => {
-    const menus = db.prepare('SELECT * FROM menus').all();
+  app.get('/api/menus', async (req, res) => {
+    const { data: menus, error } = await db.from('menus').select('*').order('id');
+    if (error) return res.status(500).json({ error: error.message });
     res.json(menus);
   });
 
-  app.put('/api/menus/:id', (req, res) => {
+  app.put('/api/menus/:id', async (req, res) => {
     const { id } = req.params;
     const { entree, primo, secondo, contorno, desert, bevande, price } = req.body;
-    const stmt = db.prepare('UPDATE menus SET entree = ?, primo = ?, secondo = ?, contorno = ?, desert = ?, bevande = ?, price = ? WHERE id = ?');
-    stmt.run(entree, primo, secondo, contorno, desert, bevande, price, id);
+    const { error } = await db.from('menus').update({ entree, primo, secondo, contorno, desert, bevande, price }).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   });
 
-  app.get('/api/categories', (req, res) => {
-    const categories = db.prepare('SELECT * FROM categories').all();
+  app.delete('/api/menus/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await db.from('menus').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  });
+
+  app.get('/api/categories', async (req, res) => {
+    const { data: categories, error } = await db.from('categories').select('*').order('id');
+    if (error) return res.status(500).json({ error: error.message });
     res.json(categories);
   });
 
-  app.get('/api/products/:id', (req, res) => {
+  app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-    if (product) {
-      res.json(product);
-    } else {
+    const { data: product, error } = await db.from('products').select('*').eq('id', id).single();
+    if (error || !product) {
       res.status(404).json({ error: 'Product not found' });
+    } else {
+      res.json(product);
     }
   });
 
-  app.post('/api/products', (req, res) => {
-    const { category_id, name, description, price, price_unit, image_url } = req.body;
-    const stmt = db.prepare('INSERT INTO products (category_id, name, description, price, price_unit, image_url) VALUES (?, ?, ?, ?, ?, ?)');
-    const info = stmt.run(category_id, name, description, price, price_unit, image_url);
-    res.json({ id: info.lastInsertRowid });
+  app.post('/api/products', async (req, res) => {
+    const { category_id, name, description, price, price_unit, image_url, sort_order } = req.body;
+    const { data, error } = await db.from('products').insert({ category_id, name, description, price, price_unit, image_url, sort_order: sort_order || 0 }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ id: data.id });
   });
 
-  app.put('/api/products/:id', (req, res) => {
+  app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    const { category_id, name, description, price, price_unit, image_url } = req.body;
-    const stmt = db.prepare('UPDATE products SET category_id = ?, name = ?, description = ?, price = ?, price_unit = ?, image_url = ? WHERE id = ?');
-    stmt.run(category_id, name, description, price, price_unit, image_url, id);
+    const { category_id, name, description, price, price_unit, image_url, sort_order } = req.body;
+    const { error } = await db.from('products').update({ category_id, name, description, price, price_unit, image_url, sort_order }).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   });
 
-  app.delete('/api/products/:id', (req, res) => {
+  app.delete('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    const stmt = db.prepare('DELETE FROM products WHERE id = ?');
-    stmt.run(id);
+    const { error } = await db.from('products').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   });
 

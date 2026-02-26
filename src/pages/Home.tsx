@@ -22,11 +22,13 @@ export default function Home() {
 
   return (
     <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-800 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
-      <Header />
-      <main className="flex-1 px-5 pb-24 pt-6 overflow-y-auto no-scrollbar">
-        <div className="mb-8">
-          <h2 className="text-xs font-medium tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-1 ml-1">Benvenuti a</h2>
+      <main className="flex-1 px-5 pb-24 pt-10 overflow-y-auto no-scrollbar">
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="w-24 h-24 mb-4 rounded-full overflow-hidden shadow-xl shadow-black/10 border-4 border-white dark:border-[#262626]">
+            <img src="/logo-pietraviva.png" alt="Pietra Viva" className="w-full h-full object-cover" />
+          </div>
           <h1 className="text-4xl font-serif font-bold text-gray-900 dark:text-[#FDFCF0] tracking-tight">Pietra Viva</h1>
+          <h2 className="text-sm font-serif italic text-gray-500 dark:text-gray-400 mt-2 tracking-wide">Restaurant & Pizza</h2>
         </div>
         <div className="space-y-4">
           <Link to="/menu/Cucina" className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">

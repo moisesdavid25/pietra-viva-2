@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, Star, Plus, Droplets, Wine } from 'lucide-react';
+import { ArrowLeft, Star, Plus, Droplets, Wine } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
@@ -46,13 +46,7 @@ export default function MenuPage() {
           <ArrowLeft className="w-6 h-6 text-[#008080]" />
         </button>
         <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">{section}</h1>
-        {isVino ? (
-          <button className="p-2 -mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <Search className="w-6 h-6 text-gray-800 dark:text-white" />
-          </button>
-        ) : (
-          <div className="w-10"></div>
-        )}
+        <div className="w-10"></div>
       </header>
 
       <div className="px-4 py-4 overflow-x-auto whitespace-nowrap no-scrollbar flex gap-3">

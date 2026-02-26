@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 
@@ -17,6 +17,7 @@ interface Product {
   price: number;
   price_unit: string | null;
   image_url: string;
+  sort_order?: number;
 }
 
 interface MenuCombo {
@@ -34,7 +35,7 @@ interface MenuCombo {
 export default function Gestione() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'products' | 'menus' | 'settings'>('products');
-  
+
   // Data
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,17 +46,35 @@ export default function Gestione() {
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [editingMenu, setEditingMenu] = useState<MenuCombo | null>(null);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('adminAuth') === 'true';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin@pietraviva.it' && password === 'admin123') {
-      setIsAuthenticated(true);
-    } else {
-      alert('Credenziali non valide');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+        localStorage.setItem('adminAuth', 'true');
+      } else {
+        alert(data.error || 'Credenziali non valide');
+      }
+    } catch (err) {
+      alert('Errore di connessione');
     }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('adminAuth');
   };
 
   useEffect(() => {
@@ -74,7 +93,7 @@ export default function Gestione() {
     setCategories(cats);
     setMenus(await menusRes.json());
     setSettings(await settingsRes.json());
-    
+
     // Fetch all products (we can fetch them by section or all at once)
     // For simplicity in this demo, we'll fetch them section by section and combine
     const sections = ['Cucina', 'Pizza', 'Vino e Drinks'];
@@ -83,9 +102,10 @@ export default function Gestione() {
       const res = await fetch(`/api/menu/${section}`);
       const data = await res.json();
       data.forEach((cat: any) => {
-        allProducts = [...allProducts, ...cat.products];
+        allProducts = [...allProducts, ...(cat.products || [])];
       });
     }
+    allProducts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     setProducts(allProducts);
   };
 
@@ -111,6 +131,79 @@ export default function Gestione() {
   const handleDeleteProduct = async (id: number) => {
     if (!confirm('Sei sicuro di voler eliminare questo prodotto?')) return;
     await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    fetchData();
+  };
+
+  const handleMoveProduct = async (product: Product, direction: 'up' | 'down') => {
+    const categoryProducts = products.filter(p => p.category_id === product.category_id);
+    const currentIndex = categoryProducts.findIndex(p => p.id === product.id);
+
+    if (direction === 'up' && currentIndex > 0) {
+      const newCategoryProducts = [...categoryProducts];
+      const temp = newCategoryProducts[currentIndex];
+      newCategoryProducts[currentIndex] = newCategoryProducts[currentIndex - 1];
+      newCategoryProducts[currentIndex - 1] = temp;
+
+      // Ensure sort orders reflect their new index
+      newCategoryProducts.forEach((p, idx) => {
+        p.sort_order = idx;
+      });
+
+      // Optimistic UI update
+      const newProducts = [...products];
+      const idx1 = newProducts.findIndex(p => p.id === newCategoryProducts[currentIndex].id);
+      const idx2 = newProducts.findIndex(p => p.id === newCategoryProducts[currentIndex - 1].id);
+      if (idx1 !== -1 && idx2 !== -1) {
+        newProducts[idx1] = newCategoryProducts[currentIndex];
+        newProducts[idx2] = newCategoryProducts[currentIndex - 1];
+        newProducts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        setProducts(newProducts);
+      }
+
+      await Promise.all(newCategoryProducts.map((p, idx) =>
+        fetch(`/api/products/${p.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...p, sort_order: idx })
+        })
+      ));
+      fetchData();
+    } else if (direction === 'down' && currentIndex < categoryProducts.length - 1) {
+      const newCategoryProducts = [...categoryProducts];
+      const temp = newCategoryProducts[currentIndex];
+      newCategoryProducts[currentIndex] = newCategoryProducts[currentIndex + 1];
+      newCategoryProducts[currentIndex + 1] = temp;
+
+      // Ensure sort orders reflect their new index
+      newCategoryProducts.forEach((p, idx) => {
+        p.sort_order = idx;
+      });
+
+      // Optimistic UI update
+      const newProducts = [...products];
+      const idx1 = newProducts.findIndex(p => p.id === newCategoryProducts[currentIndex].id);
+      const idx2 = newProducts.findIndex(p => p.id === newCategoryProducts[currentIndex + 1].id);
+      if (idx1 !== -1 && idx2 !== -1) {
+        newProducts[idx1] = newCategoryProducts[currentIndex];
+        newProducts[idx2] = newCategoryProducts[currentIndex + 1];
+        newProducts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        setProducts(newProducts);
+      }
+
+      await Promise.all(newCategoryProducts.map((p, idx) =>
+        fetch(`/api/products/${p.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...p, sort_order: idx })
+        })
+      ));
+      fetchData();
+    }
+  };
+
+  const handleDeleteMenu = async (id: number) => {
+    if (!confirm('Sei sicuro di voler eliminare questo menu?')) return;
+    await fetch(`/api/menus/${id}`, { method: 'DELETE' });
     fetchData();
   };
 
@@ -171,8 +264,8 @@ export default function Gestione() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -182,8 +275,8 @@ export default function Gestione() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -209,7 +302,9 @@ export default function Gestione() {
           <ArrowLeft className="w-6 h-6 text-[#008080]" />
         </button>
         <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">Gestione</h1>
-        <div className="w-10"></div>
+        <button onClick={handleLogout} className="text-xs font-bold text-red-500 uppercase px-2 hover:bg-red-50 dark:hover:bg-red-900/20 py-1 rounded transition-colors">
+          Esci
+        </button>
       </header>
 
       <div className="flex border-b border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar">
@@ -239,16 +334,16 @@ export default function Gestione() {
             {editingProduct ? (
               <div className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow border border-gray-100 dark:border-gray-800 space-y-4">
                 <h3 className="font-bold text-lg">{editingProduct.id ? 'Modifica Prodotto' : 'Nuovo Prodotto'}</h3>
-                
-                <input type="text" placeholder="Nome" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.name || ''} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
-                <textarea placeholder="Descrizione" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
-                
+
+                <input type="text" placeholder="Nome" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.name || ''} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} />
+                <textarea placeholder="Descrizione" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.description || ''} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} />
+
                 <div className="flex gap-4">
-                  <input type="number" placeholder="Prezzo" className="w-1/2 p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.price || ''} onChange={e => setEditingProduct({...editingProduct, price: parseFloat(e.target.value)})} />
-                  <input type="text" placeholder="Unità (es. /etto)" className="w-1/2 p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.price_unit || ''} onChange={e => setEditingProduct({...editingProduct, price_unit: e.target.value})} />
+                  <input type="number" placeholder="Prezzo" className="w-1/2 p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.price || ''} onChange={e => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) })} />
+                  <input type="text" placeholder="Unità (es. /etto)" className="w-1/2 p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.price_unit || ''} onChange={e => setEditingProduct({ ...editingProduct, price_unit: e.target.value })} />
                 </div>
 
-                <select className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.category_id || ''} onChange={e => setEditingProduct({...editingProduct, category_id: parseInt(e.target.value)})}>
+                <select className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700" value={editingProduct.category_id || ''} onChange={e => setEditingProduct({ ...editingProduct, category_id: parseInt(e.target.value) })}>
                   <option value="">Seleziona Categoria</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.section} - {c.name}</option>
@@ -257,11 +352,11 @@ export default function Gestione() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Immagine (1000x1000px 1:1)</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, (base64) => setEditingProduct({...editingProduct, image_url: base64}))}
-                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm" 
+                    onChange={(e) => handleImageUpload(e, (base64) => setEditingProduct({ ...editingProduct, image_url: base64 }))}
+                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm"
                   />
                   {editingProduct.image_url && (
                     <img src={editingProduct.image_url} alt="Preview" className="mt-2 w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
@@ -280,7 +375,7 @@ export default function Gestione() {
             ) : (
               <>
                 <div className="flex flex-col gap-3">
-                  <select 
+                  <select
                     className="w-full p-3 border rounded-xl dark:bg-[#1A1A1A] dark:border-gray-700 font-bold text-[#008080] focus:outline-none focus:border-[#008080] transition-colors"
                     value={selectedCategoryFilter}
                     onChange={(e) => setSelectedCategoryFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
@@ -300,26 +395,48 @@ export default function Gestione() {
                   {products
                     .filter(p => selectedCategoryFilter === 'all' || p.category_id === selectedCategoryFilter)
                     .map(product => (
-                    <div key={product.id} className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                      <div>
-                        <h4 className="font-bold">{product.name}</h4>
-                        <p className="text-sm text-gray-500">{product.price}€ {product.price_unit}</p>
+                      <div key={product.id} className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <div>
+                          <h4 className="font-bold">{product.name}</h4>
+                          <p className="text-sm text-gray-500">{product.price}€ {product.price_unit}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveProduct(product, 'up'); }}
+                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveProduct(product, 'up'); }}
+                            className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-[#333] rounded-full transition-colors" title="Sposta Su"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveProduct(product, 'down'); }}
+                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveProduct(product, 'down'); }}
+                            className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-[#333] rounded-full transition-colors" title="Sposta Giu"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingProduct(product); }}
+                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setEditingProduct(product); }}
+                            className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors" title="Modifica"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProduct(product.id); }}
+                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProduct(product.id); }}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-full"
+                            title="Elimina"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setEditingProduct(product)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProduct(product.id); }} 
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProduct(product.id); }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-full"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </>
             )}
@@ -331,40 +448,40 @@ export default function Gestione() {
             {editingMenu ? (
               <div className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow border border-gray-100 dark:border-gray-800 space-y-4">
                 <h3 className="font-bold text-lg text-[#008080]">Modifica Menu {editingMenu.type}</h3>
-                
+
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Prezzo (€)</label>
-                  <input type="number" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.price} onChange={e => setEditingMenu({...editingMenu, price: parseFloat(e.target.value)})} />
+                  <input type="number" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.price} onChange={e => setEditingMenu({ ...editingMenu, price: parseFloat(e.target.value) })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Entrée</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.entree || ''} onChange={e => setEditingMenu({...editingMenu, entree: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.entree || ''} onChange={e => setEditingMenu({ ...editingMenu, entree: e.target.value })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Primo / Piatto Principale</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.primo || ''} onChange={e => setEditingMenu({...editingMenu, primo: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.primo || ''} onChange={e => setEditingMenu({ ...editingMenu, primo: e.target.value })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Secondo</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.secondo || ''} onChange={e => setEditingMenu({...editingMenu, secondo: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.secondo || ''} onChange={e => setEditingMenu({ ...editingMenu, secondo: e.target.value })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Contorno</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.contorno || ''} onChange={e => setEditingMenu({...editingMenu, contorno: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.contorno || ''} onChange={e => setEditingMenu({ ...editingMenu, contorno: e.target.value })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Desert</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.desert || ''} onChange={e => setEditingMenu({...editingMenu, desert: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.desert || ''} onChange={e => setEditingMenu({ ...editingMenu, desert: e.target.value })} />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase">Bevande</label>
-                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.bevande || ''} onChange={e => setEditingMenu({...editingMenu, bevande: e.target.value})} />
+                  <input type="text" className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 mt-1" value={editingMenu.bevande || ''} onChange={e => setEditingMenu({ ...editingMenu, bevande: e.target.value })} />
                 </div>
 
                 <div className="flex gap-2 pt-4">
@@ -382,9 +499,17 @@ export default function Gestione() {
                   <div key={menu.id} className="bg-white dark:bg-[#262626] p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="font-bold text-lg text-[#008080]">Menu {menu.type}</h4>
-                      <button onClick={() => setEditingMenu(menu)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingMenu(menu)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMenu(menu.id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-full"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                       {menu.entree && <p><span className="font-semibold">Entrée:</span> {menu.entree}</p>}
@@ -405,15 +530,15 @@ export default function Gestione() {
           <div className="space-y-6">
             <div className="bg-white dark:bg-[#262626] p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
               <h3 className="font-bold text-lg text-[#008080]">Immagini Home (1200x675px 16:9)</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cucina</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({...settings, home_image_cucina: base64}))}
-                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm" 
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({ ...settings, home_image_cucina: base64 }))}
+                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm"
                   />
                   {settings.home_image_cucina && (
                     <img src={settings.home_image_cucina} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
@@ -422,11 +547,11 @@ export default function Gestione() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pizza</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({...settings, home_image_pizza: base64}))}
-                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm" 
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({ ...settings, home_image_pizza: base64 }))}
+                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm"
                   />
                   {settings.home_image_pizza && (
                     <img src={settings.home_image_pizza} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
@@ -435,11 +560,11 @@ export default function Gestione() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vino e Drinks</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({...settings, home_image_vino: base64}))}
-                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm" 
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({ ...settings, home_image_vino: base64 }))}
+                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm"
                   />
                   {settings.home_image_vino && (
                     <img src={settings.home_image_vino} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
@@ -448,11 +573,11 @@ export default function Gestione() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Menu del Giorno</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({...settings, home_image_menu: base64}))}
-                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm" 
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettings({ ...settings, home_image_menu: base64 }))}
+                    className="w-full p-2 border rounded dark:bg-[#1A1A1A] dark:border-gray-700 text-sm"
                   />
                   {settings.home_image_menu && (
                     <img src={settings.home_image_menu} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
