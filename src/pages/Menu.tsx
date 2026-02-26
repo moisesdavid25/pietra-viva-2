@@ -2,6 +2,7 @@ import { ArrowLeft, Star, Plus, Droplets, Wine } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import db from '../db';
 import BottomNav from '../components/BottomNav';
 
 interface Product {
@@ -27,14 +28,25 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`/api/menu/${section}`)
-      .then(res => res.json())
-      .then(data => {
-        setCategories(data);
-        if (data.length > 0) {
-          setActiveCategory(data[0].id);
-        }
-      });
+    async function loadMenu() {
+      if (!section) return;
+      const { data: cats, error: catError } = await db.from('categories').select('*').eq('section', section).order('id');
+      if (catError || !cats) return;
+
+      const menuData: Category[] = [];
+      for (const cat of cats) {
+        const { data: prods } = await db.from('products').select('*').eq('category_id', cat.id).order('sort_order', { ascending: true }).order('id');
+        menuData.push({
+          ...cat,
+          products: prods || []
+        });
+      }
+      setCategories(menuData);
+      if (menuData.length > 0) {
+        setActiveCategory(menuData[0].id);
+      }
+    }
+    loadMenu();
   }, [section]);
 
   const isVino = section === 'Vino e Drinks';

@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import db from '../db';
 
 interface Product {
   id: number;
@@ -18,13 +19,15 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    fetch(`/api/products/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (!data.error) {
+    async function loadProduct() {
+      if (id) {
+        const { data, error } = await db.from('products').select('*').eq('id', id).single();
+        if (!error && data) {
           setProduct(data);
         }
-      });
+      }
+    }
+    loadProduct();
   }, [id]);
 
   if (!product) {
@@ -51,16 +54,16 @@ export default function ProductDetail() {
           <img alt={product.name} className="w-full h-full object-cover" src={product.image_url} />
           <div className="absolute inset-0 bg-gradient-to-t from-[#FDFCF0] dark:from-[#1A1A1A] via-transparent to-black/30"></div>
         </div>
-        
+
         <div className="px-6 -mt-12 relative z-10">
           <div className="bg-white dark:bg-[#262626] rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-start mb-4">
               <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-white leading-tight pr-4">{product.name}</h1>
               <span className="text-2xl font-bold text-[#008080] whitespace-nowrap">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
             </div>
-            
+
             <div className="w-12 h-1 bg-[#008080] rounded-full mb-6"></div>
-            
+
             {product.description ? (
               <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
                 {product.description}

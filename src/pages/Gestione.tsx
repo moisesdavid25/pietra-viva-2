@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import db from '../db';
 import BottomNav from '../components/BottomNav';
 
 interface Category {
@@ -55,17 +56,12 @@ export default function Gestione() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const { data: user, error } = await db.from('admin_users').select('*').eq('email', email).eq('password', password).single();
+      if (!error && user) {
         setIsAuthenticated(true);
         localStorage.setItem('adminAuth', 'true');
       } else {
-        alert(data.error || 'Credenziali non valide');
+        alert('Credenziali non valide');
       }
     } catch (err) {
       alert('Errore di connessione');
@@ -84,43 +80,50 @@ export default function Gestione() {
   }, [isAuthenticated]);
 
   const fetchData = async () => {
-    const [catsRes, menusRes, settingsRes] = await Promise.all([
-      fetch('/api/categories'),
-      fetch('/api/menus'),
-      fetch('/api/settings')
+    const [{ data: cats }, { data: menusRes }, { data: settingsRes }] = await Promise.all([
+      db.from('categories').select('*').order('id'),
+      db.from('menus').select('*').order('id'),
+      db.from('settings').select('*')
     ]);
-    const cats = await catsRes.json();
-    setCategories(cats);
-    setMenus(await menusRes.json());
-    setSettings(await settingsRes.json());
-
-    // Fetch all products (we can fetch them by section or all at once)
-    // For simplicity in this demo, we'll fetch them section by section and combine
-    const sections = ['Cucina', 'Pizza', 'Vino e Drinks'];
-    let allProducts: Product[] = [];
-    for (const section of sections) {
-      const res = await fetch(`/api/menu/${section}`);
-      const data = await res.json();
-      data.forEach((cat: any) => {
-        allProducts = [...allProducts, ...(cat.products || [])];
-      });
+    if (cats) setCategories(cats);
+    if (menusRes) setMenus(menusRes);
+    if (settingsRes) {
+      const settingsObj = settingsRes.reduce((acc: any, curr: any) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+      setSettings(settingsObj);
     }
-    allProducts.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    setProducts(allProducts);
+
+    const { data: prods } = await db.from('products').select('*').order('sort_order', { ascending: true }).order('id');
+    if (prods) setProducts(prods);
   };
 
   const handleSaveProduct = async () => {
     if (!editingProduct?.name || !editingProduct?.price || !editingProduct?.category_id) return;
 
     const isNew = !editingProduct.id;
-    const url = isNew ? '/api/products' : `/api/products/${editingProduct.id}`;
-    const method = isNew ? 'POST' : 'PUT';
-
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingProduct)
-    });
+    if (isNew) {
+      await db.from('products').insert({
+        category_id: editingProduct.category_id,
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        price_unit: editingProduct.price_unit,
+        image_url: editingProduct.image_url,
+        sort_order: editingProduct.sort_order || 0
+      });
+    } else {
+      await db.from('products').update({
+        category_id: editingProduct.category_id,
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        price_unit: editingProduct.price_unit,
+        image_url: editingProduct.image_url,
+        sort_order: editingProduct.sort_order
+      }).eq('id', editingProduct.id);
+    }
 
     setEditingProduct(null);
     fetchData();
@@ -130,7 +133,7 @@ export default function Gestione() {
 
   const handleDeleteProduct = async (id: number) => {
     if (!confirm('Sei sicuro di voler eliminare questo prodotto?')) return;
-    await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    await db.from('products').delete().eq('id', id);
     fetchData();
   };
 
@@ -161,11 +164,7 @@ export default function Gestione() {
       }
 
       await Promise.all(newCategoryProducts.map((p, idx) =>
-        fetch(`/api/products/${p.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...p, sort_order: idx })
-        })
+        db.from('products').update({ sort_order: idx }).eq('id', p.id)
       ));
       fetchData();
     } else if (direction === 'down' && currentIndex < categoryProducts.length - 1) {
@@ -191,11 +190,7 @@ export default function Gestione() {
       }
 
       await Promise.all(newCategoryProducts.map((p, idx) =>
-        fetch(`/api/products/${p.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...p, sort_order: idx })
-        })
+        db.from('products').update({ sort_order: idx }).eq('id', p.id)
       ));
       fetchData();
     }
@@ -203,27 +198,31 @@ export default function Gestione() {
 
   const handleDeleteMenu = async (id: number) => {
     if (!confirm('Sei sicuro di voler eliminare questo menu?')) return;
-    await fetch(`/api/menus/${id}`, { method: 'DELETE' });
+    await db.from('menus').delete().eq('id', id);
     fetchData();
   };
 
   const handleSaveMenu = async () => {
     if (!editingMenu) return;
-    await fetch(`/api/menus/${editingMenu.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingMenu)
-    });
+    await db.from('menus').update({
+      type: editingMenu.type,
+      price: editingMenu.price,
+      entree: editingMenu.entree,
+      primo: editingMenu.primo,
+      secondo: editingMenu.secondo,
+      contorno: editingMenu.contorno,
+      desert: editingMenu.desert,
+      bevande: editingMenu.bevande
+    }).eq('id', editingMenu.id);
     setEditingMenu(null);
     fetchData();
   };
 
   const handleSaveSettings = async () => {
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
-    });
+    const updates = Object.entries(settings).map(([key, value]) => ({ key, value }));
+    for (const update of updates) {
+      await db.from('settings').upsert(update);
+    }
     alert('Impostazioni salvate con successo');
     fetchData();
   };

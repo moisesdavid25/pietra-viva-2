@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import db from '../db';
 import BottomNav from '../components/BottomNav';
 
 interface MenuCombo {
@@ -20,9 +21,13 @@ export default function MenuDelGiorno() {
   const [menus, setMenus] = useState<MenuCombo[]>([]);
 
   useEffect(() => {
-    fetch('/api/menus')
-      .then(res => res.json())
-      .then(data => setMenus(data));
+    async function loadMenus() {
+      const { data, error } = await db.from('menus').select('*').order('id');
+      if (!error && data) {
+        setMenus(data);
+      }
+    }
+    loadMenus();
   }, []);
 
   return (
@@ -42,7 +47,7 @@ export default function MenuDelGiorno() {
             <div className="p-8 text-center">
               <h2 className="text-3xl font-bold text-[#008080] uppercase tracking-widest mb-2">MENÙ</h2>
               <h3 className="text-xl font-serif text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-8">{menu.type}</h3>
-              
+
               <div className="space-y-6">
                 {menu.entree && (
                   <div>
@@ -50,7 +55,7 @@ export default function MenuDelGiorno() {
                     <p className="font-serif text-lg italic text-gray-800 dark:text-gray-200">{menu.entree}</p>
                   </div>
                 )}
-                
+
                 {menu.primo && (
                   <div>
                     <h4 className="text-sm font-bold text-[#008080] uppercase tracking-wider mb-1">Primo / Main Course</h4>

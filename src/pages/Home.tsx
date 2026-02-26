@@ -1,6 +1,7 @@
 import { ChevronRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import db from '../db';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 
@@ -13,11 +14,17 @@ export default function Home() {
   });
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        setImages(prev => ({ ...prev, ...data }));
-      });
+    async function fetchSettings() {
+      const { data, error } = await db.from('settings').select('*');
+      if (!error && data) {
+        const settingsObj = data.reduce((acc: any, curr: any) => {
+          acc[curr.key] = curr.value;
+          return acc;
+        }, {});
+        setImages(prev => ({ ...prev, ...settingsObj }));
+      }
+    }
+    fetchSettings();
   }, []);
 
   return (
