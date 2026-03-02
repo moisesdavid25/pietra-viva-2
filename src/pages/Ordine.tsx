@@ -18,7 +18,27 @@ export default function OrdinePage() {
     const [orderType, setOrderType] = useState<'tavolo' | 'asporto'>('tavolo');
     const [tableNumber, setTableNumber] = useState('');
     const [customerName, setCustomerName] = useState('');
-    const [orderConfirmed, setOrderConfirmed] = useState<{ id: string, shortId: string, dailyNumber: number, queue: number } | null>(null);
+    const [orderConfirmed, setOrderConfirmed] = useState<{ id: string, shortId: string, dailyNumber: number, queue: number, status: string } | null>(null);
+
+    useEffect(() => {
+        if (!orderConfirmed?.id || orderConfirmed.id.startsWith('DEMO')) return;
+
+        const channel = db.channel(`order_tracking_${orderConfirmed.id}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderConfirmed.id}` },
+                (payload) => {
+                    if (payload.new && payload.new.status) {
+                        setOrderConfirmed(prev => prev ? { ...prev, status: payload.new.status } : null);
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            db.removeChannel(channel);
+        };
+    }, [orderConfirmed?.id]);
 
     useEffect(() => {
         async function loadRestaurant() {
@@ -49,7 +69,8 @@ export default function OrdinePage() {
                     id: 'DEMO-' + Date.now(),
                     shortId: 'DEMO',
                     dailyNumber: Math.floor(Math.random() * 50) + 1,
-                    queue: Math.floor(Math.random() * 5)
+                    queue: Math.floor(Math.random() * 5),
+                    status: 'in_attesa'
                 });
                 return;
             }
@@ -107,7 +128,8 @@ export default function OrdinePage() {
                 id: orderData.id,
                 shortId: orderData.id.split('-')[0].toUpperCase(),
                 dailyNumber: nextOrderNumber,
-                queue: queueCount || 0
+                queue: queueCount || 0,
+                status: 'in_attesa'
             });
         } catch (e: any) {
             alert("Errore durante la conferma dell'ordine: " + e.message);
@@ -248,16 +270,36 @@ export default function OrdinePage() {
                                 <p className="text-xs text-gray-400 mt-4 uppercase tracking-widest">ID Ref: {orderConfirmed.shortId}</p>
                             </div>
 
-                            <div className="bg-teal-50 dark:bg-teal-900/20 text-[#008080] border border-teal-100 dark:border-teal-900/50 rounded-2xl p-6 mb-8">
-                                {orderConfirmed.queue === 0 ? (
-                                    <p className="font-bold text-lg">Il tuo ordine è in preparazione!</p>
-                                ) : (
-                                    <>
-                                        <p className="text-sm mb-1 uppercase font-bold tracking-wider">Coda attuale in cucina</p>
-                                        <p className="text-xl font-bold flex items-center justify-center gap-2">
-                                            <span>⏳</span> Hai {orderConfirmed.queue} {orderConfirmed.queue === 1 ? 'ordine' : 'ordini'} davanti a te.
-                                        </p>
-                                    </>
+                            <div className="space-y-4 mb-8 text-left">
+                                {orderConfirmed.status === 'in_attesa' && (
+                                    <div className="bg-gray-50 dark:bg-[#1A1A1A] text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 flex items-center gap-4 shadow-sm transition-all duration-500">
+                                        <div className="w-12 h-12 bg-gray-200 dark:bg-[#333] rounded-full flex items-center justify-center text-2xl flex-shrink-0 grayscale">👨‍🍳</div>
+                                        <div>
+                                            <p className="font-bold text-lg">In Coda</p>
+                                            <p className="text-sm">In attesa che la cucina inizi la preparazione.</p>
+                                            {orderConfirmed.queue > 0 && (
+                                                <p className="text-xs text-[#008080] font-bold mt-1">⏳ Hai {orderConfirmed.queue} {orderConfirmed.queue === 1 ? 'ordine' : 'ordini'} davanti a te.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                {orderConfirmed.status === 'in_preparazione' && (
+                                    <div className="bg-orange-50 dark:bg-orange-900/20 text-[#D84315] dark:text-[#FFB74D] border border-orange-200 dark:border-orange-900/50 rounded-2xl p-6 flex items-center gap-4 shadow-md transition-all duration-500 animate-pulse-slow">
+                                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center text-2xl flex-shrink-0">👨‍🍳</div>
+                                        <div>
+                                            <p className="font-bold text-lg">In Preparazione</p>
+                                            <p className="text-sm text-orange-700 dark:text-orange-300">I cuochi stanno preparando il tuo ordine!</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {orderConfirmed.status === 'pronto' && (
+                                    <div className="bg-green-50 dark:bg-green-900/20 text-[#2E7D32] dark:text-[#81C784] border border-green-200 dark:border-green-900/50 rounded-2xl p-6 flex items-center gap-4 shadow-xl transition-all duration-500 animate-bounce">
+                                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 text-green-600 rounded-full flex items-center justify-center text-3xl flex-shrink-0 shadow-sm">🛎️</div>
+                                        <div>
+                                            <p className="font-black text-xl mb-1 uppercase tracking-tight">Ordine Pronto!</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300 font-medium">Il tuo ordine è caldo e pronto per il ritiro.</p>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
 

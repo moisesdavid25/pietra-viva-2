@@ -505,13 +505,22 @@ export default function Gestione() {
           <div className="space-y-4 animate-fade-in">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ordini</h2>
-              <button
-                onClick={handleManualRefresh}
-                className="text-sm font-bold text-[#008080] bg-teal-50 dark:bg-teal-900/30 px-3 py-1.5 rounded-lg border border-[#008080]/20 flex items-center gap-2 transition-all active:scale-95"
-              >
-                <span className={`inline-block ${isRefreshing ? 'animate-spin' : ''}`}>↻</span>
-                Aggiorna
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.open(`/${restaurantSlug}`, '_blank')}
+                  className="text-sm font-bold text-[#008080] bg-[#008080]/10 hover:bg-[#008080]/20 dark:bg-[#008080]/20 dark:hover:bg-[#008080]/30 px-4 py-1.5 rounded-lg border border-[#008080]/30 transition-all flex items-center gap-2"
+                  title="Aggiungi manualmente un nuovo ordine da tavolo o asporto"
+                >
+                  <Plus className="w-4 h-4" /> Nuovo Ordine
+                </button>
+                <button
+                  onClick={handleManualRefresh}
+                  className="text-sm font-bold text-[#008080] bg-teal-50 dark:bg-teal-900/30 px-3 py-1.5 rounded-lg border border-[#008080]/20 flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <span className={`inline-block ${isRefreshing ? 'animate-spin' : ''}`}>↻</span>
+                  Aggiorna
+                </button>
+              </div>
             </div>
 
             <div className="flex bg-gray-100 dark:bg-[#252525] p-1 rounded-xl mb-6">
