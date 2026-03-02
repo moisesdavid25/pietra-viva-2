@@ -21,7 +21,7 @@ export default function Auth({ type }: { type: 'login' }) {
             if (signInError) throw signInError;
 
             if (authData?.user) {
-                const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', authData.user.id).single();
+                const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', authData.user.id).neq('slug', 'demo').limit(1).maybeSingle();
                 if (resData?.slug) {
                     navigate(`/${resData.slug}/gestione`);
                 } else {

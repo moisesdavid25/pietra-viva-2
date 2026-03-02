@@ -98,7 +98,7 @@ export default function Gestione() {
       if (data.user) {
         setIsAuthenticated(true);
         // Fetch their restaurant profile
-        db.from('restaurants').select('id, slug, name').eq('user_id', data.user.id).single()
+        db.from('restaurants').select('id, slug, name').eq('user_id', data.user.id).neq('slug', 'demo').limit(1).maybeSingle()
           .then(({ data: resData, error }) => {
             if (resData) {
               setRestaurantId(resData.id);
