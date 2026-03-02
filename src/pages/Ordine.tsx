@@ -42,6 +42,18 @@ export default function OrdinePage() {
         setIsConfirming(true);
 
         try {
+            if (slug && (slug.toLowerCase() === 'demo' || slug === import.meta.env.VITE_DEMO_SLUG)) {
+                await new Promise(res => setTimeout(res, 1500));
+                clearCart();
+                setOrderConfirmed({
+                    id: 'DEMO-' + Date.now(),
+                    shortId: 'DEMO',
+                    dailyNumber: Math.floor(Math.random() * 50) + 1,
+                    queue: Math.floor(Math.random() * 5)
+                });
+                return;
+            }
+
             // Calculate daily sequence number (Local timezone logic)
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();

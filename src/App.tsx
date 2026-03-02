@@ -16,6 +16,8 @@ import RegisterFlow from './pages/RegisterFlow';
 import Onboarding from './pages/Onboarding';
 import ResetPassword from './pages/ResetPassword';
 import UpdatePassword from './pages/UpdatePassword';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Termini from './pages/Termini';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
         <Route path="/register" element={<RegisterFlow />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/termini-condizioni" element={<Termini />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/gestione" element={<Gestione />} />
         <Route path="/:slug/gestione" element={<Gestione />} />

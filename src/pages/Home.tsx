@@ -1,4 +1,4 @@
-import { ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronRight, Sparkles, ArrowLeft } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import db from '../db';
@@ -130,15 +130,24 @@ export default function Home() {
 
   return (
     <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-800 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
-      <main className="flex-1 px-5 pb-24 pt-8 overflow-y-auto no-scrollbar">
+      <main className="flex-1 px-5 pb-24 pt-8 overflow-y-auto no-scrollbar relative">
+        {slug === 'demo' && (
+          <Link to="/" className="absolute top-8 left-5 text-[#008080] hover:text-teal-700 transition flex items-center gap-1 font-bold z-10">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        )}
         <div className="mb-10 flex flex-col items-center text-center">
           {/* App-Icon Style Logo */}
           <div
             className="w-20 h-20 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 flex items-center justify-center p-0.5 mb-5 overflow-hidden transition-colors duration-500"
-            style={{ backgroundColor: logoBgColor }}
+            style={{ backgroundColor: slug === 'demo' ? '#FDFCF0' : logoBgColor }}
           >
             {slug === 'pietra-viva' ? (
               <img src="/logo-pietraviva.png" alt="Pietra Viva" className="w-full h-full object-contain" />
+            ) : slug === 'demo' ? (
+              <div className="w-full h-full bg-[#FDFCF0] flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#008080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
+              </div>
             ) : images.logo_url ? (
               <img src={images.logo_url} alt={restaurant?.name} className="w-full h-full object-contain mix-blend-normal" />
             ) : (
@@ -148,7 +157,7 @@ export default function Home() {
             )}
           </div>
 
-          <h1 className="text-[2.5rem] leading-none font-serif font-extrabold text-gray-900 dark:text-[#FDFCF0] tracking-tight">{restaurant?.name}</h1>
+          <h1 className="text-[2.5rem] leading-none font-serif font-extrabold text-gray-900 dark:text-[#FDFCF0] tracking-tight">{slug === 'demo' ? 'Leomenu' : restaurant?.name}</h1>
           <h2 className="text-sm font-serif italic text-gray-500 dark:text-gray-400 mt-3 tracking-wide flex items-center justify-center gap-2">
             {images.restaurant_subtitle || 'Menu Digitale'}
           </h2>

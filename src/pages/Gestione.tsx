@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import imageCompression from 'browser-image-compression';
 import { ArrowLeft, Plus, Save, Trash2, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -321,9 +322,23 @@ export default function Gestione() {
     fetchData();
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void, aspect?: number) => {
-    const file = e.target.files?.[0];
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void, aspect?: number) => {
+    let file = e.target.files?.[0];
     if (file) {
+      setIsUploading(true);
+      try {
+        const options = {
+          maxSizeMB: 0.2, // max 200KB
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+          fileType: 'image/webp',
+          initialQuality: 0.8,
+        };
+        file = await imageCompression(file, options);
+      } catch (error) {
+        console.error("Compression error:", error);
+      }
+
       if (aspect === undefined) {
         // Direct upload without cropping (e.g., Logo)
         setIsUploading(true);
@@ -365,6 +380,7 @@ export default function Gestione() {
           setCropCallback(() => callback);
           setCropAspectRatio(aspect);
           e.target.value = ''; // Reset
+          setIsUploading(false);
         };
         reader.readAsDataURL(file);
       }

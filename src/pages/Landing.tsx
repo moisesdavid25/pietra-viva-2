@@ -32,8 +32,8 @@ export default function Landing() {
                     <Link to="/register" className="px-8 py-4 bg-[#008080] text-white font-bold rounded-xl shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-2 text-lg">
                         Inizia gratis <ArrowRight className="w-5 h-5" />
                     </Link>
-                    <a href="/pietra-viva" className="px-8 py-4 bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-800 font-bold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center text-lg">
-                        Guarda la Demo (Pietra Viva)
+                    <a href="/demo" className="px-8 py-4 bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-800 font-bold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center text-lg">
+                        Guarda la Demo
                     </a>
                 </div>
             </main>
