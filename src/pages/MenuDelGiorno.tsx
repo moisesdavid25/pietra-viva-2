@@ -1,8 +1,11 @@
-import { ArrowLeft } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { ArrowLeft, Plus } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import clsx from 'clsx';
 import db from '../db';
 import BottomNav from '../components/BottomNav';
+import NotFound from '../components/NotFound';
+import { useCart } from '../hooks/useCart';
 
 interface MenuCombo {
   id: number;
@@ -17,18 +20,48 @@ interface MenuCombo {
 }
 
 export default function MenuDelGiorno() {
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [menus, setMenus] = useState<MenuCombo[]>([]);
+  const [notFound, setNotFound] = useState(false);
+  const { addToCart } = useCart(slug || null);
+  const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     async function loadMenus() {
-      const { data, error } = await db.from('menus').select('*').order('id');
+      if (!slug) return;
+      const { data: resData } = await db.from('restaurants').select('id').eq('slug', slug).single();
+      if (!resData) {
+        setNotFound(true);
+        return;
+      }
+
+      const { data, error } = await db.from('menus').select('*').eq('restaurant_id', resData.id).order('id');
       if (!error && data) {
         setMenus(data);
       }
     }
     loadMenus();
-  }, []);
+  }, [slug]);
+
+  if (notFound) {
+    return <NotFound />;
+  }
+
+  const handleAddToCart = (e: React.MouseEvent, menu: MenuCombo) => {
+    e.preventDefault();
+    addToCart({
+      id: `menu-${menu.id}`,
+      name: `Menù ${menu.type}`,
+      price: menu.price,
+      price_unit: null,
+      image_url: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=400' // Generic placeholder for daily menu
+    });
+    setAddedItems(prev => ({ ...prev, [`menu-${menu.id}`]: true }));
+    setTimeout(() => {
+      setAddedItems(prev => ({ ...prev, [`menu-${menu.id}`]: false }));
+    }, 1500);
+  };
 
   return (
     <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
@@ -92,8 +125,17 @@ export default function MenuDelGiorno() {
                 )}
               </div>
 
-              <div className="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700">
-                <span className="text-5xl font-bold text-[#008080]">€{menu.price}</span>
+              <div className="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <span className="text-5xl font-bold text-[#008080]">€{menu.price.toFixed(2)}</span>
+                <button
+                  onClick={(e) => handleAddToCart(e, menu)}
+                  className={clsx(
+                    "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-14 h-14",
+                    addedItems[`menu-${menu.id}`] ? "bg-green-500 text-white scale-110" : "bg-[#008080] text-white hover:bg-teal-700 active:scale-95"
+                  )}
+                >
+                  {addedItems[`menu-${menu.id}`] ? <span className="text-3xl font-bold">✓</span> : <Plus className="w-8 h-8" />}
+                </button>
               </div>
             </div>
           </div>
