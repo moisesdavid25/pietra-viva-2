@@ -63,11 +63,37 @@ export default function MenuPage() {
       }
       setCategories(menuData);
       if (menuData.length > 0) {
-        setActiveCategory(menuData[0].id);
+        const savedCategory = sessionStorage.getItem(`category_${slug}_${section}`);
+        if (savedCategory && menuData.some(c => c.id === savedCategory)) {
+          setActiveCategory(savedCategory);
+        } else {
+          setActiveCategory(menuData[0].id);
+        }
       }
     }
     loadMenu();
   }, [section, slug]);
+
+  // Handle saving scroll position
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem(`scroll_${slug}_${section}`, window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [slug, section]);
+
+  // Restore scroll position after category render
+  useEffect(() => {
+    if (categories.length > 0 && activeCategory) {
+      const savedScroll = sessionStorage.getItem(`scroll_${slug}_${section}`);
+      if (savedScroll) {
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScroll, 10));
+        }, 50);
+      }
+    }
+  }, [categories, activeCategory, slug, section]);
 
   const isVino = section === 'Vino e Drinks';
 
@@ -104,7 +130,12 @@ export default function MenuPage() {
         {categories.map(cat => (
           <button
             key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
+            onClick={() => {
+              setActiveCategory(cat.id);
+              sessionStorage.setItem(`category_${slug}_${section}`, cat.id);
+              sessionStorage.setItem(`scroll_${slug}_${section}`, '0');
+              window.scrollTo(0, 0);
+            }}
             className={clsx(
               "inline-block px-6 py-2 rounded-full text-sm font-semibold tracking-wide transition-colors",
               activeCategory === cat.id
