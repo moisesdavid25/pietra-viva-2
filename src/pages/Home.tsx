@@ -50,33 +50,36 @@ export default function Home() {
     async function fetchSettings() {
       if (!slug) return navigate('/');
 
-      const { data: resData, error: resError } = await db.from('restaurants').select('id, name').eq('slug', slug).single();
-      if (resError || !resData) {
-        setNotFound(true);
+      try {
+        const { data: resData, error: resError } = await db.from('restaurants').select('id, name').eq('slug', slug).single();
+        if (resError || !resData) {
+          setNotFound(true);
+          return;
+        }
+        setRestaurant(resData);
+
+        const [{ data: settingsData }, { data: catsData }] = await Promise.all([
+          db.from('settings').select('*').eq('restaurant_id', resData.id),
+          db.from('categories').select('section').eq('restaurant_id', resData.id).order('id')
+        ]);
+
+        if (settingsData) {
+          const settingsObj = settingsData.reduce((acc: any, curr: any) => {
+            acc[curr.key] = curr.value;
+            return acc;
+          }, {});
+          setImages(prev => ({ ...prev, ...settingsObj }));
+        }
+
+        if (catsData) {
+          const uniqueSections = Array.from(new Set(catsData.map(c => c.section)));
+          setSections(uniqueSections);
+        }
+      } catch (err) {
+        console.error("Home loading error:", err);
+      } finally {
         setLoading(false);
-        return;
       }
-      setRestaurant(resData);
-
-      const [{ data: settingsData }, { data: catsData }] = await Promise.all([
-        db.from('settings').select('*').eq('restaurant_id', resData.id),
-        db.from('categories').select('section').eq('restaurant_id', resData.id).order('id')
-      ]);
-
-      if (settingsData) {
-        const settingsObj = settingsData.reduce((acc: any, curr: any) => {
-          acc[curr.key] = curr.value;
-          return acc;
-        }, {});
-        setImages(prev => ({ ...prev, ...settingsObj }));
-      }
-
-      if (catsData) {
-        const uniqueSections = Array.from(new Set(catsData.map(c => c.section)));
-        setSections(uniqueSections);
-      }
-
-      setLoading(false);
     }
     fetchSettings();
   }, [slug, navigate]);

@@ -346,7 +346,7 @@ export default function Gestione() {
         reader.onload = (event) => {
           const img = new Image();
           img.onload = () => {
-            const MAX_WIDTH = 1000;
+            const MAX_WIDTH = 800;
             let width = img.width;
             let height = img.height;
             if (width > MAX_WIDTH) {
@@ -359,7 +359,7 @@ export default function Gestione() {
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(img, 0, 0, width, height);
-              callback(canvas.toDataURL('image/webp', 0.8));
+              callback(canvas.toDataURL('image/webp', 0.6));
             } else {
               callback(event.target?.result as string);
             }
@@ -405,7 +405,7 @@ export default function Gestione() {
 
     const { width, height, x, y } = croppedAreaPixels;
 
-    const MAX_WIDTH = 1200;
+    const MAX_WIDTH = 800;
     let targetWidth = width;
     let targetHeight = height;
 
@@ -429,7 +429,7 @@ export default function Gestione() {
       targetHeight
     );
 
-    const webpDataUrl = canvas.toDataURL('image/webp', 0.8);
+    const webpDataUrl = canvas.toDataURL('image/webp', 0.5);
     cropCallback(webpDataUrl);
 
     setCropImageSrc(null);
