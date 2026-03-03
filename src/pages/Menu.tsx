@@ -85,12 +85,18 @@ export default function MenuPage() {
 
   // Restore scroll position after category render
   useEffect(() => {
-    if (categories.length > 0 && activeCategory) {
+    const activeCatData = categories.find(c => c.id === activeCategory);
+
+    // Strict Guard: Do not attempt to scroll until data is physically present in the array
+    if (categories.length > 0 && activeCategory && activeCatData && activeCatData.products.length > 0) {
       const savedScroll = sessionStorage.getItem(`scroll_${slug}_${section}`);
       if (savedScroll) {
-        setTimeout(() => {
-          window.scrollTo(0, parseInt(savedScroll, 10));
-        }, 50);
+        // Double rAF ensures the React virtual DOM has flushed to the actual DOM paints
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo(0, parseInt(savedScroll, 10));
+          });
+        });
       }
     }
   }, [categories, activeCategory, slug, section]);
@@ -131,10 +137,13 @@ export default function MenuPage() {
           <button
             key={cat.id}
             onClick={() => {
+              if (activeCategory !== cat.id) {
+                // Only reset scroll if the user is genuinely changing categories
+                sessionStorage.setItem(`scroll_${slug}_${section}`, '0');
+                window.scrollTo(0, 0);
+              }
               setActiveCategory(cat.id);
               sessionStorage.setItem(`category_${slug}_${section}`, cat.id);
-              sessionStorage.setItem(`scroll_${slug}_${section}`, '0');
-              window.scrollTo(0, 0);
             }}
             className={clsx(
               "inline-block px-6 py-2 rounded-full text-sm font-semibold tracking-wide transition-colors",
