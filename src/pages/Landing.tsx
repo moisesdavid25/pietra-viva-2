@@ -103,7 +103,7 @@ export default function Landing() {
                                 >
                                     <div className="w-12 h-12 bg-gray-100 dark:bg-[#1A1A1A] rounded-xl flex items-center justify-center text-gray-500 overflow-hidden flex-shrink-0 group-hover:bg-[#008080]/10 group-hover:text-[#008080] transition-colors">
                                         {restaurant.logo_url ? (
-                                            <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-cover" />
+                                            <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-contain p-0.5" />
                                         ) : (
                                             <Store className="w-6 h-6" />
                                         )}
