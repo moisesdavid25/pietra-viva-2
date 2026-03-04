@@ -19,6 +19,7 @@ export default function Landing() {
             const { data: restaurantsData, error } = await db.from('restaurants')
                 .select('id, name, slug')
                 .ilike('name', `%${searchQuery}%`)
+                .neq('slug', 'demo')
                 .limit(5);
 
             if (restaurantsData && restaurantsData.length > 0) {
@@ -29,16 +30,51 @@ export default function Landing() {
                     .in('restaurant_id', restaurantIds)
                     .eq('key', 'logo_url');
 
-                const formattedData = restaurantsData.map(restaurant => {
+                const extractColor = (src: string): Promise<string> => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(img, 0, 0);
+                                try {
+                                    const data = ctx.getImageData(0, 0, 1, 1).data;
+                                    if (data[3] === 0) resolve('white');
+                                    else resolve(`rgba(${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255})`);
+                                } catch (e) {
+                                    resolve('white');
+                                }
+                            } else {
+                                resolve('white');
+                            }
+                        };
+                        img.onerror = () => resolve('white');
+                        img.src = src;
+                    });
+                };
+
+                const formattedPromises = restaurantsData.map(async (restaurant) => {
                     let logo = '';
-                    if (restaurant.slug === 'pietra-viva' || restaurant.slug === 'demo') {
+                    if (restaurant.slug === 'pietra-viva') {
                         logo = '/logo-pietraviva.png';
                     } else if (settingsData) {
                         const setting = settingsData.find(s => s.restaurant_id === restaurant.id);
                         if (setting) logo = setting.value;
                     }
-                    return { ...restaurant, logo_url: logo };
+
+                    let bgColor = 'white';
+                    if (logo) {
+                        bgColor = await extractColor(logo);
+                    }
+
+                    return { ...restaurant, logo_url: logo, bgColor };
                 });
+
+                const formattedData = await Promise.all(formattedPromises);
                 setSearchResults(formattedData);
             } else {
                 setSearchResults([]);
@@ -101,7 +137,10 @@ export default function Landing() {
                                     onClick={() => navigate(`/${restaurant.slug}`)}
                                     className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#1A1A1A] rounded-2xl transition-colors w-full group"
                                 >
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-[#1A1A1A] rounded-xl flex items-center justify-center text-gray-500 overflow-hidden flex-shrink-0 group-hover:bg-[#008080]/10 group-hover:text-[#008080] transition-colors">
+                                    <div
+                                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-gray-500 overflow-hidden flex-shrink-0 transition-colors ${!restaurant.logo_url ? 'bg-gray-100 dark:bg-[#1A1A1A] group-hover:bg-[#008080]/10 group-hover:text-[#008080]' : ''}`}
+                                        style={restaurant.logo_url ? { backgroundColor: restaurant.bgColor } : {}}
+                                    >
                                         {restaurant.logo_url ? (
                                             <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-contain p-0.5" />
                                         ) : (
