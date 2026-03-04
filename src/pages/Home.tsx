@@ -73,6 +73,11 @@ export default function Home() {
 
         if (catsData) {
           const uniqueSections = Array.from(new Set(catsData.map(c => c.section)));
+          uniqueSections.sort((a, b) => {
+            if (a === 'Dessert') return 1;
+            if (b === 'Dessert') return -1;
+            return 0;
+          });
           setSections(uniqueSections);
         }
       } catch (err) {
@@ -179,7 +184,9 @@ export default function Home() {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
                 <div className="relative h-full flex items-end justify-between p-6">
-                  <h3 className="text-2xl font-bold text-white tracking-wide uppercase font-sans">{section}</h3>
+                  <h3 className="text-2xl font-bold text-white tracking-wide uppercase font-sans">
+                    {section} {section === 'Dessert' && '🍰'}
+                  </h3>
                   <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-[#008080] transition-colors duration-300">
                     <ChevronRight className="w-4 h-4 text-white" />
                   </div>
