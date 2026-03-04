@@ -17,7 +17,7 @@ export default function Landing() {
             }
             setIsSearching(true);
             const { data, error } = await db.from('restaurants')
-                .select('id, name, slug')
+                .select('id, name, slug, logo_url')
                 .ilike('name', `%${searchQuery}%`)
                 .limit(5);
 
@@ -80,10 +80,14 @@ export default function Landing() {
                                     onClick={() => navigate(`/${restaurant.slug}`)}
                                     className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#1A1A1A] rounded-2xl transition-colors w-full group"
                                 >
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-[#1A1A1A] rounded-xl flex items-center justify-center text-gray-500 group-hover:bg-[#008080]/10 group-hover:text-[#008080] transition-colors">
-                                        <Store className="w-6 h-6" />
+                                    <div className="w-12 h-12 bg-gray-100 dark:bg-[#1A1A1A] rounded-xl flex items-center justify-center text-gray-500 overflow-hidden flex-shrink-0 group-hover:bg-[#008080]/10 group-hover:text-[#008080] transition-colors">
+                                        {restaurant.logo_url ? (
+                                            <img src={restaurant.logo_url} alt={restaurant.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <Store className="w-6 h-6" />
+                                        )}
                                     </div>
-                                    <div className="flex-grow">
+                                    <div className="flex-grow text-left">
                                         <h4 className="font-bold text-gray-900 dark:text-white text-lg">{restaurant.name}</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Ordina dal menù digitale</p>
                                     </div>
