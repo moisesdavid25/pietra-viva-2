@@ -19,11 +19,60 @@ export default function OrdinePage() {
     const [tableNumber, setTableNumber] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [orderConfirmed, setOrderConfirmed] = useState<{ id: string, shortId: string, dailyNumber: number, queue: number, status: string } | null>(null);
+    const [publicOrders, setPublicOrders] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!restaurantId) return;
+
+        // Initial fetch of active orders
+        const fetchOrders = async () => {
+            const { data } = await db.from('orders')
+                .select('id, daily_order_number, status, updated_at')
+                .eq('restaurant_id', restaurantId)
+                .in('status', ['in_preparazione', 'pronto'])
+                .order('updated_at', { ascending: false });
+
+            if (data) setPublicOrders(data);
+        };
+        fetchOrders();
+
+        // Realtime subscription for global order tracking
+        const globalChannel = db.channel(`global_orders_${restaurantId}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
+                (payload: any) => {
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        const newOrder = payload.new;
+                        setPublicOrders(prev => {
+                            if (newOrder.status !== 'in_preparazione' && newOrder.status !== 'pronto') {
+                                return prev.filter(o => o.id !== newOrder.id);
+                            }
+                            const exists = prev.find(o => o.id === newOrder.id);
+                            if (exists) {
+                                return prev.map(o => o.id === newOrder.id ? { ...o, ...newOrder } : o).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                            } else {
+                                return [{ ...newOrder }, ...prev].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                            }
+                        });
+                    } else if (payload.eventType === 'DELETE') {
+                        if (payload.old && payload.old.id) {
+                            setPublicOrders(prev => prev.filter(o => o.id !== payload.old.id));
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            db.removeChannel(globalChannel);
+        };
+    }, [restaurantId]);
 
     useEffect(() => {
         if (!orderConfirmed?.id || orderConfirmed.id.startsWith('DEMO')) return;
 
-        const channel = db.channel(`order_tracking_${orderConfirmed.id}`)
+        const personalChannel = db.channel(`personal_tracking_${orderConfirmed.id}`)
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderConfirmed.id}` },
@@ -36,7 +85,7 @@ export default function OrdinePage() {
             .subscribe();
 
         return () => {
-            db.removeChannel(channel);
+            db.removeChannel(personalChannel);
         };
     }, [orderConfirmed?.id]);
 
@@ -151,13 +200,56 @@ export default function OrdinePage() {
             <main className="flex-grow px-4 pt-6 pb-24 overflow-y-auto">
                 {!orderConfirmed ? (
                     cart.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
-                            <span className="text-6xl mb-4">🛒</span>
-                            <p className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">Il tuo ordine è vuoto</p>
-                            <p className="text-gray-600 dark:text-gray-400">Aggiungi dei prodotti dal menù per iniziare.</p>
-                            <Link to={`/${slug}`} className="mt-8 bg-gradient-to-r from-[#008080] to-teal-500 text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
-                                Vai al Menù
-                            </Link>
+                        <div className="flex flex-col animate-fade-in pb-10">
+                            <div className="flex flex-col items-center justify-center py-10 text-center opacity-60">
+                                <span className="text-6xl mb-4">🛒</span>
+                                <p className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">Il tuo ordine è vuoto</p>
+                                <p className="text-gray-600 dark:text-gray-400">Aggiungi dei prodotti dal menù per iniziare.</p>
+                                <Link to={`/${slug}`} className="mt-6 bg-gradient-to-r from-[#008080] to-teal-500 text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+                                    Vai al Menù
+                                </Link>
+                            </div>
+
+                            <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-8 w-full max-w-2xl mx-auto">
+                                <h3 className="text-lg font-serif font-extrabold tracking-widest text-center text-[#1A1A1A] dark:text-white uppercase mb-6">Stato Ordini in tempo reale</h3>
+                                {publicOrders.length === 0 ? (
+                                    <div className="text-center py-10 bg-gray-50 dark:bg-[#1A1A1A] rounded-3xl border border-gray-100 dark:border-gray-800">
+                                        <p className="text-gray-500 dark:text-gray-400 italic font-medium">Nessun ordine in corso. Il tuo sarà il primo!</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* IN PREPARAZIONE COLUMN */}
+                                        <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-100/50 dark:border-orange-900/30">
+                                            <h4 className="text-center font-bold text-orange-600 dark:text-orange-400 text-sm tracking-wider uppercase mb-4 border-b border-orange-200/50 dark:border-orange-900/50 pb-2">In Preparazione</h4>
+                                            <div className="flex flex-col gap-3">
+                                                {publicOrders.filter(o => o.status === 'in_preparazione').map(order => (
+                                                    <div key={order.id} className="bg-white dark:bg-[#252525] p-3 rounded-xl shadow-sm text-center border border-orange-100 dark:border-gray-700 transform transition-all hover:-translate-y-0.5">
+                                                        <span className="text-2xl font-black text-gray-800 dark:text-white">{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
+                                                    </div>
+                                                ))}
+                                                {publicOrders.filter(o => o.status === 'in_preparazione').length === 0 && (
+                                                    <div className="text-center text-orange-400/50 py-4 text-xs font-bold uppercase">Vuoto</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* PRONTO COLUMN */}
+                                        <div className="bg-[#008080]/5 dark:bg-[#008080]/10 rounded-2xl p-4 border border-[#008080]/10 dark:border-[#008080]/20">
+                                            <h4 className="text-center font-bold text-[#008080] dark:text-teal-400 text-sm tracking-wider uppercase mb-4 border-b border-[#008080]/20 dark:border-[#008080]/40 pb-2">Pronto</h4>
+                                            <div className="flex flex-col gap-3">
+                                                {publicOrders.filter(o => o.status === 'pronto').map(order => (
+                                                    <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-xl shadow-md text-center transform transition-all animate-pulse-slow border border-[#008080]">
+                                                        <span className="text-2xl font-black text-white">{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
+                                                    </div>
+                                                ))}
+                                                {publicOrders.filter(o => o.status === 'pronto').length === 0 && (
+                                                    <div className="text-center text-[#008080]/40 py-4 text-xs font-bold uppercase">Vuoto</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-6 max-w-lg mx-auto w-full animate-fade-in">
