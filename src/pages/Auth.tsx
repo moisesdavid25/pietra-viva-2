@@ -50,7 +50,7 @@ export default function Auth({ type }: { type: 'login' }) {
     };
 
     return (
-        <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
             <div className="flex-grow flex flex-col px-6 pt-6 pb-24 max-w-md mx-auto w-full">
 
                 {/* Top bar with back button and Logo */}
@@ -120,7 +120,7 @@ export default function Auth({ type }: { type: 'login' }) {
             </div>
 
             {/* Bottom sticky button */}
-            <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FDFCF0] via-[#FDFCF0] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
+            <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
                 <button
                     form="login-form"
                     type="submit"

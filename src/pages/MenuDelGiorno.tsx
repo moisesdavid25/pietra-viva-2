@@ -64,19 +64,19 @@ export default function MenuDelGiorno() {
   };
 
   return (
-    <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
-      <header className="sticky top-0 z-50 bg-[#FDFCF0]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+    <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
+      <header className="sticky top-0 z-50 bg-[#FFFFFF]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
           <ArrowLeft className="w-6 h-6 text-[#008080]" />
         </button>
-        <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">Menu Del Giorno</h1>
+        <h1 className="font-serif text-[1.35rem] font-extrabold tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">Menu Del Giorno</h1>
         <div className="w-10"></div>
       </header>
 
       <main className="flex-grow px-4 py-6 pb-24 space-y-8">
         {menus.map(menu => (
-          <div key={menu.id} className="bg-white dark:bg-[#262626] rounded-3xl overflow-hidden shadow-xl border border-[#008080]/20 relative">
-            <div className="absolute top-0 left-0 w-full h-2 bg-[#008080]"></div>
+          <div key={menu.id} className="bg-white dark:bg-[#262626] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-transparent dark:border-gray-800 relative">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#008080] to-teal-400"></div>
             <div className="p-8 text-center">
               <h2 className="text-3xl font-bold text-[#008080] uppercase tracking-widest mb-2">MENÙ</h2>
               <h3 className="text-xl font-serif text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-8">{menu.type}</h3>
@@ -130,8 +130,8 @@ export default function MenuDelGiorno() {
                 <button
                   onClick={(e) => handleAddToCart(e, menu)}
                   className={clsx(
-                    "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-14 h-14",
-                    addedItems[`menu-${menu.id}`] ? "bg-green-500 text-white scale-110" : "bg-[#008080] text-white hover:bg-teal-700 active:scale-95"
+                    "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-14 h-14 focus:outline-none",
+                    addedItems[`menu-${menu.id}`] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008080] to-teal-500 text-white hover:shadow-lg hover:shadow-[#008080]/30 active:scale-95 border-none"
                   )}
                 >
                   {addedItems[`menu-${menu.id}`] ? <span className="text-3xl font-bold">✓</span> : <Plus className="w-8 h-8" />}

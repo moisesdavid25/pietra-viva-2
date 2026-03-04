@@ -3,7 +3,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 
 export default function Termini() {
     return (
-        <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen p-6 md:p-12">
+        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen p-6 md:p-12">
             <div className="max-w-3xl mx-auto">
                 <Link to="/" className="inline-flex items-center gap-2 text-[#008080] hover:underline mb-8 font-bold">
                     <ArrowLeft className="w-5 h-5" /> Torna alla Home

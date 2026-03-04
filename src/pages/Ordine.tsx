@@ -155,7 +155,7 @@ export default function OrdinePage() {
                             <span className="text-6xl mb-4">🛒</span>
                             <p className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">Il tuo ordine è vuoto</p>
                             <p className="text-gray-600 dark:text-gray-400">Aggiungi dei prodotti dal menù per iniziare.</p>
-                            <Link to={`/${slug}`} className="mt-8 bg-[#008080] text-white px-8 py-3 rounded-full font-bold shadow-md hover:bg-teal-700 transition">
+                            <Link to={`/${slug}`} className="mt-8 bg-gradient-to-r from-[#008080] to-teal-500 text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                                 Vai al Menù
                             </Link>
                         </div>
@@ -163,7 +163,7 @@ export default function OrdinePage() {
                         <div className="space-y-6 max-w-lg mx-auto w-full animate-fade-in">
                             <div className="space-y-4">
                                 {cart.map(item => (
-                                    <div key={item.id} className="flex gap-4 items-center bg-white dark:bg-[#252525] p-3 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                    <div key={item.id} className="flex gap-4 items-center bg-white dark:bg-[#252525] p-3 rounded-2xl border border-transparent dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
                                         <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-xl" />
                                         <div className="flex-grow">
                                             <h4 className="font-bold text-gray-900 dark:text-white tracking-wide">{item.name}</h4>
@@ -238,7 +238,7 @@ export default function OrdinePage() {
                                     <button
                                         onClick={handleConfirmOrder}
                                         disabled={isConfirming}
-                                        className="w-full bg-[#212121] hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.98] uppercase tracking-wider text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                                        className="w-full bg-gradient-to-r from-[#008080] to-teal-600 hover:from-teal-600 hover:to-[#008080] text-white font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100 border-none"
                                     >
                                         {isConfirming ? (
                                             <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

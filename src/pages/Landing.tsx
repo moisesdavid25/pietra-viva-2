@@ -3,7 +3,7 @@ import { Utensils, ArrowRight } from 'lucide-react';
 
 export default function Landing() {
     return (
-        <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
             <header className="px-6 py-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Utensils className="w-8 h-8 text-[#008080]" />

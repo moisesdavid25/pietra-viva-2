@@ -166,7 +166,7 @@ export default function RegisterFlow() {
     };
 
     return (
-        <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
+        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
             <div className="w-full max-w-md bg-white dark:bg-[#262626] rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden min-h-[500px] flex flex-col">
 
                 {/* Header Dinamico */}

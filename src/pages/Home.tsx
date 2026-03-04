@@ -137,7 +137,7 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-800 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+    <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-800 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
       <main className="flex-1 px-5 pb-24 pt-8 overflow-y-auto no-scrollbar relative">
         {slug === 'demo' && (
           <Link to="/" className="absolute top-8 left-5 text-[#008080] hover:text-teal-700 transition flex items-center gap-1 font-bold z-10">
@@ -147,13 +147,13 @@ export default function Home() {
         <div className="mb-10 flex flex-col items-center text-center">
           {/* App-Icon Style Logo */}
           <div
-            className="w-20 h-20 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 flex items-center justify-center p-0.5 mb-5 overflow-hidden transition-colors duration-500"
-            style={{ backgroundColor: slug === 'demo' ? '#FDFCF0' : logoBgColor }}
+            className="w-20 h-20 rounded-2xl shadow-lg border border-transparent dark:border-gray-700 flex items-center justify-center p-0.5 mb-5 overflow-hidden transition-all duration-500 hover:shadow-xl transform hover:-translate-y-1"
+            style={{ backgroundColor: slug === 'demo' ? '#FFFFFF' : logoBgColor }}
           >
             {slug === 'pietra-viva' ? (
               <img src="/logo-pietraviva.png" alt="Pietra Viva" className="w-full h-full object-contain" />
             ) : slug === 'demo' ? (
-              <div className="w-full h-full bg-[#FDFCF0] flex items-center justify-center">
+              <div className="w-full h-full bg-[#FFFFFF] flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#008080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
               </div>
             ) : images.logo_url ? (
@@ -165,7 +165,7 @@ export default function Home() {
             )}
           </div>
 
-          <h1 className="text-[2.5rem] leading-none font-serif font-extrabold text-gray-900 dark:text-[#FDFCF0] tracking-tight">{slug === 'demo' ? 'Leomenu' : restaurant?.name}</h1>
+          <h1 className="text-[2.5rem] leading-none font-serif font-extrabold text-[#1A1A1A] dark:text-[#FDFCF0] tracking-[0.05em]">{slug === 'demo' ? 'Leomenu' : restaurant?.name}</h1>
           <h2 className="text-sm font-serif italic text-gray-500 dark:text-gray-400 mt-3 tracking-wide flex items-center justify-center gap-2">
             {images.restaurant_subtitle || 'Menu Digitale'}
           </h2>
@@ -178,17 +178,17 @@ export default function Home() {
             const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
             const imageUrl = images[`home_image_${sectionSlug}`] || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=400&fit=crop';
             return (
-              <Link key={section} to={`/${slug}/menu/${section}`} className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
+              <Link key={section} to={`/${slug}/menu/${section}`} className="group relative block w-full h-40 rounded-3xl overflow-hidden shadow-md shadow-[#008080]/10 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gray-900">
                   <FadeImage alt={section} src={imageUrl} />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
                 <div className="relative h-full flex items-end justify-between p-6">
-                  <h3 className="text-2xl font-bold text-white tracking-wide uppercase font-sans">
+                  <h3 className="text-2xl font-extrabold text-white tracking-[0.2em] uppercase font-sans drop-shadow-md">
                     {section} {section === 'Dessert' && '🍰'}
                   </h3>
-                  <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-[#008080] transition-colors duration-300">
-                    <ChevronRight className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-[#008080] group-hover:to-teal-500 transition-colors duration-300">
+                    <ChevronRight className="w-4 h-4 text-white drop-shadow-md" />
                   </div>
                 </div>
               </Link>
@@ -196,20 +196,20 @@ export default function Home() {
           })}
 
           {images.visibility_menu !== 'false' && (
-            <Link to={`/${slug}/menu-del-giorno`} className="group relative block w-full h-40 rounded-2xl overflow-hidden shadow-lg shadow-black/20 hover:shadow-xl transition-all duration-300">
+            <Link to={`/${slug}/menu-del-giorno`} className="group relative block w-full h-40 rounded-3xl overflow-hidden shadow-md shadow-[#008080]/10 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="absolute inset-0 bg-gray-900">
                 <FadeImage alt="Menu" src={images.home_image_menu || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=400&fit=crop'} />
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
               <div className="relative h-full flex items-end justify-between p-6">
                 <div className="flex flex-col">
-                  <h3 className="text-2xl font-bold text-white tracking-wide uppercase font-sans">Menu Del Giorno</h3>
-                  <span className="text-xs text-white/80 mt-1 font-serif italic">Specialità dello Chef</span>
+                  <h3 className="text-2xl font-extrabold text-white tracking-[0.2em] uppercase font-sans drop-shadow-md">Menu Del Giorno</h3>
+                  <span className="text-[0.8rem] text-white/90 mt-1 font-serif italic drop-shadow-sm">Specialità dello Chef</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-[#008080] transition-colors duration-300">
-                  <ChevronRight className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-[#008080] group-hover:to-teal-500 transition-colors duration-300 shadow-md">
+                  <ChevronRight className="w-4 h-4 text-white drop-shadow-md" />
                 </div>
-                <Sparkles className="absolute bottom-6 right-16 text-[#008080] w-5 h-5 animate-pulse" />
+                <Sparkles className="absolute bottom-6 right-16 text-teal-400 w-5 h-5 animate-pulse drop-shadow-[0_0_8px_rgba(0,128,128,0.8)]" />
               </div>
             </Link>
           )}

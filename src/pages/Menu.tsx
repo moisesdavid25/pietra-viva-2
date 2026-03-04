@@ -55,6 +55,31 @@ export default function MenuPage() {
 
       if (catError || !cats) return;
 
+      const getCategoryWeight = (sectionName: string, categoryName: string) => {
+        const s = sectionName.toLowerCase();
+        const c = categoryName.toLowerCase();
+
+        if (s === 'vino e drinks' || s === 'bevande') {
+          if (c.includes('birre') || c.includes('bevande')) return 1;
+          if (c.includes('rossi')) return 2;
+          if (c.includes('bianchi') || c.includes('biachi')) return 3;
+          if (c.includes('bollici')) return 4;
+          if (c.includes('amari')) return 5;
+        } else if (s === 'cucina') {
+          if (c.includes('antipasti')) return 1;
+          if (c.includes('primi')) return 2;
+          if (c.includes('secondi')) return 3;
+          if (c.includes('contorni')) return 4;
+        } else if (s === 'pizza') {
+          if (c.includes('rosse')) return 1;
+          if (c.includes('bianche')) return 2;
+          if (c.includes('speciali')) return 3;
+        }
+        return 99;
+      };
+
+      cats.sort((a, b) => getCategoryWeight(section, a.name) - getCategoryWeight(section, b.name));
+
       const menuData: Category[] = [];
       for (const cat of cats) {
         const { data: prods } = await db.from('products').select('*').eq('category_id', cat.id).order('sort_order', { ascending: true }).order('id');
@@ -91,11 +116,11 @@ export default function MenuPage() {
     if (loading) return; // Strict block while fetching
 
     const activeCatData = categories.find(c => c.id === activeCategory);
-    
+
     // Strict Guard: Do not attempt to scroll until data is physically present in the array
     if (categories.length > 0 && activeCategory && activeCatData) {
       const savedScroll = sessionStorage.getItem(`scroll_${slug}_${section}`);
-      
+
       if (savedScroll && savedScroll !== "0" && activeCatData.products.length > 0) {
         // Fallback to setTimeout for mobile, taking 100ms to ensure paints as requested by user
         setTimeout(() => {
@@ -132,12 +157,12 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
-      <header className="sticky top-0 z-50 bg-[#FDFCF0]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+    <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
+      <header className="sticky top-0 z-50 bg-[#FFFFFF]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
           <ArrowLeft className="w-6 h-6 text-[#008080]" />
         </button>
-        <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">{section}</h1>
+        <h1 className="font-serif text-[1.35rem] font-extrabold tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">{section}</h1>
         <div className="w-10"></div>
       </header>
 
@@ -155,10 +180,10 @@ export default function MenuPage() {
               sessionStorage.setItem(`category_${slug}_${section}`, cat.id);
             }}
             className={clsx(
-              "inline-block px-6 py-2 rounded-full text-sm font-semibold tracking-wide transition-colors",
+              "inline-block px-6 py-2 rounded-full text-sm font-semibold tracking-wide transition-all duration-300",
               activeCategory === cat.id
-                ? "bg-[#008080] text-white shadow-lg shadow-[#008080]/30"
-                : "bg-gray-200 dark:bg-[#262626] text-gray-600 dark:text-gray-300 border border-transparent dark:border-gray-700"
+                ? "bg-gradient-to-r from-[#008080] to-teal-500 text-white shadow-md shadow-[#008080]/20 transform scale-105"
+                : "bg-[#F8F9FA] dark:bg-[#262626] text-gray-500 dark:text-gray-400 border border-transparent dark:border-gray-700 hover:bg-gray-100"
             )}
           >
             {cat.name}
@@ -169,8 +194,8 @@ export default function MenuPage() {
       <main className="flex-grow px-4 pb-24 space-y-6">
         {categories.find(c => c.id === activeCategory)?.products.map(product => (
           isVino ? (
-            <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group relative bg-white dark:bg-[#252525] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-white/5 flex gap-4 transition-all hover:shadow-lg dark:hover:bg-[#2A2A2A] block">
-              <div className="relative w-24 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-50 dark:bg-black/40 flex items-center justify-center">
+            <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group relative bg-white dark:bg-[#252525] rounded-xl p-4 shadow-sm hover:shadow-md border border-transparent dark:border-white/5 flex gap-4 transition-all duration-300 transform hover:-translate-y-1 dark:hover:bg-[#2A2A2A] block">
+              <div className="relative w-24 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-[#F8F9FA] dark:bg-black/40 flex items-center justify-center">
                 <img alt={product.name} className="h-full object-contain object-center mix-blend-normal group-hover:scale-110 transition-transform duration-500" src={product.image_url} loading="lazy" decoding="async" />
               </div>
               <div className="flex-grow flex flex-col justify-between py-1">
@@ -195,8 +220,8 @@ export default function MenuPage() {
                   <button
                     onClick={(e) => handleAddToCart(e, product)}
                     className={clsx(
-                      "rounded-full shadow-sm transition-all duration-300 flex items-center justify-center w-8 h-8",
-                      addedItems[product.id] ? "bg-green-500 text-white scale-110" : "bg-[#008080] text-white hover:bg-teal-700 active:scale-95"
+                      "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-8 h-8 focus:outline-none",
+                      addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008080] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008080]/30 active:scale-95 border-none"
                     )}
                   >
                     {addedItems[product.id] ? <span className="text-sm font-bold">✓</span> : <Plus className="w-4 h-4" />}
@@ -205,27 +230,29 @@ export default function MenuPage() {
               </div>
             </Link>
           ) : (
-            <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group bg-white dark:bg-[#262626] rounded-2xl overflow-hidden shadow-md dark:shadow-none border border-gray-100 dark:border-gray-800 relative transform transition hover:scale-[1.01] block">
-              <div className="relative h-48 w-full overflow-hidden">
+            <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group bg-white dark:bg-[#262626] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 dark:shadow-none border border-transparent dark:border-gray-800 relative flex flex-col">
+              <div className="relative h-44 w-full overflow-hidden flex-shrink-0">
                 <img alt={product.name} className="w-full h-full object-cover" src={product.image_url} loading="lazy" decoding="async" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10">
                   <span className="text-white font-bold tracking-wide">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
                 </div>
               </div>
-              <div className="p-5">
-                <h2 className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">{product.name}</h2>
-                {product.description && (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
-                    {product.description}
-                  </p>
-                )}
-                <div className="flex justify-end mt-2">
+              <div className="p-4 flex flex-col justify-between">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-grow">
+                    <h2 className="text-[1.15rem] font-serif font-bold text-gray-900 dark:text-white leading-tight mb-1">{product.name}</h2>
+                    {product.description && (
+                      <p className="text-gray-500 dark:text-gray-400 text-sm leading-snug line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={(e) => handleAddToCart(e, product)}
                     className={clsx(
-                      "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-10 h-10",
-                      addedItems[product.id] ? "bg-green-500 text-white scale-110" : "bg-[#008080] text-white hover:bg-teal-700 active:scale-95"
+                      "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-10 h-10 flex-shrink-0 focus:outline-none",
+                      addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008080] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008080]/30 active:scale-95 border-none cursor-pointer"
                     )}
                   >
                     {addedItems[product.id] ? <span className="text-xl font-bold">✓</span> : <Plus className="w-6 h-6" />}

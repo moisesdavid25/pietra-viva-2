@@ -57,7 +57,7 @@ export default function UpdatePassword() {
 
     if (success) {
         return (
-            <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+            <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
                 <div className="flex-grow flex flex-col px-6 pt-12 pb-24 max-w-md mx-auto w-full text-center">
                     <div className="flex justify-center mb-6">
                         <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ export default function UpdatePassword() {
     }
 
     return (
-        <div className="bg-[#FDFCF0] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
             <div className="flex-grow flex flex-col px-6 pt-8 pb-32 max-w-md mx-auto w-full">
                 {/* Top bar with Logo */}
                 <div className="flex items-center justify-between mb-10">
