@@ -396,8 +396,11 @@ export default function Gestione() {
     setIsUploading(true);
 
     const image = new Image();
-    image.src = cropImageSrc;
-    await new Promise(resolve => image.onload = resolve);
+    await new Promise(resolve => {
+      image.onload = resolve;
+      image.onerror = resolve; // Ensure we don't hang on error either
+      image.src = cropImageSrc;
+    });
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
