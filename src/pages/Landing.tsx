@@ -16,12 +16,33 @@ export default function Landing() {
                 return;
             }
             setIsSearching(true);
-            const { data, error } = await db.from('restaurants')
-                .select('id, name, slug, logo_url')
+            const { data: restaurantsData, error } = await db.from('restaurants')
+                .select('id, name, slug')
                 .ilike('name', `%${searchQuery}%`)
                 .limit(5);
 
-            if (data) setSearchResults(data);
+            if (restaurantsData && restaurantsData.length > 0) {
+                const restaurantIds = restaurantsData.map(r => r.id);
+                // Fetch logos from settings table
+                const { data: settingsData } = await db.from('settings')
+                    .select('restaurant_id, value')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('key', 'logo_url');
+
+                const formattedData = restaurantsData.map(restaurant => {
+                    let logo = '';
+                    if (restaurant.slug === 'pietra-viva' || restaurant.slug === 'demo') {
+                        logo = '/logo-pietraviva.png';
+                    } else if (settingsData) {
+                        const setting = settingsData.find(s => s.restaurant_id === restaurant.id);
+                        if (setting) logo = setting.value;
+                    }
+                    return { ...restaurant, logo_url: logo };
+                });
+                setSearchResults(formattedData);
+            } else {
+                setSearchResults([]);
+            }
             setIsSearching(false);
         };
 
