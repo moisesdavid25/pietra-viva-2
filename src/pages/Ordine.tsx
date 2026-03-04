@@ -26,12 +26,13 @@ export default function OrdinePage() {
 
         // Initial fetch of active orders
         const fetchOrders = async () => {
-            const { data } = await db.from('orders')
-                .select('id, daily_order_number, status, updated_at')
+            const { data, error } = await db.from('orders')
+                .select('id, daily_order_number, status, created_at')
                 .eq('restaurant_id', restaurantId)
                 .in('status', ['in_preparazione', 'pronto'])
-                .order('updated_at', { ascending: false });
+                .order('created_at', { ascending: false });
 
+            if (error) console.error("Error fetching public queue:", error);
             if (data) setPublicOrders(data);
         };
         fetchOrders();
@@ -50,9 +51,9 @@ export default function OrdinePage() {
                             }
                             const exists = prev.find(o => o.id === newOrder.id);
                             if (exists) {
-                                return prev.map(o => o.id === newOrder.id ? { ...o, ...newOrder } : o).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                                return prev.map(o => o.id === newOrder.id ? { ...o, ...newOrder } : o).sort((a, b) => new Date(b.created_at || Date.now()).getTime() - new Date(a.created_at || Date.now()).getTime());
                             } else {
-                                return [{ ...newOrder }, ...prev].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+                                return [{ ...newOrder }, ...prev].sort((a, b) => new Date(b.created_at || Date.now()).getTime() - new Date(a.created_at || Date.now()).getTime());
                             }
                         });
                     } else if (payload.eventType === 'DELETE') {
