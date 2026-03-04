@@ -134,7 +134,46 @@ export default function Gestione() {
         order_items ( id, quantity, notes, price_at_time, product:products(name) )
       `).eq('restaurant_id', restaurantId).eq('status', 'consegnato').order('created_at', { ascending: false }).limit(100)
     ]);
-    if (cats) setCategories(cats);
+    if (cats) {
+      const sortedCats = [...cats].sort((a, b) => {
+        const getSectionWeight = (section: string) => {
+          const s = section.toLowerCase();
+          if (s.includes('vino')) return 1;
+          if (s.includes('cucina')) return 2;
+          if (s.includes('pizza')) return 3;
+          if (s.includes('dessert') || s.includes('dolc')) return 4;
+          return 99;
+        };
+        const getSubcategoryWeight = (section: string, name: string) => {
+          const s = section.toLowerCase();
+          const c = name.toLowerCase();
+          if (s.includes('vino') || s.includes('bevande')) {
+            if (c.includes('birre') || c.includes('bevande')) return 1;
+            if (c.includes('rossi')) return 2;
+            if (c.includes('bianchi') || c.includes('biachi')) return 3;
+            if (c.includes('bollici')) return 4;
+            if (c.includes('amari')) return 5;
+          } else if (s.includes('cucina')) {
+            if (c.includes('antipasti')) return 1;
+            if (c.includes('primi')) return 2;
+            if (c.includes('secondi')) return 3;
+            if (c.includes('contorni')) return 4;
+          } else if (s.includes('pizza')) {
+            if (c.includes('rosse')) return 1;
+            if (c.includes('bianche')) return 2;
+            if (c.includes('speciali')) return 3;
+          }
+          return 99;
+        };
+
+        const wA = getSectionWeight(a.section);
+        const wB = getSectionWeight(b.section);
+        if (wA !== wB) return wA - wB;
+
+        return getSubcategoryWeight(a.section, a.name) - getSubcategoryWeight(b.section, b.name);
+      });
+      setCategories(sortedCats);
+    }
     if (menusRes) setMenus(menusRes);
     if (settingsRes) {
       const settingsObj = settingsRes.reduce((acc: any, curr: any) => {
