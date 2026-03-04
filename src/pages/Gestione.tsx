@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import imageCompression from 'browser-image-compression';
 import { ArrowLeft, Plus, Save, Trash2, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -188,7 +187,7 @@ export default function Gestione() {
   };
 
   const handleSaveProduct = async () => {
-    if (!editingProduct?.name || !editingProduct?.price || !editingProduct?.category_id) return;
+    if (!editingProduct?.name || editingProduct.price === undefined || editingProduct.price === null || !editingProduct?.category_id) return;
 
     const isNew = !editingProduct.id;
     if (isNew) {
@@ -326,18 +325,6 @@ export default function Gestione() {
     let file = e.target.files?.[0];
     if (file) {
       setIsUploading(true);
-      try {
-        const options = {
-          maxSizeMB: 0.2, // max 200KB
-          maxWidthOrHeight: 1200,
-          useWebWorker: true,
-          fileType: 'image/webp',
-          initialQuality: 0.8,
-        };
-        file = await imageCompression(file, options);
-      } catch (error) {
-        console.error("Compression error:", error);
-      }
 
       if (aspect === undefined) {
         // Direct upload without cropping (e.g., Logo)
