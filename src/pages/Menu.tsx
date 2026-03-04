@@ -29,6 +29,7 @@ export default function MenuPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   const { addToCart } = useCart(slug || null);
@@ -41,6 +42,7 @@ export default function MenuPage() {
       const { data: resData } = await db.from('restaurants').select('id').eq('slug', slug).single();
       if (!resData) {
         setNotFound(true);
+        setLoading(false);
         return;
       }
       setRestaurantId(resData.id);
@@ -70,6 +72,7 @@ export default function MenuPage() {
           setActiveCategory(menuData[0].id);
         }
       }
+      setLoading(false);
     }
     loadMenu();
   }, [section, slug]);
@@ -85,21 +88,27 @@ export default function MenuPage() {
 
   // Restore scroll position after category render
   useEffect(() => {
-    const activeCatData = categories.find(c => c.id === activeCategory);
+    if (loading) return; // Strict block while fetching
 
+    const activeCatData = categories.find(c => c.id === activeCategory);
+    
     // Strict Guard: Do not attempt to scroll until data is physically present in the array
-    if (categories.length > 0 && activeCategory && activeCatData && activeCatData.products.length > 0) {
+    if (categories.length > 0 && activeCategory && activeCatData) {
       const savedScroll = sessionStorage.getItem(`scroll_${slug}_${section}`);
-      if (savedScroll) {
-        // Double rAF ensures the React virtual DOM has flushed to the actual DOM paints
-        requestAnimationFrame(() => {
+      
+      if (savedScroll && savedScroll !== "0" && activeCatData.products.length > 0) {
+        // Fallback to setTimeout for mobile, taking 100ms to ensure paints as requested by user
+        setTimeout(() => {
           requestAnimationFrame(() => {
             window.scrollTo(0, parseInt(savedScroll, 10));
           });
-        });
+        }, 100);
+      } else {
+        // Force scroll to top if entering category freshly from Home (prevents router scroll bleed)
+        window.scrollTo(0, 0);
       }
     }
-  }, [categories, activeCategory, slug, section]);
+  }, [loading, categories, activeCategory, slug, section]);
 
   const isVino = section === 'Vino e Drinks';
 
@@ -162,7 +171,7 @@ export default function MenuPage() {
           isVino ? (
             <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group relative bg-white dark:bg-[#252525] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-white/5 flex gap-4 transition-all hover:shadow-lg dark:hover:bg-[#2A2A2A] block">
               <div className="relative w-24 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-50 dark:bg-black/40 flex items-center justify-center">
-                <img alt={product.name} className="h-full object-contain object-center mix-blend-normal group-hover:scale-110 transition-transform duration-500" src={product.image_url} loading="lazy" />
+                <img alt={product.name} className="h-full object-contain object-center mix-blend-normal group-hover:scale-110 transition-transform duration-500" src={product.image_url} loading="lazy" decoding="async" />
               </div>
               <div className="flex-grow flex flex-col justify-between py-1">
                 <div>
@@ -198,7 +207,7 @@ export default function MenuPage() {
           ) : (
             <Link to={`/${slug}/product/${product.id}`} key={product.id} className="group bg-white dark:bg-[#262626] rounded-2xl overflow-hidden shadow-md dark:shadow-none border border-gray-100 dark:border-gray-800 relative transform transition hover:scale-[1.01] block">
               <div className="relative h-48 w-full overflow-hidden">
-                <img alt={product.name} className="w-full h-full object-cover" src={product.image_url} loading="lazy" />
+                <img alt={product.name} className="w-full h-full object-cover" src={product.image_url} loading="lazy" decoding="async" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10">
                   <span className="text-white font-bold tracking-wide">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
