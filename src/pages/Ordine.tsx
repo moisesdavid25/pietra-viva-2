@@ -222,31 +222,41 @@ export default function OrdinePage() {
                                         {/* IN PREPARAZIONE COLUMN */}
                                         <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-100/50 dark:border-orange-900/30">
                                             <h4 className="text-center font-bold text-orange-600 dark:text-orange-400 text-sm tracking-wider uppercase mb-4 border-b border-orange-200/50 dark:border-orange-900/50 pb-2">In Preparazione</h4>
-                                            <div className="flex flex-col gap-3">
-                                                {publicOrders.filter(o => o.status === 'in_preparazione').map(order => (
-                                                    <div key={order.id} className="bg-white dark:bg-[#252525] p-3 rounded-xl shadow-sm text-center border border-orange-100 dark:border-gray-700 transform transition-all hover:-translate-y-0.5">
-                                                        <span className="text-2xl font-black text-gray-800 dark:text-white">{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
-                                                    </div>
-                                                ))}
-                                                {publicOrders.filter(o => o.status === 'in_preparazione').length === 0 && (
-                                                    <div className="text-center text-orange-400/50 py-4 text-xs font-bold uppercase">Vuoto</div>
-                                                )}
-                                            </div>
+
+                                            {publicOrders.filter(o => o.status === 'in_preparazione').length === 0 ? (
+                                                <div className="flex justify-center items-center py-8 opacity-20">
+                                                    <span className="text-4xl grayscale">⏳</span>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                    {publicOrders.filter(o => o.status === 'in_preparazione').map(order => (
+                                                        <div key={order.id} className="bg-white dark:bg-[#252525] p-3 rounded-xl shadow-sm text-center border border-orange-100 dark:border-gray-700 animate-fade-in flex flex-col justify-center items-center transform transition-transform duration-300 hover:-translate-y-0.5">
+                                                            <span className="text-[0.65rem] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Ordine</span>
+                                                            <span className="text-xl font-black text-gray-800 dark:text-white"><span className="text-orange-400/60 font-medium mr-0.5">#</span>{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* PRONTO COLUMN */}
                                         <div className="bg-[#008080]/5 dark:bg-[#008080]/10 rounded-2xl p-4 border border-[#008080]/10 dark:border-[#008080]/20">
                                             <h4 className="text-center font-bold text-[#008080] dark:text-teal-400 text-sm tracking-wider uppercase mb-4 border-b border-[#008080]/20 dark:border-[#008080]/40 pb-2">Pronto</h4>
-                                            <div className="flex flex-col gap-3">
-                                                {publicOrders.filter(o => o.status === 'pronto').map(order => (
-                                                    <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-xl shadow-md text-center transform transition-all animate-pulse-slow border border-[#008080]">
-                                                        <span className="text-2xl font-black text-white">{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
-                                                    </div>
-                                                ))}
-                                                {publicOrders.filter(o => o.status === 'pronto').length === 0 && (
-                                                    <div className="text-center text-[#008080]/40 py-4 text-xs font-bold uppercase">Vuoto</div>
-                                                )}
-                                            </div>
+
+                                            {publicOrders.filter(o => o.status === 'pronto').length === 0 ? (
+                                                <div className="flex justify-center items-center py-8 opacity-20">
+                                                    <span className="text-4xl grayscale">🛎️</span>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                    {publicOrders.filter(o => o.status === 'pronto').map(order => (
+                                                        <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-xl shadow-md text-center animate-bounce-slow border border-[#008080] flex flex-col justify-center items-center">
+                                                            <span className="text-[0.65rem] font-bold text-teal-100/80 dark:text-teal-200/80 uppercase tracking-widest mb-0.5">Ordine</span>
+                                                            <span className="text-xl font-black text-white"><span className="text-teal-200/50 font-medium mr-0.5">#</span>{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
