@@ -89,7 +89,7 @@ export default function Landing() {
         return () => clearTimeout(timeoutId);
     }, [searchQuery]);
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
             <header className="px-6 py-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Utensils className="w-8 h-8 text-[#008080]" />
@@ -99,7 +99,7 @@ export default function Landing() {
                     <Link to="/login" className="px-4 py-2 font-bold text-[#008080] hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-colors">
                         Accedi
                     </Link>
-                    <Link to="/register" className="px-4 py-2 bg-[#008080] text-white font-bold rounded-xl shadow-lg hover:bg-teal-700 transition-colors">
+                    <Link to="/register" className="px-4 py-2 bg-[#008080] text-white font-bold rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                         Crea il tuo menù
                     </Link>
                 </div>
@@ -122,14 +122,14 @@ export default function Landing() {
                             placeholder="Es. Pietra Viva..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-16 pr-6 py-5 bg-white dark:bg-[#252525] border border-gray-200 dark:border-gray-800 rounded-full outline-none focus:border-[#008080] focus:ring-4 focus:ring-[#008080]/10 dark:text-white shadow-sm transition-all text-xl font-medium"
+                            className="w-full pl-16 pr-6 py-5 bg-[#FBFBFB] dark:bg-[#252525] rounded-3xl outline-none focus:ring-4 focus:ring-[#008080]/10 dark:text-white shadow-premium transition-all text-xl font-medium"
                         />
                         {isSearching && (
                             <span className="absolute right-6 w-5 h-5 border-2 border-[#008080] border-t-transparent rounded-full animate-spin"></span>
                         )}
                     </div>
                     {searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-[#252525] rounded-3xl shadow-xl flex flex-col p-2 border border-gray-100 dark:border-gray-800 max-h-80 overflow-y-auto animate-fade-in text-left">
+                        <div className="absolute top-full left-0 right-0 mt-3 bg-[#FBFBFB] dark:bg-[#252525] rounded-3xl shadow-premium flex flex-col p-2 max-h-80 overflow-y-auto animate-fade-in text-left">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest px-4 pt-3 pb-2">Ristoranti trovati</p>
                             {searchResults.map(restaurant => (
                                 <button
@@ -161,10 +161,10 @@ export default function Landing() {
                 <div className="w-full max-w-xl mx-auto border-t border-gray-100 dark:border-gray-800 pt-10">
                     <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Oppure, sei un ristoratore?</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:justify-center">
-                        <Link to="/register" className="px-8 py-4 bg-[#008080] text-white font-bold rounded-xl shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-2 text-lg">
+                        <Link to="/register" className="px-8 py-4 bg-[#008080] text-white font-bold rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 text-lg">
                             Crea il menù QR <ArrowRight className="w-5 h-5" />
                         </Link>
-                        <a href="/demo" className="px-8 py-4 bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-800 font-bold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center text-lg text-gray-700 dark:text-white">
+                        <a href="/demo" className="px-8 py-4 bg-[#FBFBFB] dark:bg-[#262626] font-bold rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center justify-center text-lg text-gray-700 dark:text-white">
                             Guarda la Demo
                         </a>
                     </div>

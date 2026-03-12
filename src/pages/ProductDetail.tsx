@@ -32,7 +32,7 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex items-center justify-center">
+      <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-12 h-12 border-4 border-[#008080] border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-500 font-medium">Caricamento...</p>
@@ -42,7 +42,7 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+    <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
       <header className="absolute top-0 left-0 right-0 z-50 px-4 py-4 flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="p-2 bg-black/30 backdrop-blur-md rounded-full hover:bg-black/50 transition-colors">
           <ArrowLeft className="w-6 h-6 text-white" />
@@ -56,7 +56,7 @@ export default function ProductDetail() {
         </div>
 
         <div className="px-6 -mt-12 relative z-10">
-          <div className="bg-white dark:bg-[#262626] rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-800">
+          <div className="bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl p-8 shadow-premium border border-transparent dark:border-gray-800">
             <div className="flex justify-between items-start mb-4">
               <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-white leading-tight pr-4">{product.name}</h1>
               <span className="text-2xl font-bold text-[#008080] whitespace-nowrap">{product.price.toFixed(2)}€{product.price_unit || ''}</span>

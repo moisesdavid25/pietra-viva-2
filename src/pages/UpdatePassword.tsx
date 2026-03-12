@@ -57,7 +57,7 @@ export default function UpdatePassword() {
 
     if (success) {
         return (
-            <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+            <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
                 <div className="flex-grow flex flex-col px-6 pt-12 pb-24 max-w-md mx-auto w-full text-center">
                     <div className="flex justify-center mb-6">
                         <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function UpdatePassword() {
 
                     <button
                         onClick={() => navigate('/login')}
-                        className="mt-12 w-full py-4 bg-[#008080] hover:bg-teal-700 text-white font-bold text-[17px] text-center transition-colors rounded-xl shadow-lg"
+                        className="mt-12 w-full py-4 bg-[#008080] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
                     >
                         Vai al Login
                     </button>
@@ -86,7 +86,7 @@ export default function UpdatePassword() {
     }
 
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
             <div className="flex-grow flex flex-col px-6 pt-8 pb-32 max-w-md mx-auto w-full">
                 {/* Top bar with Logo */}
                 <div className="flex items-center justify-between mb-10">
@@ -107,13 +107,13 @@ export default function UpdatePassword() {
                 )}
 
                 <form id="update-form" onSubmit={handleUpdate} className="flex flex-col space-y-6">
-                    <div className="relative border-b border-gray-900 dark:border-gray-500 pb-2 focus-within:border-[#008080] dark:focus-within:border-[#008080] transition-colors">
+                    <div className="relative pb-2 transition-colors">
                         <input
                             type={showPassword ? "text" : "password"}
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-transparent focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:text-[#008080]"
+                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                             placeholder="Password"
                         />
                         <button
@@ -125,13 +125,13 @@ export default function UpdatePassword() {
                         </button>
                     </div>
 
-                    <div className="relative border-b border-gray-900 dark:border-gray-500 pb-2 focus-within:border-[#008080] dark:focus-within:border-[#008080] transition-colors">
+                    <div className="relative pb-2 transition-colors">
                         <input
                             type={showConfirmPassword ? "text" : "password"}
                             required
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-transparent focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:text-[#008080]"
+                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                             placeholder="Conferma password"
                         />
                         <button
@@ -168,7 +168,7 @@ export default function UpdatePassword() {
                         form="update-form"
                         type="submit"
                         disabled={loading || !password || !confirmPassword}
-                        className={`w-full py-4 text-white font-bold text-[17px] text-center transition-colors rounded-xl shadow-lg ${loading || !password ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080] hover:bg-teal-700'}`}
+                        className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${loading || !password ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080]'}`}
                     >
                         {loading ? 'Caricamento...' : 'Reset password'}
                     </button>

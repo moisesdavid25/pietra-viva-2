@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 
 export interface CartItem {
+    cartItemId: string; // Unique ID for the cart row (hash of product ID + customizations)
     id: string; // Product id
     name: string;
     price: number;
     quantity: number;
     image_url: string;
     price_unit: string | null;
+    customizations?: {
+        removed: string[];
+        added: { name: string; price: number }[];
+    };
 }
 
 export function useCart(slug: string | null) {
@@ -41,27 +46,33 @@ export function useCart(slug: string | null) {
         return () => window.removeEventListener('cartUpdated', handleStorage);
     }, [slug]);
 
-    const addToCart = (product: Omit<CartItem, 'quantity'>) => {
-        const existing = cart.find((item) => item.id === product.id);
+    const addToCart = (product: Omit<CartItem, 'quantity' | 'cartItemId'> & { customizations?: CartItem['customizations'] }, quantity: number = 1) => {
+        // Generate a unique ID for this specific configuration
+        const customString = product.customizations
+            ? JSON.stringify({ r: product.customizations.removed.sort(), a: product.customizations.added.map(x => x.name).sort() })
+            : '';
+        const cartItemId = `${product.id}_${btoa(customString).slice(0, 10)}`;
+
+        const existing = cart.find((item) => item.cartItemId === cartItemId);
         if (existing) {
             updateCart(cart.map((item) =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                item.cartItemId === cartItemId ? { ...item, quantity: item.quantity + quantity } : item
             ));
         } else {
-            updateCart([...cart, { ...product, quantity: 1 }]);
+            updateCart([...cart, { ...product, cartItemId, quantity }]);
         }
     };
 
-    const removeFromCart = (productId: string) => {
-        updateCart(cart.filter((item) => item.id !== productId));
+    const removeFromCart = (cartItemId: string) => {
+        updateCart(cart.filter((item) => item.cartItemId !== cartItemId));
     };
 
-    const updateQuantity = (productId: string, quantity: number) => {
+    const updateQuantity = (cartItemId: string, quantity: number) => {
         if (quantity <= 0) {
-            removeFromCart(productId);
+            removeFromCart(cartItemId);
             return;
         }
-        updateCart(cart.map((item) => (item.id === productId ? { ...item, quantity } : item)));
+        updateCart(cart.map((item) => (item.cartItemId === cartItemId ? { ...item, quantity } : item)));
     };
 
     const clearCart = () => updateCart([]);

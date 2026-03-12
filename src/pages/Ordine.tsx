@@ -157,11 +157,12 @@ export default function OrdinePage() {
 
             if (orderError) throw orderError;
 
-            const orderItems = cart.map(item => ({
+            const orderItems = cart.map((item: any) => ({
                 order_id: orderData.id,
                 product_id: item.id,
                 quantity: item.quantity,
-                price_at_time: item.price
+                price_at_time: item.price,
+                customizations: item.customizations || {}
             }));
 
             const { error: itemsError } = await db.from('order_items').insert(orderItems);
@@ -189,8 +190,8 @@ export default function OrdinePage() {
     };
 
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
-            <header className="sticky top-0 z-50 bg-[#FFFFFF]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
+            <header className="sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <ArrowLeft className="w-6 h-6 text-[#008080]" />
                 </button>
@@ -230,7 +231,7 @@ export default function OrdinePage() {
                                             ) : (
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                     {publicOrders.filter(o => o.status === 'in_preparazione').map(order => (
-                                                        <div key={order.id} className="bg-white dark:bg-[#252525] p-3 rounded-xl shadow-sm text-center border border-orange-100 dark:border-gray-700 animate-fade-in flex flex-col justify-center items-center transform transition-transform duration-300 hover:-translate-y-0.5">
+                                                        <div key={order.id} className="bg-[#FBFBFB] dark:bg-[#252525] p-3 rounded-3xl shadow-premium text-center border border-transparent dark:border-gray-700 animate-fade-in flex flex-col justify-center items-center transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                                                             <span className="text-[0.65rem] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Ordine</span>
                                                             <span className="text-xl font-black text-gray-800 dark:text-white"><span className="text-orange-400/60 font-medium mr-0.5">#</span>{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
                                                         </div>
@@ -250,7 +251,7 @@ export default function OrdinePage() {
                                             ) : (
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                     {publicOrders.filter(o => o.status === 'pronto').map(order => (
-                                                        <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-xl shadow-md text-center animate-bounce-slow border border-[#008080] flex flex-col justify-center items-center">
+                                                        <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-3xl shadow-premium text-center animate-bounce-slow border border-transparent flex flex-col justify-center items-center transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                                                             <span className="text-[0.65rem] font-bold text-teal-100/80 dark:text-teal-200/80 uppercase tracking-widest mb-0.5">Ordine</span>
                                                             <span className="text-xl font-black text-white"><span className="text-teal-200/50 font-medium mr-0.5">#</span>{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
                                                         </div>
@@ -265,15 +266,32 @@ export default function OrdinePage() {
                     ) : (
                         <div className="space-y-6 max-w-lg mx-auto w-full animate-fade-in">
                             <div className="space-y-4">
-                                {cart.map(item => (
-                                    <div key={item.id} className="flex gap-4 items-center bg-white dark:bg-[#252525] p-3 rounded-2xl border border-transparent dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
+                                {cart.map((item: any) => (
+                                    <div key={item.cartItemId || item.id} className="flex gap-4 items-center bg-[#FBFBFB] dark:bg-[#252525] p-3 rounded-3xl border border-transparent dark:border-gray-800 shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                                         <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-xl" />
                                         <div className="flex-grow">
                                             <h4 className="font-bold text-gray-900 dark:text-white tracking-wide">{item.name}</h4>
+
+                                            {/* Render Customizations */}
+                                            {item.customizations && (item.customizations.removed?.length > 0 || item.customizations.added?.length > 0) && (
+                                                <div className="flex flex-wrap gap-1 mt-1 mb-2">
+                                                    {item.customizations.removed?.map((r: string) => (
+                                                        <span key={`r-${r}`} className="text-[10px] font-bold bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-md uppercase tracking-wider border border-red-100 dark:border-red-900/50">
+                                                            Senza {r}
+                                                        </span>
+                                                    ))}
+                                                    {item.customizations.added?.map((a: any, i: number) => (
+                                                        <span key={`a-${i}`} className="text-[10px] font-bold bg-[#008080]/10 text-[#008080] dark:bg-teal-900/30 dark:text-teal-400 px-2 py-0.5 rounded-md uppercase tracking-wider border border-[#008080]/20 dark:border-teal-900/50">
+                                                            + {a.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             <span className="text-sm text-[#008080] font-bold">{item.price.toFixed(2)}€</span>
                                         </div>
                                         <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#1A1A1A] rounded-full p-1 border border-gray-200 dark:border-gray-700">
-                                            <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 transition-colors hover:text-red-500">-</button>
+                                            <button onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 transition-colors hover:text-red-500">-</button>
                                             <span className="font-bold w-4 text-center">{item.quantity}</span>
                                             <button onClick={() => addToCart(item)} className="w-8 h-8 flex items-center justify-center font-bold text-[#008080] transition-colors hover:text-teal-700">+</button>
                                         </div>
@@ -312,7 +330,7 @@ export default function OrdinePage() {
                                             <input
                                                 type="text"
                                                 placeholder="Es. 5"
-                                                className="w-full p-4 bg-white dark:bg-[#252525] border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-[#008080] dark:text-white shadow-sm transition-shadow text-center text-xl font-bold"
+                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008080] dark:text-white shadow-premium transition-all text-center text-xl font-bold"
                                                 value={tableNumber}
                                                 onChange={e => setTableNumber(e.target.value)}
                                             />
@@ -323,7 +341,7 @@ export default function OrdinePage() {
                                             <input
                                                 type="text"
                                                 placeholder="Es. Mario Rossi"
-                                                className="w-full p-4 bg-white dark:bg-[#252525] border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-[#008080] dark:text-white shadow-sm transition-shadow font-bold"
+                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008080] dark:text-white shadow-premium transition-all font-bold"
                                                 value={customerName}
                                                 onChange={e => setCustomerName(e.target.value)}
                                             />
@@ -341,7 +359,7 @@ export default function OrdinePage() {
                                     <button
                                         onClick={handleConfirmOrder}
                                         disabled={isConfirming}
-                                        className="w-full bg-gradient-to-r from-[#008080] to-teal-600 hover:from-teal-600 hover:to-[#008080] text-white font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100 border-none"
+                                        className="w-full bg-gradient-to-r from-[#008080] to-teal-600 hover:from-teal-600 hover:to-[#008080] text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98] uppercase tracking-widest text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100 border-none"
                                     >
                                         {isConfirming ? (
                                             <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -408,7 +426,7 @@ export default function OrdinePage() {
 
                             <Link
                                 to={`/${slug}`}
-                                className="inline-block w-full bg-[#008080] hover:bg-teal-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.98]"
+                                className="inline-block w-full bg-[#008080] hover:bg-teal-700 text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]"
                             >
                                 Torna al Menù
                             </Link>

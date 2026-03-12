@@ -3,7 +3,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 
 export default function Termini() {
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen p-6 md:p-12">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen p-6 md:p-12">
             <div className="max-w-3xl mx-auto">
                 <Link to="/" className="inline-flex items-center gap-2 text-[#008080] hover:underline mb-8 font-bold">
                     <ArrowLeft className="w-5 h-5" /> Torna alla Home
@@ -16,7 +16,7 @@ export default function Termini() {
                     <h1 className="text-4xl font-serif font-bold">Termini e Condizioni</h1>
                 </div>
 
-                <div className="bg-white dark:bg-[#262626] rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 dark:border-gray-800 prose prose-teal dark:prose-invert max-w-none">
+                <div className="bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl p-8 md:p-12 shadow-premium border border-transparent dark:border-gray-800 prose prose-teal dark:prose-invert max-w-none">
                     <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mb-8">Ultimo aggiornamento: Ottobre 2023</p>
 
                     <h2 className="text-2xl font-bold mt-8 mb-4">1. Accettazione dei Termini</h2>

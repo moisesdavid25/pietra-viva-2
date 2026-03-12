@@ -50,7 +50,7 @@ export default function Auth({ type }: { type: 'login' }) {
     };
 
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
             <div className="flex-grow flex flex-col px-6 pt-6 pb-24 max-w-md mx-auto w-full">
 
                 {/* Top bar with back button and Logo */}
@@ -85,7 +85,7 @@ export default function Auth({ type }: { type: 'login' }) {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-4 border border-gray-400 dark:border-gray-600 rounded-xl bg-white dark:bg-[#262626] focus:outline-none focus:border-[#008080] dark:focus:border-[#008080] transition-colors"
+                            className="w-full p-4 rounded-3xl bg-[#FBFBFB] shadow-premium dark:bg-[#262626] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                             placeholder="Email"
                         />
                     </div>
@@ -95,7 +95,7 @@ export default function Auth({ type }: { type: 'login' }) {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-4 border border-gray-400 dark:border-gray-600 rounded-xl bg-white dark:bg-[#262626] focus:outline-none focus:border-[#008080] dark:focus:border-[#008080] transition-colors pr-12"
+                            className="w-full p-4 rounded-3xl bg-[#FBFBFB] shadow-premium dark:bg-[#262626] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 pr-12"
                             placeholder="Password"
                         />
                         <button
@@ -120,12 +120,12 @@ export default function Auth({ type }: { type: 'login' }) {
             </div>
 
             {/* Bottom sticky button */}
-            <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
+            <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FBFBFB] via-[#FBFBFB] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
                 <button
                     form="login-form"
                     type="submit"
                     disabled={loading}
-                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-colors rounded-xl shadow-lg ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080] hover:bg-teal-700'}`}
+                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080]'}`}
                 >
                     {loading ? 'Caricamento...' : 'Accedi'}
                 </button>

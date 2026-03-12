@@ -3,7 +3,7 @@ import { SearchX, ArrowLeft } from 'lucide-react';
 
 export default function NotFound() {
     return (
-        <div className="min-h-screen bg-[#FFFFFF] dark:bg-[#1A1A1A] flex flex-col items-center justify-center p-6 text-center text-[#1A1A1A] dark:text-[#FDFCF0]">
+        <div className="min-h-screen bg-[#F0F0F0] dark:bg-[#1A1A1A] flex flex-col items-center justify-center p-6 text-center text-[#1A1A1A] dark:text-[#FDFCF0]">
             <SearchX className="w-24 h-24 text-[#008080]/60 mb-6" />
             <h1 className="text-4xl font-serif font-extrabold mb-4 tracking-wide">Ristorante non trovato</h1>
             <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-md">

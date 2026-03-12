@@ -12,6 +12,7 @@ import ProductDetail from './pages/ProductDetail';
 import OrdinePage from './pages/Ordine';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
+import Cameriere from './pages/Cameriere';
 import RegisterFlow from './pages/RegisterFlow';
 import Onboarding from './pages/Onboarding';
 import ResetPassword from './pages/ResetPassword';
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/:slug/menu-del-giorno" element={<MenuDelGiorno />} />
         <Route path="/:slug/product/:id" element={<ProductDetail />} />
         <Route path="/:slug/ordini" element={<OrdinePage />} />
+        <Route path="/:slug/cameriere" element={<Cameriere />} />
       </Routes>
     </BrowserRouter>
   );

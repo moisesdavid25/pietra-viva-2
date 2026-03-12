@@ -42,7 +42,7 @@ export default function ResetPassword() {
 
     if (success) {
         return (
-            <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+            <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
                 <div className="flex-grow flex flex-col px-6 pt-6 pb-24 max-w-md mx-auto w-full">
                     {/* Top bar with back button and Logo */}
                     <div className="flex items-center justify-between mb-6">
@@ -80,7 +80,7 @@ export default function ResetPassword() {
                 <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
                     <button
                         onClick={() => navigate('/login')}
-                        className="w-full py-4 bg-[#008080] hover:bg-teal-700 text-white font-bold text-[17px] text-center transition-colors rounded-xl shadow-lg"
+                        className="w-full py-4 bg-[#008080] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
                     >
                         Ok capito
                     </button>
@@ -90,7 +90,7 @@ export default function ResetPassword() {
     }
 
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans flex flex-col min-h-screen antialiased">
             <div className="flex-grow flex flex-col px-6 pt-6 pb-24 max-w-md mx-auto w-full">
 
                 {/* Top bar with back button and Logo */}
@@ -130,8 +130,8 @@ export default function ResetPassword() {
                 )}
 
                 <form id="reset-form" onSubmit={handleReset} className="flex flex-col space-y-4">
-                    <div className="relative border border-gray-400 dark:border-gray-600 rounded-xl bg-white dark:bg-[#262626] pt-2 px-3 pb-1 focus-within:border-[#008080] dark:focus-within:border-[#008080] transition-colors">
-                        <label className="absolute -top-2 left-2 bg-white dark:bg-[#262626] px-1 text-[11px] font-bold text-[#008080]">
+                    <div className="relative rounded-3xl shadow-premium bg-[#FBFBFB] dark:bg-[#262626] pt-2 px-3 pb-1 focus-within:ring-2 focus-within:ring-[#008080]/20 transition-all duration-300">
+                        <label className="absolute -top-3 left-3 bg-[#FBFBFB] shadow-sm rounded-full px-2 py-1 dark:bg-[#262626] text-[11px] font-bold text-gray-500">
                             Email
                         </label>
                         <input
@@ -139,7 +139,7 @@ export default function ResetPassword() {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full pt-2 pb-1 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-[15px]"
+                            className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-[15px]"
                             placeholder="Inserisci l'email"
                         />
                     </div>
@@ -151,7 +151,7 @@ export default function ResetPassword() {
                     form="reset-form"
                     type="submit"
                     disabled={loading || !email}
-                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-colors rounded-xl shadow-lg ${(loading || !email) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080] hover:bg-teal-700'}`}
+                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${(loading || !email) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080]'}`}
                 >
                     {loading ? 'Caricamento...' : 'Reset password'}
                 </button>

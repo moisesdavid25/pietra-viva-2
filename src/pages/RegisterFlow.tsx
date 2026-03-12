@@ -166,8 +166,8 @@ export default function RegisterFlow() {
     };
 
     return (
-        <div className="bg-[#FFFFFF] dark:bg-[#1A1A1A] text-gray-900 dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
-            <div className="w-full max-w-md bg-white dark:bg-[#262626] rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden min-h-[500px] flex flex-col">
+        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
+            <div className="w-full max-w-md bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl shadow-premium overflow-hidden min-h-[500px] flex flex-col">
 
                 {/* Header Dinamico */}
                 {step < 6 && (
@@ -201,24 +201,24 @@ export default function RegisterFlow() {
                             <form onSubmit={handleStep1} className="flex-1 flex flex-col">
                                 <div className="space-y-4 flex-1">
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Email *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Email *</label>
                                         <input
                                             type="email"
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                     </div>
                                     <div className="relative mt-6">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Password *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Password *</label>
                                         <input
                                             type="password"
                                             required
                                             minLength={6}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                     </div>
                                     <div className="mt-4 space-y-2">
@@ -226,7 +226,7 @@ export default function RegisterFlow() {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={loading} className={`w-full text-white py-4 rounded-full font-bold mt-8 shadow-md transition-transform active:scale-95 ${loading ? 'bg-[#008080]/50' : 'bg-[#008080] hover:bg-teal-700'}`}>
+                                <button type="submit" disabled={loading} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${loading ? 'bg-[#008080]/50' : 'bg-[#008080] hover:bg-teal-700'}`}>
                                     {loading ? 'Attendere...' : 'Crea un account'}
                                 </button>
                                 <p className="text-center text-sm text-gray-500 mt-4">
@@ -245,28 +245,28 @@ export default function RegisterFlow() {
                             <form onSubmit={handleStep2} className="flex-1 flex flex-col">
                                 <div className="space-y-6 flex-1">
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Nome *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Nome *</label>
                                         <input
                                             type="text"
                                             required
                                             value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                     </div>
                                     <div className="relative mt-6">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Cognome *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Cognome *</label>
                                         <input
                                             type="text"
                                             required
                                             value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={!firstName || !lastName} className={`w-full text-white py-4 rounded-full font-bold mt-8 shadow-md transition-transform active:scale-95 ${!firstName || !lastName ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
+                                <button type="submit" disabled={!firstName || !lastName} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${!firstName || !lastName ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
                                     Continua
                                 </button>
                             </form>
@@ -282,7 +282,7 @@ export default function RegisterFlow() {
                             <form onSubmit={handleStep3} className="flex-1 flex flex-col">
                                 <div className="space-y-5 flex-1 overflow-y-auto pb-4 pr-1">
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Telefono *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Telefono *</label>
                                         <input
                                             type="tel"
                                             required
@@ -291,11 +291,11 @@ export default function RegisterFlow() {
                                             title="Inserisci un numero di telefono valido"
                                             value={telefono}
                                             onChange={(e) => setTelefono(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                     </div>
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Indirizzo completto *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Indirizzo completto *</label>
                                         <input
                                             type="text"
                                             required
@@ -303,23 +303,23 @@ export default function RegisterFlow() {
                                             value={indirizzo}
                                             onChange={(e) => setIndirizzo(e.target.value)}
                                             placeholder="Via e numero civico"
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent placeholder-gray-300"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 placeholder-gray-300"
                                         />
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Città *</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Città *</label>
                                             <input
                                                 type="text"
                                                 required
                                                 minLength={2}
                                                 value={citta}
                                                 onChange={(e) => setCitta(e.target.value)}
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                             />
                                         </div>
                                         <div className="relative w-1/3">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Prov. *</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Prov. *</label>
                                             <input
                                                 type="text"
                                                 required
@@ -329,13 +329,13 @@ export default function RegisterFlow() {
                                                 onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                                                 value={provincia}
                                                 onChange={(e) => setProvincia(e.target.value)}
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                             />
                                         </div>
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">CAP *</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">CAP *</label>
                                             <input
                                                 type="text"
                                                 required
@@ -345,24 +345,24 @@ export default function RegisterFlow() {
                                                 onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                                                 value={cap}
                                                 onChange={(e) => setCap(e.target.value)}
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                             />
                                         </div>
                                         <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Paese</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Paese</label>
                                             <input
                                                 type="text"
                                                 required
                                                 minLength={3}
                                                 value={paese}
                                                 onChange={(e) => setPaese(e.target.value)}
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent text-gray-500"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 text-gray-500"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                <button type="submit" className={`w-full text-white py-4 rounded-full font-bold mt-4 shadow-md transition-transform active:scale-95 bg-[#008080] hover:bg-teal-700`}>
+                                <button type="submit" className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 bg-[#008080] hover:bg-teal-700`}>
                                     Continua
                                 </button>
                             </form>
@@ -401,7 +401,7 @@ export default function RegisterFlow() {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={!privacyAccepted} className={`w-full text-white py-4 rounded-full font-bold mt-8 shadow-md transition-transform active:scale-95 ${!privacyAccepted ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
+                                <button type="submit" disabled={!privacyAccepted} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${!privacyAccepted ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
                                     Continua
                                 </button>
                             </form>
@@ -417,13 +417,13 @@ export default function RegisterFlow() {
                             <form onSubmit={handleStep5} className="flex-1 flex flex-col">
                                 <div className="space-y-5 flex-1 overflow-y-auto pb-4 pr-1">
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Nome Attività *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Nome Attività *</label>
                                         <input
                                             type="text"
                                             required
                                             value={businessName}
                                             onChange={(e) => setBusinessName(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         />
                                         {businessName && (
                                             <p className="text-xs text-[#008080] font-medium mt-1 ml-3">
@@ -433,35 +433,35 @@ export default function RegisterFlow() {
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Tipo *</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Tipo *</label>
                                             <select
                                                 value={businessType}
                                                 onChange={(e) => setBusinessType(e.target.value)}
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                             >
                                                 <option value="Pizzería">Pizzeria (Layout base)</option>
                                                 <option value="Ristorante">Ristorante (Vuoto)</option>
                                             </select>
                                         </div>
                                         <div className="relative w-1/3">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Coperti</label>
+                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Coperti</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={numeroCoperti}
                                                 onChange={(e) => setNumeroCoperti(e.target.value)}
                                                 placeholder="es. 50"
-                                                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent placeholder-gray-300"
+                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 placeholder-gray-300"
                                             />
                                         </div>
                                     </div>
 
                                     <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] px-1 text-xs font-bold text-gray-500">Hai scoperto Leomenu tramite *</label>
+                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Hai scoperto Leomenu tramite *</label>
                                         <select
                                             value={scopertoTramite}
                                             onChange={(e) => setScopertoTramite(e.target.value)}
-                                            className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl dark:bg-[#1A1A1A] focus:outline-none focus:border-[#008080] transition-colors bg-transparent"
+                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
                                         >
                                             <option>Google</option>
                                             <option>Social Media</option>
@@ -472,7 +472,7 @@ export default function RegisterFlow() {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={loading || !businessName} className={`w-full text-white py-4 rounded-full font-bold mt-4 shadow-md transition-transform active:scale-95 ${loading || !businessName ? 'bg-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
+                                <button type="submit" disabled={loading || !businessName} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${loading || !businessName ? 'bg-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
                                     {loading ? 'Preparazione in corso...' : 'Inizia Ora'}
                                 </button>
                             </form>
