@@ -125,7 +125,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                         {/* Title & Price */}
                         <div className="text-center sm:text-left w-full mb-6">
                             <h2 className="text-3xl font-bold font-sans text-[#1A1A1A] dark:text-white tracking-tight">{product.name}</h2>
-                            <p className="text-[#008080] text-xl font-bold mt-1.5">€{product.price.toFixed(2)}</p>
+                            <p className="text-[#008081] text-xl font-bold mt-1.5">€{product.price.toFixed(2)}</p>
                         </div>
 
                         {product.description && (
@@ -143,7 +143,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                                         <button
                                             key={extra.id}
                                             onClick={() => handleAddSuggestion(extra)}
-                                            className="px-3 py-1.5 bg-[#008080]/10 text-[#008080] dark:bg-[#008080]/20 dark:text-teal-400 rounded-lg text-sm font-bold hover:bg-[#008080]/20 dark:hover:bg-[#008080]/30 transition-colors border border-[#008080]/20"
+                                            className="px-3 py-1.5 bg-[#008081]/10 text-[#008081] dark:bg-[#008081]/20 dark:text-teal-400 rounded-lg text-sm font-bold hover:bg-[#008081]/20 dark:hover:bg-[#008081]/30 transition-colors border border-[#008081]/20"
                                         >
                                             + {extra.name} {extra.price > 0 ? `(€${extra.price.toFixed(2)})` : ''}
                                         </button>
@@ -158,7 +158,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                                 <h3 className="font-medium text-[#1A1A1A] dark:text-white text-base">Note o Modifiche</h3>
                                 <button
                                     onClick={handleAddModification}
-                                    className="p-2 bg-[#F8F9FA] dark:bg-[#262626] rounded-full text-[#008080] hover:bg-[#E9ECEF] dark:hover:bg-[#333] transition-colors shadow-sm"
+                                    className="p-2 bg-[#F8F9FA] dark:bg-[#262626] rounded-full text-[#008081] hover:bg-[#E9ECEF] dark:hover:bg-[#333] transition-colors shadow-sm"
                                 >
                                     <Plus className="w-5 h-5" />
                                 </button>
@@ -173,7 +173,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                                                 placeholder="Ej: Senza Cipolla, + Extra Prosciutto"
                                                 value={mod.text}
                                                 onChange={(e) => handleModificationChange(mod.id, 'text', e.target.value)}
-                                                className="flex-1 bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-white rounded-3xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#008080] outline-none transition-all shadow-premium border border-transparent"
+                                                className="flex-1 bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-white rounded-3xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#008081] outline-none transition-all shadow-premium border border-transparent"
                                             />
                                             <div className="relative w-24">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold hidden sm:inline">€</span>
@@ -184,7 +184,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                                                     min="0"
                                                     value={mod.price}
                                                     onChange={(e) => handleModificationChange(mod.id, 'price', e.target.value)}
-                                                    className="w-full bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-white rounded-3xl px-2 sm:pl-7 sm:pr-3 py-3 text-sm focus:ring-2 focus:ring-[#008080] outline-none transition-all font-bold text-center sm:text-left shadow-premium border border-transparent"
+                                                    className="w-full bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-white rounded-3xl px-2 sm:pl-7 sm:pr-3 py-3 text-sm focus:ring-2 focus:ring-[#008081] outline-none transition-all font-bold text-center sm:text-left shadow-premium border border-transparent"
                                                 />
                                             </div>
                                             <button
@@ -231,7 +231,7 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                 <div className="p-4 bg-[#FBFBFB]/80 backdrop-blur-md dark:bg-[#1A1A1A]/80 border-t border-gray-200/50 dark:border-gray-800/50 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] pb-safe relative z-20">
                     <button
                         onClick={handleConfirm}
-                        className="w-full py-4 font-bold text-white text-base bg-[#008080] rounded-3xl hover:bg-[#006666] transition-all duration-300 shadow-premium hover:shadow-lg hover:-translate-y-1 flex items-center justify-center gap-2"
+                        className="w-full py-4 font-bold text-white text-base bg-[#008081] rounded-3xl hover:bg-[#006666] transition-all duration-300 shadow-premium hover:shadow-lg hover:-translate-y-1 flex items-center justify-center gap-2"
                     >
                         <span>Aggiungi al carrello • </span>
                         <span>€{totalPrice.toFixed(2)}</span>
@@ -241,3 +241,5 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
         </div>
     );
 }
+
+
