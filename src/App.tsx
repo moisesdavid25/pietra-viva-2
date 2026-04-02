@@ -47,10 +47,12 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
           
           if (roleData.role === 'admin') {
             navigate('/leomenu-admin', { replace: true });
+            setLoading(false);
           } else if (roleData.role === 'owner') {
             const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', session.user.id).neq('slug', 'demo').limit(1).maybeSingle();
             if (resData?.slug) {
                 navigate(`/${resData.slug}/gestione`, { replace: true });
+                setLoading(false);
             } else {
                 await db.auth.signOut();
                 navigate('/register', { replace: true });
@@ -59,6 +61,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
             }
           } else {
             navigate('/passport', { replace: true });
+            setLoading(false);
           }
         } catch (e) {
           await db.auth.signOut();
