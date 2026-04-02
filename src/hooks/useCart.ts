@@ -11,6 +11,7 @@ export interface CartItem {
     customizations?: {
         removed: string[];
         added: { name: string; price: number }[];
+        notes?: string;
     };
 }
 
@@ -49,7 +50,7 @@ export function useCart(slug: string | null) {
     const addToCart = (product: Omit<CartItem, 'quantity' | 'cartItemId'> & { customizations?: CartItem['customizations'] }, quantity: number = 1) => {
         // Generate a unique ID for this specific configuration
         const customString = product.customizations
-            ? JSON.stringify({ r: product.customizations.removed.sort(), a: product.customizations.added.map(x => x.name).sort() })
+            ? JSON.stringify({ r: product.customizations.removed.sort(), a: product.customizations.added.map(x => x.name).sort(), n: product.customizations.notes || '' })
             : '';
         const cartItemId = `${product.id}_${btoa(customString).slice(0, 10)}`;
 

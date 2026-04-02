@@ -1,19 +1,20 @@
 {
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
-        }
-    ],
-    "headers": [
-        {
-            "source": "/(.*)",
-            "headers": [
-                {
-                    "key": "Content-Language",
-                    "value": "it"
-                }
-            ]
-        }
-    ]
+  "redirects": [
+    { "source": "/menu/alfredo",      "destination": "/pietra-viva",  "permanent": true },
+    { "source": "/menu/el-encuentro", "destination": "/el-encuentro", "permanent": true },
+    { "source": "/pietraviva",        "destination": "/pietra-viva",  "permanent": true },
+    { "source": "/pietra_viva",       "destination": "/pietra-viva",  "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Language", "value": "it" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ]
 }

@@ -1,1 +1,8 @@
-/* /index.html 200
+/menu/alfredo       /pietra-viva    301
+/menu/el-encuentro  /el-encuentro   301
+/pietraviva         /pietra-viva    301
+/pietra_viva        /pietra-viva    301
+/privacy            /privacy-policy 301
+/terms              /termini-condizioni 301
+/contact            /contatti       301
+/*                  /index.html     200

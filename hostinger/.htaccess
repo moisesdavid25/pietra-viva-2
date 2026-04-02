@@ -1,0 +1,26 @@
+# ============================================================
+# Leomenu — Redirect 301 da Hostinger (leomenu.it) a Vercel
+# Copia questo file nella root del tuo hosting Hostinger
+# ============================================================
+
+Options -MultiViews
+RewriteEngine On
+
+# Forza HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect specifici QR — Pietra Viva
+RewriteRule ^pietraviva/?$   https://app.leomenu.it/pietra-viva [R=301,L]
+RewriteRule ^pietra-viva/?$  https://app.leomenu.it/pietra-viva [R=301,L]
+RewriteRule ^menu/alfredo/?$ https://app.leomenu.it/pietra-viva [R=301,L]
+
+# Redirect pagine legali (per Stripe)
+RewriteRule ^privacy/?$      https://app.leomenu.it/privacy-policy        [R=301,L]
+RewriteRule ^terms/?$        https://app.leomenu.it/termini-condizioni     [R=301,L]
+RewriteRule ^contact/?$      https://app.leomenu.it/contatti               [R=301,L]
+RewriteRule ^prezzi/?$       https://app.leomenu.it/prezzi                 [R=301,L]
+
+# Redirect globale: tutto il resto → app Vercel
+RewriteCond %{REQUEST_URI} !^/\.well-known
+RewriteRule ^(.*)$ https://app.leomenu.it/$1 [R=301,L]

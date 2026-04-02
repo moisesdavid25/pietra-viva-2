@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon, LayoutGrid, Calendar, Tag, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import db from '../../db';
 import ImageCropperModal from '../ImageCropperModal';
@@ -12,7 +12,6 @@ interface Props {
     onOpenPersonalizzazione: () => void;
 }
 
-// Keeping the existing types
 interface Category {
     id: string;
     section: string;
@@ -22,18 +21,29 @@ interface Category {
 
 interface Product {
     id: string;
-    category_id: string;
     name: string;
-    description: string;
-    price: number;
-    price_unit: string | null;
     image_url: string;
-    sort_order?: number;
-    iva?: number;
-    active?: boolean;
 }
 
-type ViewState = 'hub' | 'wizard-1' | 'wizard-2' | 'wizard-3' | 'success' | 'listino' | 'visibility';
+type ViewState = 'hub' | 'wizard-1' | 'wizard-2' | 'wizard-3' | 'success' | 'bundle-editor';
+
+interface MenuBundle {
+    id?: number;
+    type: string;
+    price: number;
+    entree: string;
+    primo: string;
+    secondo: string;
+    contorno: string;
+    desert: string;
+    bevande: string;
+}
+
+const slideVariants = {
+    initial: { x: 40, opacity: 0 },
+    animate: { x: 0, opacity: 1, transition: { duration: 0.22, ease: 'easeOut' } },
+    exit: { x: -40, opacity: 0, transition: { duration: 0.16, ease: 'easeIn' } },
+};
 
 export default function MenuManager({ restaurantId, onOpenListino, onOpenSettings, onOpenPersonalizzazione }: Props) {
     const [view, setView] = useState<ViewState>('hub');
@@ -43,44 +53,52 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
     // Data
     const [categories, setCategories] = useState<Category[]>([]);
     const [sectionSettings, setSectionSettings] = useState<any>({});
+    const [bundles, setBundles] = useState<MenuBundle[]>([]);
+    const [editingBundle, setEditingBundle] = useState<MenuBundle | null>(null);
+    const [productsWithoutPhoto, setProductsWithoutPhoto] = useState(0);
+    const [totalProducts, setTotalProducts] = useState(0);
+
+    // Pending delete bundle (undo pattern)
+    const [pendingDeleteBundle, setPendingDeleteBundle] = useState<number | null>(null);
+    const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Wizard State
     const [wizardMacro, setWizardMacro] = useState({ name: '', image: '', visible: true });
     const [wizardSubCats, setWizardSubCats] = useState<string[]>(['']);
     const [wizardProduct, setWizardProduct] = useState({
-        name: '',
-        price: '',
-        iva: 10,
-        description: '',
-        image: '',
-        active: true,
-        subCategoryIndex: 0
+        name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0
     });
 
     // Cropper
     const [cropperState, setCropperState] = useState<{ src: string | null; aspect: number; callback: ((b64: string) => void) | null }>({ src: null, aspect: 1, callback: null });
     const categoryImageRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-    // Load basic data
     const fetchData = async () => {
         setLoading(true);
-        const { data: cats } = await db.from('categories').select('*').eq('restaurant_id', restaurantId).order('position', { ascending: true });
-        if (cats) setCategories(cats);
+        const [{ data: cats }, { data: settingsRows }, { data: bundleRows }, { data: prods }] = await Promise.all([
+            db.from('categories').select('id,name,section,position').eq('restaurant_id', restaurantId).order('position', { ascending: true }),
+            db.from('settings').select('key, value').eq('restaurant_id', restaurantId),
+            db.from('menus').select('id,type,price,entree,primo,secondo,contorno,desert,bevande').eq('restaurant_id', restaurantId).order('id'),
+            db.from('products').select('id,image_url').eq('restaurant_id', restaurantId),
+        ]);
 
-        // Load settings for visibility
-        const { data: settingsRows } = await db.from('settings').select('key, value').eq('restaurant_id', restaurantId);
+        if (cats) setCategories(cats);
         if (settingsRows) {
-            const settingsObj: any = {};
-            settingsRows.forEach((row: any) => { settingsObj[row.key] = row.value; });
-            setSectionSettings(settingsObj);
+            const obj: any = {};
+            settingsRows.forEach((row: any) => { obj[row.key] = row.value; });
+            setSectionSettings(obj);
+        }
+        if (bundleRows) setBundles(bundleRows);
+        if (prods) {
+            setTotalProducts(prods.length);
+            setProductsWithoutPhoto(prods.filter((p: any) => !p.image_url || p.image_url === '').length);
         }
         setLoading(false);
     };
 
-    useEffect(() => {
-        fetchData();
-    }, [restaurantId]);
+    useEffect(() => { fetchData(); }, [restaurantId]);
 
+    // ── Wizard ────────────────────────────────────────────────────────────────
     const handleNext = () => {
         if (view === 'wizard-1') {
             if (!wizardMacro.name.trim()) return showToast('Inserisci il nome della categoria macro', 'error');
@@ -96,7 +114,6 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
     };
 
     const saveWizard = async () => {
-        // 1. Create SubCategories mapped to the Macro section
         const newCats = await Promise.all(wizardSubCats.map(async (subName, idx) => {
             const { data } = await db.from('categories').insert({
                 restaurant_id: restaurantId,
@@ -106,10 +123,8 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             }).select().single();
             return data;
         }));
-
-        // 2. Create the first Product
         const targetCat = newCats[wizardProduct.subCategoryIndex];
-        if (targetCat) {
+        if (targetCat && wizardProduct.name.trim()) {
             await db.from('products').insert({
                 restaurant_id: restaurantId,
                 category_id: targetCat.id,
@@ -121,36 +136,48 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 active: wizardProduct.active,
             });
         }
-
-        setWizardProduct(prev => ({ ...prev, name: '', price: '', iva: 10, description: '', image: '', active: true }));
+        setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
         fetchData();
         setView('success');
     };
 
-    // Toggle visibility for a section
+    const resetWizard = () => {
+        setWizardMacro({ name: '', image: '', visible: true });
+        setWizardSubCats(['']);
+        setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
+    };
+
+    // ── Visibility ────────────────────────────────────────────────────────────
     const handleVisibilityToggle = async (section: string) => {
         const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
         const visibilityKey = `visibility_${sectionSlug}`;
         const isCurrentlyVisible = sectionSettings[visibilityKey] !== 'false';
+
+        const allSections = categories.map((c: Category) => c.section);
+        const macroSectionsArr = allSections.filter((s, i) => allSections.indexOf(s) === i);
+        if (isCurrentlyVisible) {
+            let visibleCount = 0;
+            macroSectionsArr.forEach(s => {
+                const sSlug = s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+                if (sectionSettings[`visibility_${sSlug}`] !== 'false') visibleCount++;
+            });
+            if (visibleCount <= 1) {
+                showToast('Devi mantenere almeno un reparto visibile', 'error');
+                return;
+            }
+        }
+
         const newValue = isCurrentlyVisible ? 'false' : 'true';
-
         setSectionSettings((prev: any) => ({ ...prev, [visibilityKey]: newValue }));
-
         await db.from('settings').upsert(
             { restaurant_id: restaurantId, key: visibilityKey, value: newValue },
             { onConflict: 'restaurant_id,key' }
         );
-
-        // SYNC: Update 'active' column in categories table for all categories in this macro section
-        await db.from('categories')
-            .update({ active: newValue === 'true' })
-            .eq('restaurant_id', restaurantId)
-            .eq('section', section);
-
-        showToast(newValue === 'true' ? `👁 ${section} ora visibile` : `🙈 ${section} nascosto`);
+        await db.from('categories').update({ active: newValue === 'true' }).eq('restaurant_id', restaurantId).eq('section', section);
+        showToast(newValue === 'true' ? `${section} ora visibile` : `${section} nascosto`);
     };
 
-    // Upload section image via cropper
+    // ── Section Image ─────────────────────────────────────────────────────────
     const handleSectionImageUpload = (file: File, section: string) => {
         const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
         const sectionKey = `home_image_${sectionSlug}`;
@@ -160,397 +187,567 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 src: reader.result as string,
                 aspect: 16 / 9,
                 callback: async (b64: string) => {
-                    setSectionSettings((prev: any) => ({ ...prev, [sectionKey]: b64 }));
-                    await db.from('settings').upsert(
-                        { restaurant_id: restaurantId, key: sectionKey, value: b64 },
-                        { onConflict: 'restaurant_id,key' }
-                    );
-                    showToast('✓ Immagine aggiornata');
+                    try {
+                        const res = await fetch(b64);
+                        const blob = await res.blob();
+                        const fileName = `${restaurantId}/home_${sectionSlug}_${Date.now()}.png`;
+                        const { error, data } = await db.storage.from('media').upload(fileName, blob, { upsert: true, contentType: 'image/webp' });
+                        if (error) throw error;
+                        const { data: { publicUrl } } = db.storage.from('media').getPublicUrl(data.path);
+                        setSectionSettings((prev: any) => ({ ...prev, [sectionKey]: publicUrl }));
+                        await db.from('settings').upsert(
+                            { restaurant_id: restaurantId, key: sectionKey, value: publicUrl },
+                            { onConflict: 'restaurant_id,key' }
+                        );
+                        showToast('✓ Immagine aggiornata');
+                    } catch (err) {
+                        console.error('[Storage] Upload error', err);
+                        showToast('Errore upload immagine', 'error');
+                    }
                 }
             });
         };
         reader.readAsDataURL(file);
     };
 
-    const renderProgressBar = (step: number) => {
-        return (
-            <div className="flex items-center justify-center gap-2 mb-8 bg-gray-100 dark:bg-[#1A1A1A] p-2 rounded-2xl shadow-inner w-max mx-auto">
-                <div className={`px-4 py-1.5 rounded-xl font-bold text-sm transition-all duration-300 ${step >= 1 ? 'bg-white dark:bg-[#262626] text-[#008080] shadow-sm transform scale-105' : 'text-gray-400'}`}>1. Categoria</div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-                <div className={`px-4 py-1.5 rounded-xl font-bold text-sm transition-all duration-300 ${step >= 2 ? 'bg-white dark:bg-[#262626] text-[#008080] shadow-sm transform scale-105' : 'text-gray-400'}`}>2. Sezione</div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-                <div className={`px-4 py-1.5 rounded-xl font-bold text-sm transition-all duration-300 ${step >= 3 ? 'bg-white dark:bg-[#262626] text-[#008080] shadow-sm transform scale-105' : 'text-gray-400'}`}>3. Piatto</div>
-            </div>
-        );
+    // ── Bundle CRUD (Undo pattern) ────────────────────────────────────────────
+    const emptyBundle = (): MenuBundle => ({ type: '', price: 0, entree: '', primo: '', secondo: '', contorno: '', desert: '', bevande: '' });
+
+    const handleSaveBundle = async () => {
+        if (!editingBundle) return;
+        if (!editingBundle.type.trim()) return showToast('Inserisci il nome del Menù', 'error');
+        if (editingBundle.id) {
+            await db.from('menus').update({
+                type: editingBundle.type, price: editingBundle.price,
+                entree: editingBundle.entree, primo: editingBundle.primo,
+                secondo: editingBundle.secondo, contorno: editingBundle.contorno,
+                desert: editingBundle.desert, bevande: editingBundle.bevande
+            }).eq('id', editingBundle.id);
+            showToast('✓ Menù aggiornato');
+        } else {
+            await db.from('menus').insert({
+                restaurant_id: restaurantId,
+                type: editingBundle.type, price: editingBundle.price,
+                entree: editingBundle.entree, primo: editingBundle.primo,
+                secondo: editingBundle.secondo, contorno: editingBundle.contorno,
+                desert: editingBundle.desert, bevande: editingBundle.bevande
+            });
+            showToast('✓ Menù creato');
+        }
+        setEditingBundle(null);
+        fetchData();
     };
 
-    const slideVariants = {
-        initial: { x: 50, opacity: 0 },
-        animate: { x: 0, opacity: 1 },
-        exit: { x: -50, opacity: 0 }
+    const handleDeleteBundle = (id: number) => {
+        setPendingDeleteBundle(id);
+        setBundles(prev => prev.filter(b => b.id !== id));
+        showToast('Menù eliminato — Annulla?', 'info');
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        undoTimerRef.current = setTimeout(async () => {
+            await db.from('menus').delete().eq('id', id);
+            setPendingDeleteBundle(null);
+        }, 4000);
     };
+
+    const handleUndoDeleteBundle = () => {
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setPendingDeleteBundle(null);
+        fetchData();
+        showToast('Eliminazione annullata');
+    };
+
+    const handleDeleteSection = async (section: string) => {
+        const categoriesToDelete = categories.filter(c => c.section === section).map(c => c.id);
+        if (categoriesToDelete.length === 0) return;
+        await db.from('categories').delete().in('id', categoriesToDelete);
+        showToast(`Reparto "${section}" eliminato`);
+        fetchData();
+    };
+
+    // ── Progress Bar ──────────────────────────────────────────────────────────
+    const renderProgressBar = (step: number) => (
+        <div className="flex items-center justify-center gap-2 mb-8 bg-gray-100 dark:bg-[#1A1A1A] p-1.5 rounded-2xl shadow-inner w-max mx-auto">
+            {[{ n: 1, label: 'Reparto' }, { n: 2, label: 'Sezioni' }, { n: 3, label: 'Prodotto' }].map(({ n, label }, idx, arr) => (
+                <React.Fragment key={n}>
+                    <div className={`px-4 py-1.5 rounded-xl font-bold text-sm transition-all duration-300 ${step >= n ? 'bg-white dark:bg-[#262626] text-[#008081] shadow-sm' : 'text-gray-400'}`}>
+                        {n}. {label}
+                    </div>
+                    {idx < arr.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
+                </React.Fragment>
+            ))}
+        </div>
+    );
 
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center p-24 space-y-4">
-                <div className="w-10 h-10 border-4 border-gray-100 dark:border-gray-800 border-t-[#008080] rounded-full animate-spin shadow-sm"></div>
+                <div className="w-10 h-10 border-4 border-gray-100 dark:border-gray-800 border-t-[#008081] rounded-full animate-spin" />
                 <p className="text-sm font-bold text-gray-500 animate-pulse tracking-wide">Sincronizzazione catalogo...</p>
             </div>
         );
     }
 
     const macroSections: string[] = Array.from(new Set(categories.map(c => c.section)));
+    const hiddenSections = macroSections.filter(s => {
+        const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return sectionSettings[`visibility_${slug}`] === 'false';
+    }).length;
 
     return (
         <div className="space-y-6 pb-24">
 
-            {/* Configuration Hub */}
+            {/* ══════════════════════════════════════════════════════════
+                HUB — Command Center
+            ══════════════════════════════════════════════════════════ */}
             {view === 'hub' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                    <div className="flex flex-col gap-4 max-w-lg mx-auto w-full">
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 max-w-2xl mx-auto">
 
-                        <button onClick={() => setView('wizard-1')} className="group bg-[#FFFFFF] dark:bg-[#262626] p-5 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-5 text-left w-full h-auto">
-                            <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 bg-teal-50 text-[#008080] dark:bg-teal-900/30 dark:text-teal-400 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                                    <Plus className="w-7 h-7" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-gray-900 dark:text-white text-lg leading-tight">Aggiungi Categoria</h3>
-                                    <p className="text-sm text-gray-500 font-medium mt-1">Avvia la configurazione rapida</p>
-                                </div>
-                            </div>
-                            <div className="text-gray-300 dark:text-gray-600 group-hover:text-[#008080] transition-colors pr-2">
-                                <ChevronRight className="w-6 h-6" />
-                            </div>
-                        </button>
-
-                        <button onClick={onOpenListino} className="group bg-[#FFFFFF] dark:bg-[#262626] p-5 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-5 text-left w-full h-auto">
-                            <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                                    <List className="w-7 h-7" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-gray-900 dark:text-white text-lg leading-tight">Gestisci Listino</h3>
-                                    <p className="text-sm text-gray-500 font-medium mt-1">Visualizza e modifica in linea</p>
-                                </div>
-                            </div>
-                            <div className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors pr-2">
-                                <ChevronRight className="w-6 h-6" />
-                            </div>
-                        </button>
-
-                        <button onClick={() => setView('visibility')} className="group bg-[#FFFFFF] dark:bg-[#262626] p-5 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-5 text-left w-full h-auto">
-                            <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 bg-teal-50 text-[#008080] dark:bg-teal-900/30 dark:text-teal-400 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-inner">
-                                    <Eye className="w-7 h-7" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-gray-900 dark:text-white text-lg leading-tight">Visibilità Reparti</h3>
-                                    <p className="text-sm text-gray-500 font-medium mt-1">Mostra/nascondi categorie e foto</p>
-                                </div>
-                            </div>
-                            <div className="text-gray-300 dark:text-gray-600 group-hover:text-[#008080] transition-colors pr-2">
-                                <ChevronRight className="w-6 h-6" />
-                            </div>
-                        </button>
-
-                    </div>
-                </motion.div>
-            )}
-
-            {/* VISIBILITY VIEW */}
-            <AnimatePresence mode="wait">
-                {view === 'visibility' && (
-                    <motion.div key="visibility" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto space-y-4">
-                        <button onClick={() => setView('hub')} className="mb-2 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                            <ChevronLeft className="w-5 h-5" /> Indietro
-                        </button>
-
-                        <div className="text-center mb-2">
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white">Visibilità Reparti</h2>
-                            <p className="text-gray-500 text-sm mt-1">Gestisci cosa vedono i tuoi clienti nella home.</p>
+                    {/* ── Header ── */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Menù Diretto</h2>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Catalogo & Prezzi</p>
                         </div>
+                        <button
+                            onClick={() => { resetWizard(); setView('wizard-1'); }}
+                            className="flex items-center gap-2 bg-[#008081] text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-md shadow-[#008081]/20 hover:bg-teal-600 hover:-translate-y-0.5 active:scale-95 transition-all"
+                        >
+                            <Plus className="w-4 h-4" /> Nuovo Reparto
+                        </button>
+                    </div>
 
-                        {macroSections.length === 0 && (
-                            <div className="text-center p-8 text-gray-400 text-sm font-medium">Nessuna categoria presente.</div>
-                        )}
+                    {/* ── KPI Strip ── */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { value: macroSections.length, label: 'Reparti', color: 'text-[#008081]', bg: 'bg-teal-50 dark:bg-teal-900/10' },
+                            { value: hiddenSections, label: 'Nascosti', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/10' },
+                            { value: productsWithoutPhoto, label: 'Senza Foto', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/10' },
+                        ].map(({ value, label, color, bg }) => (
+                            <div key={label} className={`${bg} rounded-2xl p-4 text-center border border-white dark:border-white/5`}>
+                                <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</p>
+                            </div>
+                        ))}
+                    </div>
 
-                        {macroSections.map((section) => {
+                    {/* ── Section Rows ── */}
+                    <div className="space-y-2">
+                        {macroSections.length === 0 ? (
+                            <div className="text-center py-16 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                                <p className="text-4xl mb-3">🍽️</p>
+                                <p className="font-bold text-gray-400 text-sm">Nessun reparto configurato.</p>
+                                <p className="text-xs text-gray-400 mt-1">Crea il primo reparto del tuo menù.</p>
+                            </div>
+                        ) : macroSections.map(section => {
                             const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
-                            const sectionKey = `home_image_${sectionSlug}`;
                             const visibilityKey = `visibility_${sectionSlug}`;
+                            const sectionKey = `home_image_${sectionSlug}`;
                             const isVisible = sectionSettings[visibilityKey] !== 'false';
-                            const thumbSrc = sectionSettings[sectionKey] || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=100&h=100&fit=crop';
+                            const thumbSrc = sectionSettings[sectionKey] || null;
+                            const catCount = categories.filter(c => c.section === section).length;
 
                             return (
-                                <div key={section} className="bg-white dark:bg-[#262626] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 p-4">
-                                    {/* Thumbnail */}
+                                <div key={section} className="bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl flex items-center gap-3 px-4 py-3 shadow-sm hover:shadow-md transition-all group">
+
+                                    {/* Section thumbnail + upload */}
                                     <div className="relative flex-shrink-0">
-                                        <img src={thumbSrc} alt={section} className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-gray-700" />
-                                        {/* Hidden input */}
+                                        {thumbSrc ? (
+                                            <img src={thumbSrc} alt={section} className="w-11 h-11 rounded-xl object-cover border border-gray-100 dark:border-gray-700" />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-300">
+                                                <ImageIcon className="w-4 h-4" />
+                                            </div>
+                                        )}
                                         <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
+                                            type="file" accept="image/*" className="hidden"
                                             ref={el => { categoryImageRefs.current[section] = el; }}
-                                            onChange={(e) => {
+                                            onChange={e => {
                                                 const file = e.target.files?.[0];
                                                 if (file) { e.target.value = ''; handleSectionImageUpload(file, section); }
                                             }}
                                         />
                                         <button
                                             onClick={() => categoryImageRefs.current[section]?.click()}
-                                            className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#008080] text-white flex items-center justify-center shadow-md hover:bg-teal-700 transition-colors"
-                                            title="Carica Foto"
+                                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#008081] text-white flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity hover:bg-teal-600"
                                         >
-                                            <ImageIcon className="w-3 h-3" />
+                                            <ImageIcon className="w-2.5 h-2.5" />
                                         </button>
                                     </div>
 
-                                    {/* Name & Status */}
+                                    {/* Section info */}
                                     <div className="flex-1 min-w-0">
-                                        <span className="font-bold text-sm text-gray-900 dark:text-gray-100 block uppercase truncate">{section}</span>
-                                        <span className={`text-[10px] uppercase font-bold tracking-wider ${isVisible ? 'text-[#008080]' : 'text-gray-400'}`}>
-                                            {isVisible ? 'Visibile' : 'Nascosto'}
-                                        </span>
+                                        <p className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wide truncate">{section}</p>
+                                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{catCount} {catCount === 1 ? 'sezione' : 'sezioni'}</p>
                                     </div>
 
-                                    {/* Toggle */}
+                                    {/* Visibility toggle */}
                                     <button
                                         onClick={() => handleVisibilityToggle(section)}
-                                        className={`w-12 h-7 rounded-full relative transition-colors duration-300 focus:outline-none flex-shrink-0 ${isVisible ? 'bg-[#008080]' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                        title={isVisible ? 'Nascondi reparto' : 'Mostra reparto'}
+                                        className={`w-10 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0 ${isVisible ? 'bg-[#008081]' : 'bg-gray-200 dark:bg-gray-700'}`}
                                     >
-                                        <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-sm ${isVisible ? 'translate-x-5' : ''}`} />
+                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${isVisible ? 'translate-x-4' : ''}`} />
+                                    </button>
+
+                                    {/* Drill into listino */}
+                                    <button
+                                        onClick={onOpenListino}
+                                        className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-[#262626] text-gray-400 hover:text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 flex items-center justify-center transition-colors flex-shrink-0"
+                                        title="Gestisci prodotti"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
                             );
                         })}
+                    </div>
+
+                    {/* ── Action Modules ── */}
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                        <button
+                            onClick={onOpenListino}
+                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-blue-200 dark:hover:border-blue-900/30 hover:shadow-md transition-all text-left"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <List className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Listino</p>
+                                <p className="text-[10px] text-gray-400 font-semibold">{totalProducts} prodotti</p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setView('bundle-editor')}
+                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-amber-200 dark:hover:border-amber-900/30 hover:shadow-md transition-all text-left"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <Calendar className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Menù del Giorno</p>
+                                <p className="text-[10px] text-gray-400 font-semibold">{bundles.length} bundle</p>
+                            </div>
+                        </button>
+                    </div>
+
+                </motion.div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════
+                BUNDLE EDITOR — Menù del Giorno
+            ══════════════════════════════════════════════════════════ */}
+            <AnimatePresence mode="wait">
+                {view === 'bundle-editor' && (
+                    <motion.div key="bundle" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto space-y-4">
+
+                        <button onClick={() => { setEditingBundle(null); setView('hub'); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm mb-2">
+                            <ChevronLeft className="w-5 h-5" /> Menù Diretto
+                        </button>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Menù del Giorno</h2>
+                                <p className="text-xs text-gray-400 font-semibold mt-0.5">Bundle fissi con composizione e prezzo</p>
+                            </div>
+                            {!editingBundle && (
+                                <button
+                                    onClick={() => setEditingBundle(emptyBundle())}
+                                    className="flex items-center gap-1.5 bg-[#008081] text-white font-bold px-3 py-2 rounded-xl text-sm shadow-md hover:bg-teal-600 transition-all"
+                                >
+                                    <Plus className="w-4 h-4" /> Nuovo
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Undo snackbar */}
+                        <AnimatePresence>
+                            {pendingDeleteBundle !== null && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                                    className="flex items-center justify-between bg-[#1A1A1A] text-white px-4 py-3 rounded-xl shadow-lg"
+                                >
+                                    <p className="text-sm font-bold">Menù eliminato</p>
+                                    <button onClick={handleUndoDeleteBundle} className="text-[#008081] font-black text-sm hover:text-teal-400 transition-colors ml-4">
+                                        ANNULLA
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Bundle List */}
+                        {!editingBundle && (
+                            <div className="space-y-3">
+                                {bundles.length === 0 && (
+                                    <div className="text-center py-12 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                                        <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-400 text-sm font-semibold">Nessun bundle configurato.</p>
+                                    </div>
+                                )}
+
+                                {bundles.map(bundle => (
+                                    <div key={bundle.id} className="bg-white dark:bg-[#1C1C1C] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+                                        {/* Card Header */}
+                                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-gray-800">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center">
+                                                    <Tag className="w-4 h-4" />
+                                                </div>
+                                                <span className="font-black text-base text-gray-900 dark:text-white uppercase tracking-wide">
+                                                    Menù {bundle.type}
+                                                </span>
+                                            </div>
+                                            <span className="font-black text-lg text-[#008081]">
+                                                €{Number(bundle.price).toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        {/* Course Grid */}
+                                        <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                                            {[
+                                                { key: 'entree', label: 'Entrée' },
+                                                { key: 'primo', label: 'Primo' },
+                                                { key: 'secondo', label: 'Secondo' },
+                                                { key: 'contorno', label: 'Contorno' },
+                                                { key: 'desert', label: 'Dessert' },
+                                                { key: 'bevande', label: 'Bevande' },
+                                            ].filter(({ key }) => (bundle as any)[key]).map(({ key, label }) => (
+                                                <div key={key} className="min-w-0">
+                                                    <p className="text-[9px] font-black text-[#008081] uppercase tracking-widest">{label}</p>
+                                                    <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold truncate mt-0.5">{(bundle as any)[key]}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex gap-2 px-5 pb-4">
+                                            <button
+                                                onClick={() => setEditingBundle({ ...bundle })}
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 rounded-xl transition-colors"
+                                            >
+                                                <Save className="w-3.5 h-3.5" /> Modifica
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteBundle(bundle.id!)}
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 rounded-xl transition-colors"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" /> Elimina
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Bundle Form */}
+                        {editingBundle && (
+                            <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm p-6 space-y-5">
+                                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+                                    <h3 className="font-black text-lg text-[#008081]">
+                                        {editingBundle.id ? 'Modifica Menù' : 'Nuovo Menù'}
+                                    </h3>
+                                    <button onClick={() => setEditingBundle(null)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2 md:col-span-1">
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Tipo Menù *</label>
+                                        <input type="text" placeholder="Es. Carne, Pesce, Pizza..." className="w-full p-3 bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none" value={editingBundle.type} onChange={e => setEditingBundle({ ...editingBundle, type: e.target.value })} />
+                                    </div>
+                                    <div className="col-span-2 md:col-span-1">
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prezzo (€) *</label>
+                                        <input type="number" step="0.5" placeholder="16.00" className="w-full p-3 bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl font-black text-[#008081] text-lg focus:ring-2 focus:ring-[#008081]/30 outline-none" value={editingBundle.price || ''} onChange={e => setEditingBundle({ ...editingBundle, price: parseFloat(e.target.value) || 0 })} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Composizione</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {([
+                                            { key: 'entree', label: 'Entrée' },
+                                            { key: 'primo', label: 'Primo / Main' },
+                                            { key: 'secondo', label: 'Secondo' },
+                                            { key: 'contorno', label: 'Contorno' },
+                                            { key: 'desert', label: 'Dessert' },
+                                            { key: 'bevande', label: 'Bevande' },
+                                        ] as { key: keyof MenuBundle; label: string }[]).map(({ key, label }) => (
+                                            <div key={key}>
+                                                <label className="block text-[9px] font-black text-[#008081] uppercase tracking-widest mb-1">{label}</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder={label}
+                                                    className="w-full p-2.5 text-sm bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#008081]/30 outline-none"
+                                                    value={(editingBundle[key] as string) || ''}
+                                                    onChange={e => setEditingBundle({ ...editingBundle, [key]: e.target.value })}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                    <button onClick={handleSaveBundle} className="flex-1 py-3 bg-[#008081] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-700 transition-colors shadow-lg shadow-[#008081]/20">
+                                        <Save className="w-4 h-4" /> Salva Menù
+                                    </button>
+                                    <button onClick={() => setEditingBundle(null)} className="flex-1 py-3 bg-gray-100 dark:bg-[#262626] text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                                        Annulla
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* The Wizard Steps */}
+            {/* ══════════════════════════════════════════════════════════
+                WIZARD — Step 1: Macro Category
+            ══════════════════════════════════════════════════════════ */}
             <AnimatePresence mode="wait">
-
-                {/* WIZARD STEP 1: MACRO CATEGORY */}
                 {view === 'wizard-1' && (
                     <motion.div key="w1" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
                         <button onClick={() => setView('hub')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
                             <ChevronLeft className="w-5 h-5" /> Indietro
                         </button>
-
                         {renderProgressBar(1)}
-
-                        <div className="bg-[#FFFFFF] dark:bg-[#262626] p-8 rounded-3xl shadow-premium border border-gray-200 dark:border-gray-800 space-y-6">
-                            <div className="text-center mb-8">
+                        <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-6">
+                            <div className="text-center">
                                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">Il Reparto</h2>
-                                <p className="text-gray-500 text-sm mt-2">Come si chiama questa grande famiglia di prodotti?</p>
+                                <p className="text-gray-400 text-sm mt-2">Come si chiama questa grande famiglia di prodotti?</p>
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Nome Macro-Categoria</label>
-                                <input
-                                    type="text"
-                                    value={wizardMacro.name}
-                                    onChange={e => setWizardMacro({ ...wizardMacro, name: e.target.value })}
-                                    placeholder="Es. Pizzeria, Cucina, Sushi, Bar..."
-                                    className="w-full bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-2xl p-4 text-center font-bold text-xl text-[#008080] shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-[#1A1A1A] p-4 rounded-2xl shadow-inner flex justify-between items-center">
-                                <div>
-                                    <span className="block font-bold text-gray-900 dark:text-white">Visibilità Globale</span>
-                                    <span className="text-xs text-gray-500">Mostra questo reparto ai clienti</span>
-                                </div>
-                                <button
-                                    onClick={() => setWizardMacro({ ...wizardMacro, visible: !wizardMacro.visible })}
-                                    className={`w-14 h-8 rounded-full relative transition-colors duration-300 focus:outline-none shadow-sm ${wizardMacro.visible ? 'bg-[#008080]' : 'bg-gray-300 dark:bg-gray-600'}`}
-                                >
-                                    <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${wizardMacro.visible ? 'transform translate-x-6' : ''}`} />
-                                </button>
-                            </div>
-
-                            <button onClick={handleNext} className="w-full bg-[#008080] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008080]/30 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                            <input
+                                type="text"
+                                value={wizardMacro.name}
+                                onChange={e => setWizardMacro({ ...wizardMacro, name: e.target.value })}
+                                placeholder="Es. Pizzeria, Cucina, Sushi, Bar..."
+                                className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-center font-bold text-xl text-[#008081] focus:ring-2 focus:ring-[#008081]/30 transition-all outline-none"
+                                onKeyDown={e => e.key === 'Enter' && handleNext()}
+                            />
+                            <button onClick={handleNext} className="w-full bg-[#008081] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-600 active:scale-[0.98] transition-all">
                                 Continua alle Sezioni <ArrowRight className="w-5 h-5" />
                             </button>
                         </div>
                     </motion.div>
                 )}
 
-                {/* WIZARD STEP 2: SUB-CATEGORIES */}
+                {/* Step 2: Sub-Categories */}
                 {view === 'wizard-2' && (
                     <motion.div key="w2" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
                         <button onClick={() => setView('wizard-1')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
                             <ChevronLeft className="w-5 h-5" /> Indietro
                         </button>
-
                         {renderProgressBar(2)}
-
-                        <div className="bg-[#FFFFFF] dark:bg-[#262626] p-8 rounded-3xl shadow-premium border border-gray-200 dark:border-gray-800 space-y-6">
-                            <div className="text-center mb-8">
-                                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Le Sezioni interne</h2>
-                                <p className="text-gray-500 text-sm mt-2">Come vuoi dividere <strong className="text-[#008080]">{wizardMacro.name || 'il Reparto'}</strong>?</p>
+                        <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-6">
+                            <div className="text-center">
+                                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Le Sezioni</h2>
+                                <p className="text-gray-400 text-sm mt-2">Come vuoi dividere <strong className="text-[#008081]">{wizardMacro.name}</strong>?</p>
                             </div>
-
                             <div className="space-y-3">
                                 {wizardSubCats.map((sub, idx) => (
                                     <div key={idx} className="flex gap-2">
                                         <input
                                             type="text"
                                             value={sub}
-                                            onChange={e => {
-                                                const newCats = [...wizardSubCats];
-                                                newCats[idx] = e.target.value;
-                                                setWizardSubCats(newCats);
-                                            }}
-                                            placeholder={idx === 0 ? "Es. Pizze Bianche" : "Nuova Sezione"}
-                                            className="flex-1 bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-2xl p-4 font-bold text-gray-900 dark:text-white shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none"
+                                            onChange={e => { const n = [...wizardSubCats]; n[idx] = e.target.value; setWizardSubCats(n); }}
+                                            placeholder={idx === 0 ? 'Es. Pizze Classiche' : 'Nuova Sezione'}
+                                            className="flex-1 bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none"
                                         />
                                         {idx > 0 && (
-                                            <button
-                                                onClick={() => setWizardSubCats(wizardSubCats.filter((_, i) => i !== idx))}
-                                                className="w-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center shadow-inner hover:bg-red-100 transition-colors"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
+                                            <button onClick={() => setWizardSubCats(wizardSubCats.filter((_, i) => i !== idx))} className="w-12 bg-red-50 dark:bg-red-900/20 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-100 transition-colors">
+                                                <X className="w-4 h-4" />
                                             </button>
                                         )}
                                     </div>
                                 ))}
                             </div>
-
-                            <button
-                                onClick={() => setWizardSubCats([...wizardSubCats, ''])}
-                                className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-500 hover:text-[#008080] hover:border-[#008080] hover:bg-teal-50 dark:hover:bg-teal-900/10 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all"
-                            >
-                                <Plus className="w-5 h-5" /> Aggiungi un'altra sezione
+                            <button onClick={() => setWizardSubCats([...wizardSubCats, ''])} className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[#008081] hover:border-[#008081] py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm">
+                                <Plus className="w-4 h-4" /> Aggiungi sezione
                             </button>
-
-                            <button onClick={handleNext} className="w-full bg-[#008080] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008080]/30 hover:scale-[1.02] active:scale-[0.98] transition-all mt-6">
+                            <button onClick={handleNext} className="w-full bg-[#008081] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-600 active:scale-[0.98] transition-all">
                                 Continua ai Prodotti <ArrowRight className="w-5 h-5" />
                             </button>
                         </div>
                     </motion.div>
                 )}
 
-                {/* WIZARD STEP 3: PRODUCT */}
+                {/* Step 3: First Product */}
                 {view === 'wizard-3' && (
                     <motion.div key="w3" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
                         <button onClick={() => setView('wizard-2')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
                             <ChevronLeft className="w-5 h-5" /> Indietro
                         </button>
-
                         {renderProgressBar(3)}
-
-                        <div className="bg-[#FFFFFF] dark:bg-[#262626] p-8 rounded-3xl shadow-premium border border-gray-200 dark:border-gray-800 space-y-6">
-                            <div className="text-center mb-8">
+                        <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-5">
+                            <div className="text-center">
                                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">Il Primo Prodotto</h2>
-                                <p className="text-gray-500 text-sm mt-2">Creiamo il primo piatto di queste nuove sezioni!</p>
+                                <p className="text-gray-400 text-sm mt-2">Aggiungi il primo piatto del tuo nuovo reparto</p>
                             </div>
-
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Destinazione</label>
-                                <select
-                                    value={wizardProduct.subCategoryIndex}
-                                    onChange={e => setWizardProduct({ ...wizardProduct, subCategoryIndex: parseInt(e.target.value) })}
-                                    className="w-full bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-xl p-3 font-bold text-gray-900 dark:text-white shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none"
-                                >
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Sezione di destinazione</label>
+                                <select value={wizardProduct.subCategoryIndex} onChange={e => setWizardProduct({ ...wizardProduct, subCategoryIndex: parseInt(e.target.value) })} className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none">
                                     {wizardSubCats.filter(c => c.trim().length > 0).map((sub, idx) => (
-                                        <option key={idx} value={idx}>{wizardMacro.name} &gt; {sub}</option>
+                                        <option key={idx} value={idx}>{wizardMacro.name} › {sub}</option>
                                     ))}
                                 </select>
                             </div>
-
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nome Prodotto</label>
-                                <input
-                                    type="text"
-                                    value={wizardProduct.name}
-                                    onChange={e => setWizardProduct({ ...wizardProduct, name: e.target.value })}
-                                    placeholder="Es. Margherita"
-                                    className="w-full bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-xl p-4 font-bold text-xl text-gray-900 dark:text-white shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none"
-                                />
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nome Prodotto</label>
+                                <input type="text" value={wizardProduct.name} onChange={e => setWizardProduct({ ...wizardProduct, name: e.target.value })} placeholder="Es. Margherita" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none" />
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Prezzo Finale</label>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prezzo (€)</label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 font-bold text-lg">€</span>
-                                        <input
-                                            type="text"
-                                            value={wizardProduct.price}
-                                            onChange={e => setWizardProduct({ ...wizardProduct, price: e.target.value })}
-                                            placeholder="8,50"
-                                            className="w-full bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-xl py-4 pl-10 pr-4 font-black text-xl text-[#008080] shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none"
-                                        />
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
+                                        <input type="text" value={wizardProduct.price} onChange={e => setWizardProduct({ ...wizardProduct, price: e.target.value })} placeholder="8,50" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-8 pr-3 font-black text-xl text-[#008081] focus:ring-2 focus:ring-[#008081]/30 outline-none" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Alíquota IVA</label>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">IVA</label>
                                     <div className="relative">
-                                        <select
-                                            value={wizardProduct.iva}
-                                            onChange={e => setWizardProduct({ ...wizardProduct, iva: parseInt(e.target.value) })}
-                                            className="w-full bg-gray-50 dark:bg-[#1A1A1A] border-none rounded-xl p-4 font-bold text-xl text-gray-900 dark:text-white shadow-inner focus:ring-2 focus:ring-[#008080]/30 transition-all outline-none appearance-none pr-10"
-                                        >
-                                            <option value="4">4% - Minim.</option>
-                                            <option value="5">5% - Ridotta</option>
-                                            <option value="10">10% - Ristoraz.</option>
-                                            <option value="22">22% - Ordinaria</option>
+                                        <select value={wizardProduct.iva} onChange={e => setWizardProduct({ ...wizardProduct, iva: parseInt(e.target.value) })} className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none appearance-none pr-8">
+                                            <option value="4">4% Minim.</option>
+                                            <option value="5">5% Ridotta</option>
+                                            <option value="10">10% Ristor.</option>
+                                            <option value="22">22% Ordinaria</option>
                                         </select>
-                                        <Percent className="w-5 h-5 absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <Percent className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
-
-                            <button onClick={handleNext} className="w-full bg-[#008080] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008080]/30 hover:scale-[1.02] active:scale-[0.98] transition-all mt-8">
+                            <button onClick={handleNext} className="w-full bg-[#008081] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-600 active:scale-[0.98] transition-all">
                                 <Save className="w-5 h-5" /> Salva e Termina
                             </button>
                         </div>
                     </motion.div>
                 )}
-                {/* WIZARD SUCCESS */}
+
+                {/* Success */}
                 {view === 'success' && (
-                    <motion.div key="w-success" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto text-center mt-12 space-y-8">
-                        <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto shadow-premium transform scale-110 mb-6">
-                            <Save className="w-10 h-10" />
+                    <motion.div key="success" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto text-center mt-8 space-y-6">
+                        <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 text-green-500 rounded-full flex items-center justify-center mx-auto">
+                            <LayoutGrid className="w-10 h-10" />
                         </div>
-
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white">Reparto Creato!</h2>
-                        <p className="text-gray-500 text-lg">Hai configurato con successo la struttura e aggiunto il primo piatto.</p>
-
-                        <div className="flex flex-col gap-4 mt-8">
-                            <button onClick={() => {
-                                setWizardMacro({ name: '', image: '', visible: true });
-                                setWizardSubCats(['']);
-                                setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
-                                onOpenPersonalizzazione();
-                            }} className="w-full bg-[#FFFFFF] dark:bg-[#262626] text-[#008080] border-2 border-[#008080] py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-premium hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all text-lg">
-                                <Plus className="w-6 h-6" /> Asocia Suggerimenti Rapidi
+                        <p className="text-gray-400 font-medium">La struttura è configurata e il primo piatto è pronto.</p>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={() => { resetWizard(); onOpenPersonalizzazione(); }} className="w-full border-2 border-[#008081] text-[#008081] py-4 rounded-2xl font-bold hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all">
+                                Associa Suggerimenti Rapidi
                             </button>
-
-                            <button onClick={() => {
-                                setWizardMacro({ name: '', image: '', visible: true });
-                                setWizardSubCats(['']);
-                                setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
-                                setView('hub');
-                            }} className="w-full bg-gray-100 dark:bg-[#1A1A1A] text-gray-700 dark:text-gray-300 py-4 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
-                                Torna all'Hub
+                            <button onClick={() => { resetWizard(); setView('hub'); }} className="w-full bg-gray-100 dark:bg-[#262626] text-gray-700 dark:text-gray-300 py-4 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                Torna al Menù Diretto
                             </button>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Global Cropper Modal */}
+            {/* Cropper */}
             <ImageCropperModal
                 imageSrc={cropperState.src}
                 aspect={cropperState.aspect}
-                onConfirm={(base64) => {
-                    if (cropperState.callback) cropperState.callback(base64);
-                    setCropperState({ src: null, aspect: 1, callback: null });
-                }}
+                onConfirm={b64 => { if (cropperState.callback) cropperState.callback(b64); setCropperState({ src: null, aspect: 1, callback: null }); }}
                 onCancel={() => setCropperState({ src: null, aspect: 1, callback: null })}
             />
             <ToastContainer />
