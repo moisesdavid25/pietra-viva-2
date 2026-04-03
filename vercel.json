@@ -1,9 +1,11 @@
 {
   "redirects": [
-    { "source": "/menu/alfredo",      "destination": "/pietra-viva",  "permanent": true },
-    { "source": "/menu/el-encuentro", "destination": "/el-encuentro", "permanent": true },
-    { "source": "/pietraviva",        "destination": "/pietra-viva",  "permanent": true },
-    { "source": "/pietra_viva",       "destination": "/pietra-viva",  "permanent": true }
+    { "source": "/pietra-viva",        "destination": "/pietra-viva-new",          "permanent": true },
+    { "source": "/pietra-viva/:path*", "destination": "/pietra-viva-new/:path*",   "permanent": true },
+    { "source": "/pietraviva",         "destination": "/pietra-viva-new",          "permanent": true },
+    { "source": "/pietra_viva",        "destination": "/pietra-viva-new",          "permanent": true },
+    { "source": "/menu/alfredo",       "destination": "/pietra-viva-new",          "permanent": true },
+    { "source": "/menu/el-encuentro",  "destination": "/el-encuentro",            "permanent": true }
   ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
