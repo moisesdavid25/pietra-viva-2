@@ -50,8 +50,7 @@ export function useRestaurantAuth(): UseRestaurantAuthReturn {
 
   const handleLogout = async () => {
     await db.auth.signOut();
-    setIsAuthenticated(false);
-    navigate('/');
+    window.location.href = '/';
   };
 
   const handleDeleteAccount = async (onError: (msg: string) => void) => {

@@ -34,7 +34,7 @@ export function usePassportAuth() {
 
   const handleLogout = async () => {
     await db.auth.signOut();
-    navigate('/');
+    window.location.href = '/';
   };
 
   const handleSaveProfile = async () => {
