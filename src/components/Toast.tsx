@@ -4,6 +4,7 @@ import { CheckCircle, X, AlertCircle, Info } from 'lucide-react';
 export type ToastType = 'success' | 'error' | 'info';
 
 interface ToastProps {
+    key?: string | number | React.Key;
     message: string;
     type?: ToastType;
     duration?: number;
@@ -26,7 +27,7 @@ export function Toast({ message, type = 'success', duration = 3000, onDismiss }:
 
     const styles = {
         success: {
-            bg: 'bg-[#008080]',
+            bg: 'bg-[#008081]',
             border: 'border-teal-600',
             icon: <CheckCircle className="w-5 h-5 flex-shrink-0" />,
         },
@@ -99,4 +100,6 @@ export function useToast() {
 
     return { showToast, ToastContainer };
 }
+
+
 

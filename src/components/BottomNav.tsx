@@ -2,6 +2,8 @@ import { Home, Settings, ShoppingBag } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { useCart } from '../hooks/useCart';
+import { useState, useEffect } from 'react';
+import db from '../db';
 
 export default function BottomNav({ restaurantSlug }: { restaurantSlug?: string } = {}) {
   const location = useLocation();
@@ -16,30 +18,48 @@ export default function BottomNav({ restaurantSlug }: { restaurantSlug?: string 
 
   const { totalItems } = useCart(slug || null);
 
+  const [role, setRole] = useState<string | null>(null);
+  
+  useEffect(() => {
+    db.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        db.from('user_roles').select('role').eq('user_id', session.user.id).single()
+          .then(({ data }) => {
+             if (data?.role) setRole(data.role);
+          });
+      }
+    });
+  }, []);
+
+  const thirdLinkDest = role === 'owner' ? (slug ? `/${slug}/gestione` : "/gestione") : (role === 'customer' ? '/passport' : '/login');
+  const thirdLinkLabel = role === 'customer' ? 'Passport' : (role === 'owner' ? 'Gestione' : 'Accedi');
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#252525] border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 px-6 z-50">
       <div className="flex items-center justify-around max-w-md mx-auto h-16">
         <Link to={homeLink} className="flex flex-col items-center justify-center w-20 space-y-1 group">
-          <Home className={clsx("w-6 h-6 transition-colors", isHomeActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
-          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isHomeActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>Home</span>
+          <Home className={clsx("w-6 h-6 transition-colors", isHomeActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
+          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isHomeActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>Home</span>
         </Link>
         <Link to={ordiniLink} className="flex flex-col items-center justify-center w-20 space-y-1 group relative">
           <div className="relative">
-            <ShoppingBag className={clsx("w-6 h-6 transition-colors", isOrdiniActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
+            <ShoppingBag className={clsx("w-6 h-6 transition-colors", isOrdiniActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
             {totalItems > 0 && (
               <span className="absolute -top-1 -right-2 bg-[#D32F2F] text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                 {totalItems}
               </span>
             )}
           </div>
-          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isOrdiniActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>Ordine</span>
+          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isOrdiniActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>Ordine</span>
         </Link>
-        <Link to={slug ? `/${slug}/gestione` : "/gestione"} className="flex flex-col items-center justify-center w-20 space-y-1 group">
-          <Settings className={clsx("w-6 h-6 transition-colors", isGestioneActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
-          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isGestioneActive ? "text-[#008080]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>Gestione</span>
+        <Link to={thirdLinkDest} className="flex flex-col items-center justify-center w-20 space-y-1 group">
+          <Settings className={clsx("w-6 h-6 transition-colors", isGestioneActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
+          <span className={clsx("text-[10px] font-medium uppercase tracking-wider transition-colors", isGestioneActive ? "text-[#008081]" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300")}>{thirdLinkLabel}</span>
         </Link>
       </div>
       <div className="h-5 w-full"></div>
     </nav>
   );
 }
+
+

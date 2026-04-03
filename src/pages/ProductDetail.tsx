@@ -21,7 +21,7 @@ export default function ProductDetail() {
   useEffect(() => {
     async function loadProduct() {
       if (id) {
-        const { data, error } = await db.from('products').select('*').eq('id', id).single();
+        const { data, error } = await db.from('products').select('id, category_id, name, description, price, price_unit, image_url, sort_order, active, restaurant_id').eq('id', id).single();
         if (!error && data) {
           setProduct(data);
         }
@@ -34,7 +34,7 @@ export default function ProductDetail() {
     return (
       <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-[#008080] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="w-12 h-12 border-4 border-[#008081] border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-500 font-medium">Caricamento...</p>
         </div>
       </div>
@@ -58,11 +58,11 @@ export default function ProductDetail() {
         <div className="px-6 -mt-12 relative z-10">
           <div className="bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl p-8 shadow-premium border border-transparent dark:border-gray-800">
             <div className="flex justify-between items-start mb-4">
-              <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-white leading-tight pr-4">{product.name}</h1>
-              <span className="text-2xl font-bold text-[#008080] whitespace-nowrap">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
+              <h1 className="text-3xl font-sans font-bold text-gray-900 dark:text-white leading-tight pr-4">{product.name}</h1>
+              <span className="text-2xl font-bold text-[#008081] whitespace-nowrap">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
             </div>
 
-            <div className="w-12 h-1 bg-[#008080] rounded-full mb-6"></div>
+            <div className="w-12 h-1 bg-[#008081] rounded-full mb-6"></div>
 
             {product.description ? (
               <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
@@ -77,3 +77,6 @@ export default function ProductDetail() {
     </div>
   );
 }
+
+
+

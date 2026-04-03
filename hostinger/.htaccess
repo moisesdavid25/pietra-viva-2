@@ -1,6 +1,7 @@
 # ============================================================
-# Leomenu — Redirect 301 da Hostinger (leomenu.it) a Vercel
-# Copia questo file nella root del tuo hosting Hostinger
+# Leomenu — Hostinger (.htaccess)
+# leomenu.it sirve el marketing estático.
+# Todo lo demás se redirige a app.leomenu.it (Vercel).
 # ============================================================
 
 Options -MultiViews
@@ -10,17 +11,33 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Redirect specifici QR — Pietra Viva
-RewriteRule ^pietraviva/?$   https://app.leomenu.it/pietra-viva [R=301,L]
-RewriteRule ^pietra-viva/?$  https://app.leomenu.it/pietra-viva [R=301,L]
-RewriteRule ^menu/alfredo/?$ https://app.leomenu.it/pietra-viva [R=301,L]
+# ── QR Codes físicos → app ──────────────────────────────────
+RewriteRule ^pietraviva/?$       https://app.leomenu.it/pietra-viva-new  [R=301,L]
+RewriteRule ^pietra-viva/?$      https://app.leomenu.it/pietra-viva-new  [R=301,L]
+RewriteRule ^pietra_viva/?$      https://app.leomenu.it/pietra-viva-new  [R=301,L]
+RewriteRule ^menu/alfredo/?$     https://app.leomenu.it/pietra-viva-new  [R=301,L]
+RewriteRule ^menu/el-encuentro/? https://app.leomenu.it/el-encuentro [R=301,L]
 
-# Redirect pagine legali (per Stripe)
-RewriteRule ^privacy/?$      https://app.leomenu.it/privacy-policy        [R=301,L]
-RewriteRule ^terms/?$        https://app.leomenu.it/termini-condizioni     [R=301,L]
-RewriteRule ^contact/?$      https://app.leomenu.it/contatti               [R=301,L]
-RewriteRule ^prezzi/?$       https://app.leomenu.it/prezzi                 [R=301,L]
+# ── Rutas de la App → app.leomenu.it ───────────────────────
+RewriteRule ^login/?$            https://app.leomenu.it/login            [R=301,L]
+RewriteRule ^register/?$         https://app.leomenu.it/register         [R=301,L]
+RewriteRule ^passport/?$         https://app.leomenu.it/passport         [R=301,L]
+RewriteRule ^onboarding/?$       https://app.leomenu.it/onboarding       [R=301,L]
+RewriteRule ^reset-password/?$   https://app.leomenu.it/reset-password   [R=301,L]
+RewriteRule ^update-password/?$  https://app.leomenu.it/update-password  [R=301,L]
+RewriteRule ^trova/?$            https://app.leomenu.it/trova            [R=301,L]
+RewriteRule ^leomenu-admin(.*)$  https://app.leomenu.it/leomenu-admin$1  [R=301,L]
 
-# Redirect globale: tutto il resto → app Vercel
-RewriteCond %{REQUEST_URI} !^/\.well-known
-RewriteRule ^(.*)$ https://app.leomenu.it/$1 [R=301,L]
+# ── Cualquier slug de restaurante → app ────────────────────
+# Rutas tipo /pietra-viva, /el-encuentro, /[slug]/menu, etc.
+# (slugs que no son páginas de marketing)
+RewriteCond %{REQUEST_URI} !^/(funzionalita|prezzi|sicurezza|come-funziona|privacy-policy|termini-condizioni|contatti|assets|index\.html)
+RewriteCond %{REQUEST_URI} ^/[a-z0-9-]+(/.*)?$
+RewriteCond %{REQUEST_URI} !^/$
+RewriteRule ^(.+)$ https://app.leomenu.it/$1 [R=301,L]
+
+# ── SPA fallback para rutas de marketing ───────────────────
+# Permite que React Router maneje /, /funzionalita, /prezzi, etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]

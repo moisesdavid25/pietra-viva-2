@@ -83,7 +83,7 @@ export default function ImageCropperModal({ imageSrc, aspect = 1, onConfirm, onC
                     showGrid={true}
                     style={{
                         containerStyle: { borderRadius: '16px' },
-                        cropAreaStyle: { borderColor: '#008080', borderWidth: 2 },
+                        cropAreaStyle: { borderColor: '#008081', borderWidth: 2 },
                     }}
                 />
             </div>
@@ -103,7 +103,7 @@ export default function ImageCropperModal({ imageSrc, aspect = 1, onConfirm, onC
                     step={0.05}
                     value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1 accent-[#008080]"
+                    className="flex-1 accent-[#008081]"
                 />
                 <button
                     onClick={() => setZoom(z => Math.min(3, z + 0.1))}
@@ -126,7 +126,7 @@ export default function ImageCropperModal({ imageSrc, aspect = 1, onConfirm, onC
                     disabled={isProcessing}
                     className={`flex-1 py-3.5 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all ${isProcessing
                             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-[#008080] text-white hover:bg-teal-700 shadow-lg shadow-[#008080]/30'
+                            : 'bg-[#008081] text-white hover:bg-teal-700 shadow-lg shadow-[#008081]/30'
                         }`}
                 >
                     {isProcessing ? (
@@ -142,3 +142,5 @@ export default function ImageCropperModal({ imageSrc, aspect = 1, onConfirm, onC
         </div>
     );
 }
+
+

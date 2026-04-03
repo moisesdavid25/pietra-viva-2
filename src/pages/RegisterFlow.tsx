@@ -1,504 +1,266 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, CheckCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Store, User, ArrowRight } from 'lucide-react';
 import db from '../db';
+import Logo from '../components/Logo';
 
 export default function RegisterFlow() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
 
-    // Step 1: Crea il tuo account
+    // Step 1: Role
+    const [role, setRole] = useState<'owner' | 'customer' | ''>('');
+
+    // Step 2: Account & Details
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-
-    // Step 2: I tuoi dati
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-
-    // Step 3: Contatti & Indirizzo
-    const [telefono, setTelefono] = useState('');
-    const [indirizzo, setIndirizzo] = useState('');
-    const [citta, setCitta] = useState('');
-    const [provincia, setProvincia] = useState('');
-    const [cap, setCap] = useState('');
-    const [paese, setPaese] = useState('Italia');
-
-    // Step 4: Privacy
-    const [privacyAccepted, setPrivacyAccepted] = useState(false);
-    const [marketingAccepted, setMarketingAccepted] = useState(false);
-
-    // Step 5: Il tuo locale
+    const [phone, setPhone] = useState('');
     const [businessName, setBusinessName] = useState('');
-    const [businessType, setBusinessType] = useState('Pizzería');
-    const [numeroCoperti, setNumeroCoperti] = useState('');
-    const [scopertoTramite, setScopertoTramite] = useState('Google');
-
-    const [userId, setUserId] = useState<string | null>(null);
+    const [businessType, setBusinessType] = useState('Ristorante');
+    const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
     const navigate = useNavigate();
 
-    const handleStep1 = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
-        try {
-            const { data, error: signUpError } = await db.auth.signUp({
-                email,
-                password
-            });
-            if (signUpError) throw signUpError;
+    useEffect(() => {
+        const savedRole = localStorage.getItem('registerRole');
+        if (savedRole && (savedRole === 'owner' || savedRole === 'customer')) {
+            setRole(savedRole);
+        }
 
-            const { data: signInData, error: signInError } = await db.auth.signInWithPassword({ email, password });
-            if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
-
-            setUserId(signInData?.user?.id || data?.user?.id || null);
-            setStep(2);
-        } catch (err: any) {
-            let errorMessage = err.message;
-            if (errorMessage === 'Email not confirmed') {
-                errorMessage = "Verifica la tua email prima di continuare.";
-            } else if (errorMessage?.includes('For security purposes') || errorMessage?.includes('rate limit')) {
-                errorMessage = "Hai superato il limite di invio. Riprova più tardi.";
-            } else if (errorMessage === 'User already registered') {
-                errorMessage = "Utente già registrato. Accedi con questa email.";
-            } else {
-                errorMessage = errorMessage || 'Errore durante la registrazione.';
+        db.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                redirectDone(session.user.id);
             }
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
+        });
+    }, []);
+
+    const redirectDone = async (userId: string) => {
+        try {
+            const { data: roleData, error } = await db.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+            if (error || !roleData) {
+                // Ghost session detected, destroy it safely to allow registration
+                await db.auth.signOut();
+                return;
+            }
+            
+            if (roleData.role === 'owner') {
+                const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', userId).neq('slug', 'demo').limit(1).maybeSingle();
+                if (resData?.slug) {
+                    navigate(`/${resData.slug}/gestione`);
+                } else {
+                    navigate('/gestione?wizard=true');
+                }
+            } else {
+                navigate('/passport?wizard=true');
+            }
+        } catch {
+            await db.auth.signOut();
         }
     };
 
-    const handleStep2 = (e: React.FormEvent) => {
+
+
+    const handleStep2Next = (e: React.FormEvent) => {
         e.preventDefault();
         setStep(3);
     };
 
-    const handleStep3 = (e: React.FormEvent) => {
+    const handleStep3Submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setStep(4);
-    };
-
-    const handleStep4 = (e: React.FormEvent) => {
-        e.preventDefault();
-        setStep(5);
-    };
-
-    const handleStep5 = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!userId) return;
         setError('');
         setLoading(true);
 
         try {
-            // Aggiorna nome e cognome
-            await db.auth.updateUser({
-                data: { first_name: firstName, last_name: lastName }
+            localStorage.setItem('registerRole', role);
+            
+            const { data, error: signUpError } = await db.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        first_name: firstName,
+                        last_name: lastName,
+                        phone: phone
+                    }
+                }
             });
+            
+            if (signUpError) throw signUpError;
+            
+            const { data: { session }, error: signInError } = await db.auth.signInWithPassword({ email, password });
+            if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
 
-            const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) throw new Error('Utente non autenticato');
 
-            const { data: restaurant, error: resError } = await db.from('restaurants')
-                .insert({
-                    user_id: userId,
-                    name: businessName,
-                    slug,
-                    type: businessType,
-                    numero_coperti: numeroCoperti ? parseInt(numeroCoperti) : null,
-                    telefono,
-                    indirizzo,
-                    citta,
-                    provincia,
-                    cap,
-                    paese,
-                    sondaggio_tipo_menu: 'Un menu digitale interattivo',
-                    scoperto_tramite: scopertoTramite
-                })
-                .select()
-                .single();
+            const profileData = { id: user.id, role, first_name: firstName, last_name: lastName, phone };
+            const { error: profError } = await db.from('profiles').upsert(profileData);
+            if (profError) throw profError;
 
-            if (resError) {
-                if (resError.code === '23505') throw new Error('Questo nome o link web è già in uso. Prova un altro nome.');
-                throw resError;
+            if (role === 'owner') {
+                const baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                const randomSuffix = Math.random().toString(36).substring(2, 8);
+                const slug = `${baseSlug}-${randomSuffix}`;
+                
+                const { error: resError } = await db.from('restaurants')
+                    .insert({ user_id: user.id, name: businessName, slug: slug, type: businessType })
+                    .select()
+                    .single();
+                
+                if (resError && resError.code === '23505') throw new Error('Questo nome esiste già.');
+                if (resError) throw resError;
+                
+                await db.rpc('upgrade_to_owner');
+                navigate('/gestione?wizard=true');
+            } else {
+                navigate('/passport?wizard=true');
             }
-
-            if (businessType === 'Pizzería') {
-                const templateCategories = [
-                    { section: 'Antipasti e Fritto', name: 'Antipasti e Fritto' },
-                    { section: 'Pizza', name: 'Rosse' },
-                    { section: 'Pizza', name: 'Bianche' },
-                    { section: 'Pizza', name: 'Special' },
-                    { section: 'Bevande', name: 'Bevande' },
-                    { section: 'Dolci', name: 'Dolci' }
-                ];
-
-                const categoriesData = templateCategories.map(cat => ({
-                    restaurant_id: restaurant.id,
-                    section: cat.section,
-                    name: cat.name
-                }));
-
-                const { error: catError } = await db.from('categories').insert(categoriesData);
-                if (catError) throw catError;
-
-                const initialSettings = [
-                    { restaurant_id: restaurant.id, key: 'home_image_antipastiefritto', value: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800&h=400&fit=crop' },
-                    { restaurant_id: restaurant.id, key: 'home_image_pizza', value: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=400&fit=crop' },
-                    { restaurant_id: restaurant.id, key: 'home_image_bevande', value: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&h=400&fit=crop' },
-                    { restaurant_id: restaurant.id, key: 'home_image_dolci', value: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&h=400&fit=crop' }
-                ];
-                await db.from('settings').insert(initialSettings);
-            }
-
-            setStep(6);
         } catch (err: any) {
-            setError(err.message || 'Errore durante la configurazione del profilo.');
+            await db.auth.signOut();
+            let errorMessage = err.message;
+            if (errorMessage === 'User already registered') {
+                errorMessage = "Utente già registrato. Accedi.";
+            }
+            setError(errorMessage || 'Errore durante la registrazione.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleFinish = async () => {
-        await db.auth.signOut();
-        navigate('/login');
-    };
 
     return (
-        <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
-            <div className="w-full max-w-md bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl shadow-premium overflow-hidden min-h-[500px] flex flex-col">
+        <div className="flex min-h-screen bg-[#FBFBFB] dark:bg-[#1A1A1A] font-sans antialiased text-[#1A1A1A] dark:text-[#FDFCF0]">
+            <div className="hidden lg:flex lg:w-1/2 bg-[#008081] text-white flex-col justify-between p-16 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#008081] to-[#005c5c]"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-white opacity-5 blur-3xl"></div>
+                <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-black opacity-10 blur-3xl"></div>
+                
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                        <div className="flex items-center gap-3 mb-20">
+                            <Logo className="text-white" />
+                        </div>
+                        <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-6 drop-shadow-sm">
+                            Crea il menù del tuo<br />ristorante in<br />pochi minuti.
+                        </h1>
+                        <p className="text-xl font-medium text-teal-50 max-w-md drop-shadow-sm mb-12">
+                            Digitalizza i tuoi ordini e aumenta le vendite con Leomenu. Tutto ciò di cui hai bisogno in un solo posto.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                {/* Header Dinamico */}
-                {step < 6 && (
-                    <div className="px-6 py-4 flex items-center border-b border-gray-100 dark:border-gray-800">
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-12 relative overflow-y-auto">
+                {step === 1 && (
+                    <Link to="/" className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors lg:hidden">
+                        <ChevronLeft className="w-6 h-6" />
+                    </Link>
+                )}
+                
+                <div className="w-full max-w-md bg-white dark:bg-[#262626] rounded-[24px] shadow-lg flex flex-col border border-gray-100 min-h-[500px] overflow-hidden">
+                    <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
                         {step > 1 ? (
                             <button onClick={() => setStep(step - 1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                                 <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                             </button>
-                        ) : (
-                            <div className="w-10"></div>
-                        )}
-                        <h1 className="flex-1 font-serif text-xl font-bold tracking-widest uppercase text-center text-[#008080]">Leomenu</h1>
+                        ) : <div className="w-10"></div>}
+                        
+                        <div className="flex gap-2">
+                            <div className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'w-8 bg-[#008081]' : 'w-4 bg-gray-200'}`} />
+                            <div className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'w-8 bg-[#008081]' : 'w-4 bg-gray-200'}`} />
+                            <div className={`h-2 rounded-full transition-all duration-300 ${step >= 3 ? 'w-8 bg-[#008081]' : 'w-4 bg-gray-200'}`} />
+                        </div>
                         <div className="w-10"></div>
                     </div>
-                )}
 
-                <div className="p-6 sm:p-8 flex-1 flex flex-col">
-                    {/* Error Banner */}
-                    {error && (
-                        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 text-center border border-red-100 dark:border-red-900/30">
-                            {error}
-                        </div>
-                    )}
+                    <div className="p-6 flex-1 flex flex-col">
+                        {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 text-center">{error}</div>}
+                        {message && <div className="bg-green-50 text-green-700 p-3 rounded-xl text-sm mb-6 text-center">{message}</div>}
 
-                    {/* Step 1: Account */}
-                    {step === 1 && (
-                        <div className="animate-fade-in flex-1 flex flex-col">
-                            <h2 className="text-3xl font-bold mb-2">Crea il tuo account</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-8">Inserisci le credenziali di accesso.</p>
-
-                            <form onSubmit={handleStep1} className="flex-1 flex flex-col">
-                                <div className="space-y-4 flex-1">
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Email *</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                    </div>
-                                    <div className="relative mt-6">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Password *</label>
-                                        <input
-                                            type="password"
-                                            required
-                                            minLength={6}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                    </div>
-                                    <div className="mt-4 space-y-2">
-                                        <p className="text-xs text-gray-500 flex items-center gap-2"><CheckCircle className="w-3 h-3 text-[#008080]" /> Minimo 6 caratteri richiesti</p>
-                                    </div>
+                        {step === 1 && (
+                            <div className="animate-fade-in flex-1 flex flex-col">
+                                <h2 className="text-3xl font-bold mb-2">Scegli il tuo ruolo</h2>
+                                <p className="text-gray-500 mb-8">Sei proprietario di un'attività o cliente?</p>
+                                <div className="space-y-4">
+                                    <button onClick={() => { setRole('owner'); setStep(2); }} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
+                                        <div className="p-3 bg-teal-50 group-hover:bg-[#008081] group-hover:text-white rounded-xl text-[#008081] transition-colors"><Store className="w-8 h-8"/></div>
+                                        <div><h3 className="font-bold text-lg">Proprietario del locale</h3><p className="text-sm text-gray-500">Voglio creare il mio menù digitale</p></div>
+                                        <ArrowRight className="w-5 h-5 ml-auto text-gray-400 group-hover:text-[#008081]" />
+                                    </button>
+                                    <button onClick={() => { setRole('customer'); setStep(2); }} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
+                                        <div className="p-3 bg-teal-50 group-hover:bg-[#008081] group-hover:text-white rounded-xl text-[#008081] transition-colors"><User className="w-8 h-8"/></div>
+                                        <div><h3 className="font-bold text-lg">Cliente</h3><p className="text-sm text-gray-500">Voglio effettuare ordini</p></div>
+                                        <ArrowRight className="w-5 h-5 ml-auto text-gray-400 group-hover:text-[#008081]" />
+                                    </button>
                                 </div>
+                            </div>
+                        )}
 
-                                <button type="submit" disabled={loading} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${loading ? 'bg-[#008080]/50' : 'bg-[#008080] hover:bg-teal-700'}`}>
-                                    {loading ? 'Attendere...' : 'Crea un account'}
-                                </button>
-                                <p className="text-center text-sm text-gray-500 mt-4">
-                                    Hai già un account? <Link to="/login" className="text-[#008080] font-bold hover:underline">Accedi</Link>
-                                </p>
-                            </form>
-                        </div>
-                    )}
+                        {step === 2 && (
+                            <div className="animate-fade-in flex-1 flex flex-col">
+                                <h2 className="text-3xl font-bold mb-2">I tuoi dati</h2>
+                                <p className="text-gray-500 mb-8">Inserisci i tuoi dati personali.</p>
 
-                    {/* Step 2: Dati */}
-                    {step === 2 && (
-                        <div className="animate-fade-in flex-1 flex flex-col">
-                            <h2 className="text-3xl font-bold mb-2">I tuoi dati</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-8">Dicci chi sei.</p>
-
-                            <form onSubmit={handleStep2} className="flex-1 flex flex-col">
-                                <div className="space-y-6 flex-1">
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Nome *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={firstName}
-                                            onChange={(e) => setFirstName(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                    </div>
-                                    <div className="relative mt-6">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Cognome *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={lastName}
-                                            onChange={(e) => setLastName(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                    </div>
-                                </div>
-
-                                <button type="submit" disabled={!firstName || !lastName} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${!firstName || !lastName ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
-                                    Continua
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Step 3: Indirizzo e Telefono */}
-                    {step === 3 && (
-                        <div className="animate-fade-in flex-1 flex flex-col">
-                            <h2 className="text-3xl font-bold mb-2">Contatti & Posizione</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-6">Come possiamo metterci in contatto?</p>
-
-                            <form onSubmit={handleStep3} className="flex-1 flex flex-col">
-                                <div className="space-y-5 flex-1 overflow-y-auto pb-4 pr-1">
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Telefono *</label>
-                                        <input
-                                            type="tel"
-                                            required
-                                            minLength={6}
-                                            pattern="^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$"
-                                            title="Inserisci un numero di telefono valido"
-                                            value={telefono}
-                                            onChange={(e) => setTelefono(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Indirizzo completto *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            minLength={5}
-                                            value={indirizzo}
-                                            onChange={(e) => setIndirizzo(e.target.value)}
-                                            placeholder="Via e numero civico"
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 placeholder-gray-300"
-                                        />
-                                    </div>
+                                <form onSubmit={handleStep2Next} className="flex-1 flex flex-col space-y-4">
                                     <div className="flex gap-4">
-                                        <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Città *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                minLength={2}
-                                                value={citta}
-                                                onChange={(e) => setCitta(e.target.value)}
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                            />
-                                        </div>
-                                        <div className="relative w-1/3">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Prov. *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                pattern="^[a-zA-Z]{2}$"
-                                                title="Due lettere, es: RM o MI"
-                                                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Usa un formato che corrisponda a quello richiesto. (es: RM)')}
-                                                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
-                                                value={provincia}
-                                                onChange={(e) => setProvincia(e.target.value)}
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                            />
-                                        </div>
+                                        <div className="flex-1"><label htmlFor="firstName" className="text-xs font-bold text-gray-500 ml-2">Nome *</label><input id="firstName" name="firstName" autoComplete="given-name" type="text" required value={firstName} onChange={e=>setFirstName(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
+                                        <div className="flex-1"><label htmlFor="lastName" className="text-xs font-bold text-gray-500 ml-2">Cognome *</label><input id="lastName" name="lastName" autoComplete="family-name" type="text" required value={lastName} onChange={e=>setLastName(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
                                     </div>
-                                    <div className="flex gap-4">
-                                        <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">CAP *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                pattern="^[0-9]{5}$"
-                                                title="Il CAP deve avere esattamente 5 numeri (es: 20100)"
-                                                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Usa un formato che corrisponda a quello richiesto. Il CAP deve avere esattamente 5 numeri (es: 20100)')}
-                                                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
-                                                value={cap}
-                                                onChange={(e) => setCap(e.target.value)}
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                            />
-                                        </div>
-                                        <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Paese</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                minLength={3}
-                                                value={paese}
-                                                onChange={(e) => setPaese(e.target.value)}
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 text-gray-500"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                                    
+                                    <div><label htmlFor="regEmail" className="text-xs font-bold text-gray-500 ml-2">Email *</label><input id="regEmail" name="email" autoComplete="email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
+                                    
+                                    <div><label htmlFor="regPhone" className="text-xs font-bold text-gray-500 ml-2">Telefono *</label><input id="regPhone" name="phone" autoComplete="tel" type="tel" required value={phone} onChange={e=>setPhone(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
 
-                                <button type="submit" className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 bg-[#008080] hover:bg-teal-700`}>
-                                    Continua
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Step 4: Privacy */}
-                    {step === 4 && (
-                        <div className="animate-fade-in flex-1 flex flex-col">
-                            <h2 className="text-3xl font-bold mb-2">Preferenze Privacy</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-8">* Informazioni richieste</p>
-
-                            <form onSubmit={handleStep4} className="flex-1 flex flex-col">
-                                <div className="space-y-6 flex-1">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            <span className="text-red-500 mr-1">*</span>
-                                            Ho letto e accettato i <Link to="/termini-condizioni" target="_blank" className="text-[#008080] hover:underline">Termini e Condizioni</Link> e la <Link to="/privacy-policy" target="_blank" className="text-[#008080] hover:underline">Privacy Policy</Link> (obbligatorio).
-                                        </p>
-                                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
-                                            <input type="checkbox" className="sr-only peer" checked={privacyAccepted} onChange={(e) => setPrivacyAccepted(e.target.checked)} />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#008080]"></div>
-                                        </label>
-                                    </div>
-
-                                    <div className="w-full h-px bg-gray-200 dark:bg-gray-800 my-4"></div>
-
-                                    <div className="flex items-start justify-between gap-4">
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Accetto di ricevere comunicazioni informative e promozionali con sconti dedicati (facoltativo).
-                                        </p>
-                                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
-                                            <input type="checkbox" className="sr-only peer" checked={marketingAccepted} onChange={(e) => setMarketingAccepted(e.target.checked)} />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#008080]"></div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <button type="submit" disabled={!privacyAccepted} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${!privacyAccepted ? 'bg-gray-200 text-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
-                                    Continua
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Step 5: Locale */}
-                    {step === 5 && (
-                        <div className="animate-fade-in flex-1 flex flex-col">
-                            <h2 className="text-3xl font-bold mb-2">Il tuo business</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-6">Ultimo passo, parlaci della tua attività.</p>
-
-                            <form onSubmit={handleStep5} className="flex-1 flex flex-col">
-                                <div className="space-y-5 flex-1 overflow-y-auto pb-4 pr-1">
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Nome Attività *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={businessName}
-                                            onChange={(e) => setBusinessName(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        />
-                                        {businessName && (
-                                            <p className="text-xs text-[#008080] font-medium mt-1 ml-3">
-                                                Link: leomenu.it/{businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <div className="relative flex-1">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Tipo *</label>
-                                            <select
-                                                value={businessType}
-                                                onChange={(e) => setBusinessType(e.target.value)}
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                            >
-                                                <option value="Pizzería">Pizzeria (Layout base)</option>
-                                                <option value="Ristorante">Ristorante (Vuoto)</option>
+                                    {role === 'owner' && (
+                                        <>
+                                        <div><label htmlFor="businessName" className="text-xs font-bold text-gray-500 ml-2">Nome del Ristorante *</label><input id="businessName" name="businessName" autoComplete="organization" type="text" required value={businessName} onChange={e=>setBusinessName(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
+                                        <div>
+                                            <label htmlFor="businessType" className="text-xs font-bold text-gray-500 ml-2">Tipologia *</label>
+                                            <select id="businessType" name="businessType" required value={businessType} onChange={e=>setBusinessType(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200">
+                                                <option value="Ristorante">Ristorante</option>
+                                                <option value="Pizzeria">Pizzeria</option>
+                                                <option value="Bar">Bar</option>
+                                                <option value="Gelateria">Gelateria</option>
+                                                <option value="Pub">Pub</option>
                                             </select>
                                         </div>
-                                        <div className="relative w-1/3">
-                                            <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Coperti</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={numeroCoperti}
-                                                onChange={(e) => setNumeroCoperti(e.target.value)}
-                                                placeholder="es. 50"
-                                                className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300 placeholder-gray-300"
-                                            />
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
 
-                                    <div className="relative">
-                                        <label className="absolute -top-2.5 left-3 z-10 bg-white dark:bg-[#262626] shadow-sm rounded-full px-2 py-1 text-xs font-bold text-gray-500">Hai scoperto Leomenu tramite *</label>
-                                        <select
-                                            value={scopertoTramite}
-                                            onChange={(e) => setScopertoTramite(e.target.value)}
-                                            className="w-full p-4 bg-[#FBFBFB] shadow-premium rounded-3xl dark:bg-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
-                                        >
-                                            <option>Google</option>
-                                            <option>Social Media</option>
-                                            <option>Passaparola / Amici</option>
-                                            <option>Pubblicità online</option>
-                                            <option>Altro</option>
-                                        </select>
-                                    </div>
+                                    <button type="submit" className={`w-full text-white py-4 rounded-2xl font-bold hover:bg-teal-700 transition-colors mt-6 bg-[#008081]`}>Continua</button>
+                                </form>
+                                <div className="mt-8 text-center text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400">Hai già un account? </span>
+                                    <Link to="/login" className="text-[#008081] font-bold hover:underline">Accedi</Link>
                                 </div>
-
-                                <button type="submit" disabled={loading || !businessName} className={`w-full text-white py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-95 ${loading || !businessName ? 'bg-gray-400' : 'bg-[#008080] hover:bg-teal-700'}`}>
-                                    {loading ? 'Preparazione in corso...' : 'Inizia Ora'}
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Step 6: Success */}
-                    {step === 6 && (
-                        <div className="animate-fade-in flex-1 flex flex-col items-center justify-center text-center">
-                            <div className="relative mb-6 group">
-                                <div className="absolute inset-0 bg-[#008080] rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
-                                <CheckCircle className="w-24 h-24 text-[#008080] relative z-10" strokeWidth={1.5} />
                             </div>
-                            <h2 className="text-3xl font-bold mb-4">Benvenuto in App!</h2>
-                            <p className="text-gray-500 dark:text-gray-400 mb-10 max-w-[250px] mx-auto">
-                                Congratulazioni per l'iscrizione. Il tuo menù digitale è pronto.
-                            </p>
+                        )}
 
-                            <button onClick={handleFinish} className="w-full text-white bg-[#008080] hover:bg-teal-700 py-4 rounded-full font-bold shadow-md transition-transform active:scale-95">
-                                Fatto
-                            </button>
-                        </div>
-                    )}
+                        {step === 3 && (
+                            <div className="animate-fade-in flex-1 flex flex-col">
+                                <h2 className="text-3xl font-bold mb-2">Sicurezza</h2>
+                                <p className="text-gray-500 mb-8">Scegli una password per il tuo account.</p>
+
+                                <form onSubmit={handleStep3Submit} className="flex-1 flex flex-col space-y-4">
+                                    <div><label htmlFor="regPassword" className="text-xs font-bold text-gray-500 ml-2">Password *</label><input id="regPassword" name="password" autoComplete="new-password" type="password" required minLength={6} value={password} onChange={e=>setPassword(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl transition-all focus:ring-2 focus:ring-[#008081]/20 border border-gray-200"/></div>
+
+                                    <label htmlFor="privacyAccepted" className="flex items-center gap-3 mt-4 text-sm text-gray-600"><input id="privacyAccepted" name="privacyAccepted" type="checkbox" required checked={privacyAccepted} onChange={e=>setPrivacyAccepted(e.target.checked)} className="w-5 h-5 text-[#008081] rounded focus:ring-[#008081]"/>Accetto la Policy e i Termini</label>
+                                    
+                                    <button type="submit" disabled={loading || !privacyAccepted} className={`w-full text-white py-4 rounded-2xl font-bold hover:bg-teal-700 transition-colors mt-6 ${(!privacyAccepted) ? 'bg-gray-300' : 'bg-[#008081]'}`}>{loading ? 'Attendi...' : 'Crea account'}</button>
+                                </form>
+                                <div className="mt-8 text-center text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400">Hai già un account? </span>
+                                    <Link to="/login" className="text-[#008081] font-bold hover:underline">Accedi</Link>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
-

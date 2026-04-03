@@ -5,15 +5,15 @@ export default function Termini() {
     return (
         <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen p-6 md:p-12">
             <div className="max-w-3xl mx-auto">
-                <Link to="/" className="inline-flex items-center gap-2 text-[#008080] hover:underline mb-8 font-bold">
+                <Link to="/" className="inline-flex items-center gap-2 text-[#008081] hover:underline mb-8 font-bold">
                     <ArrowLeft className="w-5 h-5" /> Torna alla Home
                 </Link>
 
                 <div className="flex items-center gap-4 mb-8">
-                    <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-2xl text-[#008080]">
+                    <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-2xl text-[#008081]">
                         <FileText className="w-8 h-8" />
                     </div>
-                    <h1 className="text-4xl font-serif font-bold">Termini e Condizioni</h1>
+                    <h1 className="text-4xl font-sans font-bold">Termini e Condizioni</h1>
                 </div>
 
                 <div className="bg-[#FBFBFB] dark:bg-[#262626] rounded-3xl p-8 md:p-12 shadow-premium border border-transparent dark:border-gray-800 prose prose-teal dark:prose-invert max-w-none">
@@ -41,3 +41,6 @@ export default function Termini() {
         </div>
     );
 }
+
+
+

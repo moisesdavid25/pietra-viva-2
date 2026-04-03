@@ -61,8 +61,8 @@ export default function UpdatePassword() {
                 <div className="flex-grow flex flex-col px-6 pt-12 pb-24 max-w-md mx-auto w-full text-center">
                     <div className="flex justify-center mb-6">
                         <div className="flex items-center gap-2">
-                            <Utensils className="w-10 h-10 text-[#008080]" />
-                            <span className="font-serif text-3xl font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
+                            <Utensils className="w-10 h-10 text-[#008081]" />
+                            <span className="font-sans text-3xl font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
                         </div>
                     </div>
 
@@ -76,7 +76,7 @@ export default function UpdatePassword() {
 
                     <button
                         onClick={() => navigate('/login')}
-                        className="mt-12 w-full py-4 bg-[#008080] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
+                        className="mt-12 w-full py-4 bg-[#008081] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
                     >
                         Vai al Login
                     </button>
@@ -91,8 +91,8 @@ export default function UpdatePassword() {
                 {/* Top bar with Logo */}
                 <div className="flex items-center justify-between mb-10">
                     <div className="flex items-center gap-2">
-                        <Utensils className="w-6 h-6 text-[#008080]" />
-                        <span className="font-serif text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
+                        <Utensils className="w-6 h-6 text-[#008081]" />
+                        <span className="font-sans text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
                     </div>
                 </div>
 
@@ -113,13 +113,13 @@ export default function UpdatePassword() {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
+                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008081]/20 transition-all duration-300"
                             placeholder="Password"
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-800 dark:text-gray-300 hover:text-[#008080] dark:hover:text-[#008080]"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-800 dark:text-gray-300 hover:text-[#008081] dark:hover:text-[#008081]"
                         >
                             {showPassword ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                         </button>
@@ -131,13 +131,13 @@ export default function UpdatePassword() {
                             required
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008080]/20 transition-all duration-300"
+                            className="w-full bg-[#FBFBFB] rounded-3xl shadow-premium p-4 focus:outline-none placeholder-gray-500 dark:placeholder-gray-400 text-[16px] pr-12 focus:ring-2 focus:ring-[#008081]/20 transition-all duration-300"
                             placeholder="Conferma password"
                         />
                         <button
                             type="button"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-800 dark:text-gray-300 hover:text-[#008080] dark:hover:text-[#008080]"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-800 dark:text-gray-300 hover:text-[#008081] dark:hover:text-[#008081]"
                         >
                             {showConfirmPassword ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                         </button>
@@ -168,14 +168,14 @@ export default function UpdatePassword() {
                         form="update-form"
                         type="submit"
                         disabled={loading || !password || !confirmPassword}
-                        className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${loading || !password ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080]'}`}
+                        className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${loading || !password ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008081]'}`}
                     >
                         {loading ? 'Caricamento...' : 'Reset password'}
                     </button>
                     <button
                         type="button"
                         onClick={() => navigate('/login')}
-                        className="w-full py-4 bg-transparent border-2 border-[#008080] text-[#008080] font-bold text-[17px] text-center transition-colors rounded-xl hover:bg-[#008080]/10"
+                        className="w-full py-4 bg-transparent border-2 border-[#008081] text-[#008081] font-bold text-[17px] text-center transition-colors rounded-xl hover:bg-[#008081]/10"
                     >
                         Annulla
                     </button>
@@ -184,3 +184,6 @@ export default function UpdatePassword() {
         </div>
     );
 }
+
+
+

@@ -193,9 +193,9 @@ export default function OrdinePage() {
         <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
             <header className="sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <ArrowLeft className="w-6 h-6 text-[#008080]" />
+                    <ArrowLeft className="w-6 h-6 text-[#008081]" />
                 </button>
-                <h1 className="font-serif text-[1.35rem] font-extrabold tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">Il tuo Ordine</h1>
+                <h1 className="font-sans text-[1.35rem] font-extrabold tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">Il tuo Ordine</h1>
                 <div className="w-10"></div>
             </header>
 
@@ -205,15 +205,15 @@ export default function OrdinePage() {
                         <div className="flex flex-col animate-fade-in pb-10">
                             <div className="flex flex-col items-center justify-center py-10 text-center opacity-60">
                                 <span className="text-6xl mb-4">🛒</span>
-                                <p className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">Il tuo ordine è vuoto</p>
+                                <p className="text-xl font-sans font-bold text-gray-900 dark:text-white mb-2">Il tuo ordine è vuoto</p>
                                 <p className="text-gray-600 dark:text-gray-400">Aggiungi dei prodotti dal menù per iniziare.</p>
-                                <Link to={`/${slug}`} className="mt-6 bg-gradient-to-r from-[#008080] to-teal-500 text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+                                <Link to={`/${slug}`} className="mt-6 bg-gradient-to-r from-[#008081] to-teal-500 text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                                     Vai al Menù
                                 </Link>
                             </div>
 
                             <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-8 w-full max-w-2xl mx-auto">
-                                <h3 className="text-lg font-serif font-extrabold tracking-widest text-center text-[#1A1A1A] dark:text-white uppercase mb-6">Stato Ordini in tempo reale</h3>
+                                <h3 className="text-lg font-sans font-extrabold tracking-widest text-center text-[#1A1A1A] dark:text-white uppercase mb-6">Stato Ordini in tempo reale</h3>
                                 {publicOrders.length === 0 ? (
                                     <div className="text-center py-10 bg-gray-50 dark:bg-[#1A1A1A] rounded-3xl border border-gray-100 dark:border-gray-800">
                                         <p className="text-gray-500 dark:text-gray-400 italic font-medium">Nessun ordine in corso. Il tuo sarà il primo!</p>
@@ -241,8 +241,8 @@ export default function OrdinePage() {
                                         </div>
 
                                         {/* PRONTO COLUMN */}
-                                        <div className="bg-[#008080]/5 dark:bg-[#008080]/10 rounded-2xl p-4 border border-[#008080]/10 dark:border-[#008080]/20">
-                                            <h4 className="text-center font-bold text-[#008080] dark:text-teal-400 text-sm tracking-wider uppercase mb-4 border-b border-[#008080]/20 dark:border-[#008080]/40 pb-2">Pronto</h4>
+                                        <div className="bg-[#008081]/5 dark:bg-[#008081]/10 rounded-2xl p-4 border border-[#008081]/10 dark:border-[#008081]/20">
+                                            <h4 className="text-center font-bold text-[#008081] dark:text-teal-400 text-sm tracking-wider uppercase mb-4 border-b border-[#008081]/20 dark:border-[#008081]/40 pb-2">Pronto</h4>
 
                                             {publicOrders.filter(o => o.status === 'pronto').length === 0 ? (
                                                 <div className="flex justify-center items-center py-8 opacity-20">
@@ -251,7 +251,7 @@ export default function OrdinePage() {
                                             ) : (
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                     {publicOrders.filter(o => o.status === 'pronto').map(order => (
-                                                        <div key={order.id} className="bg-[#008080] dark:bg-teal-600 p-3 rounded-3xl shadow-premium text-center animate-bounce-slow border border-transparent flex flex-col justify-center items-center transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                                                        <div key={order.id} className="bg-[#008081] dark:bg-teal-600 p-3 rounded-3xl shadow-premium text-center animate-bounce-slow border border-transparent flex flex-col justify-center items-center transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                                                             <span className="text-[0.65rem] font-bold text-teal-100/80 dark:text-teal-200/80 uppercase tracking-widest mb-0.5">Ordine</span>
                                                             <span className="text-xl font-black text-white"><span className="text-teal-200/50 font-medium mr-0.5">#</span>{order.daily_order_number || order.id.split('-')[0].toUpperCase()}</span>
                                                         </div>
@@ -281,19 +281,19 @@ export default function OrdinePage() {
                                                         </span>
                                                     ))}
                                                     {item.customizations.added?.map((a: any, i: number) => (
-                                                        <span key={`a-${i}`} className="text-[10px] font-bold bg-[#008080]/10 text-[#008080] dark:bg-teal-900/30 dark:text-teal-400 px-2 py-0.5 rounded-md uppercase tracking-wider border border-[#008080]/20 dark:border-teal-900/50">
+                                                        <span key={`a-${i}`} className="text-[10px] font-bold bg-[#008081]/10 text-[#008081] dark:bg-teal-900/30 dark:text-teal-400 px-2 py-0.5 rounded-md uppercase tracking-wider border border-[#008081]/20 dark:border-teal-900/50">
                                                             + {a.name}
                                                         </span>
                                                     ))}
                                                 </div>
                                             )}
 
-                                            <span className="text-sm text-[#008080] font-bold">{item.price.toFixed(2)}€</span>
+                                            <span className="text-sm text-[#008081] font-bold">{item.price.toFixed(2)}€</span>
                                         </div>
                                         <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#1A1A1A] rounded-full p-1 border border-gray-200 dark:border-gray-700">
                                             <button onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 transition-colors hover:text-red-500">-</button>
                                             <span className="font-bold w-4 text-center">{item.quantity}</span>
-                                            <button onClick={() => addToCart(item)} className="w-8 h-8 flex items-center justify-center font-bold text-[#008080] transition-colors hover:text-teal-700">+</button>
+                                            <button onClick={() => addToCart(item)} className="w-8 h-8 flex items-center justify-center font-bold text-[#008081] transition-colors hover:text-teal-700">+</button>
                                         </div>
                                     </div>
                                 ))}
@@ -305,20 +305,20 @@ export default function OrdinePage() {
                                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Totale*</h3>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">{totalItems} prodotto/i nel tuo ordine</p>
                                     </div>
-                                    <span className="text-3xl font-bold text-[#008080] dark:text-[#008080]">€ {totalPrice.toFixed(2)}</span>
+                                    <span className="text-3xl font-bold text-[#008081] dark:text-[#008081]">€ {totalPrice.toFixed(2)}</span>
                                 </div>
 
                                 <div className="mb-6 space-y-4">
                                     <div className="flex bg-gray-100 dark:bg-[#1A1A1A] rounded-xl p-1">
                                         <button
                                             onClick={() => setOrderType('tavolo')}
-                                            className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-colors ${orderType === 'tavolo' ? 'bg-white dark:bg-[#252525] text-[#008080] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                            className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-colors ${orderType === 'tavolo' ? 'bg-white dark:bg-[#252525] text-[#008081] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                         >
                                             Al Tavolo
                                         </button>
                                         <button
                                             onClick={() => setOrderType('asporto')}
-                                            className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-colors ${orderType === 'asporto' ? 'bg-white dark:bg-[#252525] text-[#008080] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                            className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-colors ${orderType === 'asporto' ? 'bg-white dark:bg-[#252525] text-[#008081] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                         >
                                             Da Asporto
                                         </button>
@@ -330,7 +330,7 @@ export default function OrdinePage() {
                                             <input
                                                 type="text"
                                                 placeholder="Es. 5"
-                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008080] dark:text-white shadow-premium transition-all text-center text-xl font-bold"
+                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white shadow-premium transition-all text-center text-xl font-bold"
                                                 value={tableNumber}
                                                 onChange={e => setTableNumber(e.target.value)}
                                             />
@@ -341,7 +341,7 @@ export default function OrdinePage() {
                                             <input
                                                 type="text"
                                                 placeholder="Es. Mario Rossi"
-                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008080] dark:text-white shadow-premium transition-all font-bold"
+                                                className="w-full p-4 bg-[#FBFBFB] dark:bg-[#252525] border border-transparent dark:border-gray-700 rounded-3xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white shadow-premium transition-all font-bold"
                                                 value={customerName}
                                                 onChange={e => setCustomerName(e.target.value)}
                                             />
@@ -359,7 +359,7 @@ export default function OrdinePage() {
                                     <button
                                         onClick={handleConfirmOrder}
                                         disabled={isConfirming}
-                                        className="w-full bg-gradient-to-r from-[#008080] to-teal-600 hover:from-teal-600 hover:to-[#008080] text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98] uppercase tracking-widest text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100 border-none"
+                                        className="w-full bg-gradient-to-r from-[#008081] to-teal-600 hover:from-teal-600 hover:to-[#008081] text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98] uppercase tracking-widest text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100 border-none"
                                     >
                                         {isConfirming ? (
                                             <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -381,11 +381,11 @@ export default function OrdinePage() {
                             <p className="text-gray-600 dark:text-gray-400 mb-8">Il tuo ordine è stato inviato in cucina con successo.</p>
 
                             <div className="bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-800 rounded-3xl p-8 mb-8 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-[#008080]/10 rounded-bl-full"></div>
-                                <div className="absolute bottom-0 left-0 w-16 h-16 bg-[#008080]/10 rounded-tr-full"></div>
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-[#008081]/10 rounded-bl-full"></div>
+                                <div className="absolute bottom-0 left-0 w-16 h-16 bg-[#008081]/10 rounded-tr-full"></div>
                                 <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Numero Ordine</p>
-                                <p className="text-6xl font-black text-[#008080] tracking-tighter">
-                                    <span className="text-2xl text-[#008080]/50 align-top mr-1">#</span>
+                                <p className="text-6xl font-black text-[#008081] tracking-tighter">
+                                    <span className="text-2xl text-[#008081]/50 align-top mr-1">#</span>
                                     {orderConfirmed.dailyNumber}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-4 uppercase tracking-widest">ID Ref: {orderConfirmed.shortId}</p>
@@ -399,7 +399,7 @@ export default function OrdinePage() {
                                             <p className="font-bold text-lg">In Coda</p>
                                             <p className="text-sm">In attesa che la cucina inizi la preparazione.</p>
                                             {orderConfirmed.queue > 0 && (
-                                                <p className="text-xs text-[#008080] font-bold mt-1">⏳ Hai {orderConfirmed.queue} {orderConfirmed.queue === 1 ? 'ordine' : 'ordini'} davanti a te.</p>
+                                                <p className="text-xs text-[#008081] font-bold mt-1">⏳ Hai {orderConfirmed.queue} {orderConfirmed.queue === 1 ? 'ordine' : 'ordini'} davanti a te.</p>
                                             )}
                                         </div>
                                     </div>
@@ -426,7 +426,7 @@ export default function OrdinePage() {
 
                             <Link
                                 to={`/${slug}`}
-                                className="inline-block w-full bg-[#008080] hover:bg-teal-700 text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]"
+                                className="inline-block w-full bg-[#008081] hover:bg-teal-700 text-white font-bold py-4 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]"
                             >
                                 Torna al Menù
                             </Link>
@@ -439,3 +439,6 @@ export default function OrdinePage() {
         </div>
     );
 }
+
+
+

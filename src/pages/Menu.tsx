@@ -1,4 +1,4 @@
-import { ArrowLeft, Star, Plus, Droplets, Wine } from 'lucide-react';
+import { ArrowLeft, Star, Plus, Droplets, Wine, Zap } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
@@ -61,7 +61,7 @@ export default function MenuPage() {
       setRestaurantId(resData.id);
 
       const { data: cats, error: catError } = await db.from('categories')
-        .select('*')
+        .select('id,name,position,active,section')
         .eq('section', section)
         .eq('restaurant_id', resData.id)
         .eq('active', true)
@@ -71,16 +71,18 @@ export default function MenuPage() {
       if (catError || !cats) return;
 
       // Fetch product_extras for this restaurant
-      const { data: extrasData } = await db.from('product_extras').select('*').eq('restaurant_id', resData.id).eq('available', true);
+      const { data: extrasData } = await db.from('product_extras').select('id,name,category,price,available').eq('restaurant_id', resData.id).eq('available', true);
       if (extrasData) setExtras(extrasData);
 
       const menuData: Category[] = [];
       for (const cat of cats) {
-        const { data: prods } = await db.from('products').select('*').eq('category_id', cat.id).eq('active', true).order('sort_order', { ascending: true }).order('id');
-        menuData.push({
-          ...cat,
-          products: prods || []
-        });
+        const { data: prods } = await db.from('products').select('id,name,description,price,price_unit,image_url,sort_order,active,category_id').eq('category_id', cat.id).eq('active', true).order('sort_order', { ascending: true }).order('id');
+        if (prods && prods.length > 0) {
+          menuData.push({
+            ...cat,
+            products: prods
+          });
+        }
       }
       setCategories(menuData);
       if (menuData.length > 0) {
@@ -154,7 +156,7 @@ export default function MenuPage() {
     <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
       <header className="sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <ArrowLeft className="w-6 h-6 text-[#008080]" />
+          <ArrowLeft className="w-6 h-6 text-[#008081]" />
         </button>
         <h1 className="font-sans text-[1.35rem] font-black tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">{section}</h1>
         <div className="w-10"></div>
@@ -179,8 +181,8 @@ export default function MenuPage() {
             className={clsx(
               "flex flex-col items-center justify-center min-w-[100px] h-[72px] rounded-2xl transition-all duration-300 border",
               activeCategory === cat.id
-                ? "bg-gradient-to-br from-[#008080] to-teal-600 text-white shadow-md shadow-[#008080]/30 border-transparent transform scale-105"
-                : "bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800 hover:border-[#008080] hover:shadow-sm"
+                ? "bg-gradient-to-br from-[#008081] to-teal-600 text-white shadow-md shadow-[#008081]/30 border-transparent transform scale-105"
+                : "bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800 hover:border-[#008081] hover:shadow-sm"
             )}
           >
             <span className="text-xs font-bold tracking-wider uppercase text-center w-full truncate px-2">{cat.name}</span>
@@ -194,7 +196,7 @@ export default function MenuPage() {
         {categories.map((category) => (
           <div key={category.id} id={`category-${category.id}`} className="scroll-mt-36">
             <h2 className="text-2xl font-black font-sans text-[#1A1A1A] dark:text-[#FDFCF0] mb-6 tracking-tight flex items-center gap-3">
-              <span className="w-8 h-[2px] bg-[#008080] rounded-full"></span>
+              <span className="w-8 h-[2px] bg-[#008081] rounded-full"></span>
               {category.name}
             </h2>
             <div className="space-y-6">
@@ -208,18 +210,18 @@ export default function MenuPage() {
                       <div>
                         <div className="flex justify-between items-start">
                           <h3 className="font-sans text-xl font-bold text-[#1A1A1A] dark:text-white leading-tight">{product.name}</h3>
-                          <span className="text-[#008080] font-bold font-sans text-lg">{product.price.toFixed(2)}€</span>
+                          <span className="text-[#008081] font-bold font-sans text-lg">{product.price.toFixed(2)}€</span>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-2">{product.description}</p>
                       </div>
                       <div className="flex items-center gap-3 mt-3 justify-between">
                         <div className="flex gap-2">
                           <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded text-[10px] text-gray-500 dark:text-gray-300">
-                            <Droplets className="w-3 h-3 text-[#008080]" />
+                            <Droplets className="w-3 h-3 text-[#008081]" />
                             14.5°
                           </div>
                           <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded text-[10px] text-gray-500 dark:text-gray-300">
-                            <Wine className="w-3 h-3 text-[#008080]" />
+                            <Wine className="w-3 h-3 text-[#008081]" />
                             750mL
                           </div>
                         </div>
@@ -230,7 +232,7 @@ export default function MenuPage() {
                           }}
                           className={clsx(
                             "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-8 h-8 focus:outline-none",
-                            addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008080] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008080]/30 active:scale-95 border-none"
+                            addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008081]/30 active:scale-95 border-none"
                           )}
                         >
                           {addedItems[product.id] ? <span className="text-sm font-bold">✓</span> : <Plus className="w-4 h-4" />}
@@ -268,7 +270,7 @@ export default function MenuPage() {
                           }}
                           className={clsx(
                             "rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-10 h-10 flex-shrink-0 focus:outline-none",
-                            addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008080] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008080]/30 active:scale-95 border-none cursor-pointer"
+                            addedItems[product.id] ? "bg-green-500 text-white scale-110 shadow-green-500/30" : "bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg hover:shadow-[#008081]/30 active:scale-95 border-none cursor-pointer"
                           )}
                         >
                           {addedItems[product.id] ? <span className="text-xl font-bold">✓</span> : <Plus className="w-6 h-6" />}
@@ -282,6 +284,18 @@ export default function MenuPage() {
           </div>
         ))}
       </main>
+
+      {/* 🚀 Viral B2B Growth Footer */}
+      <div className="pb-36 pt-8 flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity">
+        <Link to="/" target="_blank" className="flex flex-col items-center gap-1 group">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-[#008081] transition-colors">Powered by</span>
+          <div className="flex items-center gap-1.5 mb-1">
+             <div className="bg-[#008081] text-white p-0.5 rounded-md shadow-sm"><Zap className="w-3 h-3 fill-white" /></div>
+             <span className="font-extrabold text-lg tracking-tighter text-gray-800 dark:text-gray-200 group-hover:text-[#008081] transition-colors">Leomenu</span>
+          </div>
+          <span className="text-[10px] font-black text-gray-500 bg-gray-200 dark:bg-gray-800 px-4 py-1.5 rounded-full group-hover:bg-teal-50 group-hover:text-[#008081] transition-colors border border-transparent group-hover:border-teal-100">Crea il tuo menù gratis</span>
+        </Link>
+      </div>
 
       <BottomNav />
 
@@ -302,3 +316,5 @@ export default function MenuPage() {
     </div>
   );
 }
+
+

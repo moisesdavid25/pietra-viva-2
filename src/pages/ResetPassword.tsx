@@ -50,14 +50,14 @@ export default function ResetPassword() {
                             <ChevronLeft className="w-6 h-6" />
                         </Link>
                         <div className="flex items-center gap-2">
-                            <Utensils className="w-6 h-6 text-[#008080]" />
-                            <span className="font-serif text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
+                            <Utensils className="w-6 h-6 text-[#008081]" />
+                            <span className="font-sans text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
                         </div>
                     </div>
 
                     <div className="flex items-center mb-4">
                         <div className="relative">
-                            <KeyRound className="w-10 h-10 text-[#008080]" />
+                            <KeyRound className="w-10 h-10 text-[#008081]" />
                             <div className="absolute -bottom-2 -right-2 bg-[#005c5c] rounded-sm p-0.5 animate-pulse">
                                 <span className="text-[10px] font-bold text-white leading-none px-1">L</span>
                             </div>
@@ -80,7 +80,7 @@ export default function ResetPassword() {
                 <div className="fixed bottom-0 left-0 w-full z-10 px-6 pb-6 pt-2 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF] dark:from-[#1A1A1A] dark:via-[#1A1A1A] to-transparent">
                     <button
                         onClick={() => navigate('/login')}
-                        className="w-full py-4 bg-[#008080] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
+                        className="w-full py-4 bg-[#008081] text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1"
                     >
                         Ok capito
                     </button>
@@ -99,14 +99,14 @@ export default function ResetPassword() {
                         <ChevronLeft className="w-6 h-6" />
                     </Link>
                     <div className="flex items-center gap-2">
-                        <Utensils className="w-6 h-6 text-[#008080]" />
-                        <span className="font-serif text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
+                        <Utensils className="w-6 h-6 text-[#008081]" />
+                        <span className="font-sans text-lg font-bold tracking-widest uppercase text-gray-900 dark:text-white">Leomenu</span>
                     </div>
                 </div>
 
                 <div className="flex items-center mb-4">
                     <div className="relative">
-                        <KeyRound className="w-10 h-10 text-[#008080]" />
+                        <KeyRound className="w-10 h-10 text-[#008081]" />
                         <div className="absolute -bottom-2 -right-2 bg-[#005c5c] rounded-sm p-0.5">
                             <span className="text-[10px] font-bold text-white leading-none px-1">L</span>
                         </div>
@@ -130,7 +130,7 @@ export default function ResetPassword() {
                 )}
 
                 <form id="reset-form" onSubmit={handleReset} className="flex flex-col space-y-4">
-                    <div className="relative rounded-3xl shadow-premium bg-[#FBFBFB] dark:bg-[#262626] pt-2 px-3 pb-1 focus-within:ring-2 focus-within:ring-[#008080]/20 transition-all duration-300">
+                    <div className="relative rounded-3xl shadow-premium bg-[#FBFBFB] dark:bg-[#262626] pt-2 px-3 pb-1 focus-within:ring-2 focus-within:ring-[#008081]/20 transition-all duration-300">
                         <label className="absolute -top-3 left-3 bg-[#FBFBFB] shadow-sm rounded-full px-2 py-1 dark:bg-[#262626] text-[11px] font-bold text-gray-500">
                             Email
                         </label>
@@ -151,7 +151,7 @@ export default function ResetPassword() {
                     form="reset-form"
                     type="submit"
                     disabled={loading || !email}
-                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${(loading || !email) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008080]'}`}
+                    className={`w-full py-4 text-white font-bold text-[17px] text-center transition-all duration-300 rounded-3xl shadow-premium hover:shadow-lg hover:-translate-y-1 ${(loading || !email) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#008081]'}`}
                 >
                     {loading ? 'Caricamento...' : 'Reset password'}
                 </button>
@@ -159,3 +159,6 @@ export default function ResetPassword() {
         </div>
     );
 }
+
+
+
