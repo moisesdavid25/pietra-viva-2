@@ -138,10 +138,13 @@ export default function RestaurantHome() {
     return <NotFound />;
   }
 
+  const brandColor = images.brand_color || images.theme_color || '#008081';
+
   return (
-    <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+    <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased"
+      style={{ '--brand': brandColor } as React.CSSProperties}>
       {/* Dynamic Cover Header */}
-      <div className="relative w-full h-48 sm:h-56 bg-[#008081]/10 dark:bg-[#008081]/20 overflow-hidden">
+      <div className="relative w-full h-48 sm:h-56 overflow-hidden" style={{ backgroundColor: `${brandColor}18` }}>
         {images.cover_image_url && (
           <img src={images.cover_image_url} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
         )}
@@ -235,7 +238,7 @@ export default function RestaurantHome() {
                   <h3 className="text-2xl font-extrabold text-white tracking-[0.2em] uppercase font-sans drop-shadow-md">
                     {section} {section === 'Dessert' && '🍰'}
                   </h3>
-                  <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-[#008081] group-hover:to-teal-500 transition-colors duration-300">
+                  <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center transition-colors duration-300" style={{ ['--tw-bg-opacity' as any]: 1 }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = brandColor)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}>
                     <ChevronRight className="w-4 h-4 text-white drop-shadow-md" />
                   </div>
                 </div>
@@ -243,7 +246,7 @@ export default function RestaurantHome() {
             );
           })}
 
-          {images.visibility_menu !== 'false' && (
+          {images.visibility_menu !== 'false' && images.menu_del_giorno_enabled !== 'false' && (
             <Link to={`/${slug}/menu-del-giorno`} className="group relative block w-full h-40 rounded-3xl overflow-hidden shadow-premium hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="absolute inset-0 bg-gray-900">
                 <FadeImage alt="Menu" src={images.home_image_menu || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=400&fit=crop'} />

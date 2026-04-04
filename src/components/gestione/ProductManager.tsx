@@ -443,6 +443,18 @@ export default function ProductManager({ restaurantId, categories, products, onR
         onRefresh();
     };
 
+    // ── Delete single sub-category ────────────────────────────────────────────
+    const handleDeleteSubCategory = async (cat: Category) => {
+        const macroSubCount = categories.filter(c => c.section === cat.section).length;
+        if (macroSubCount <= 1) {
+            showToast('Devi avere almeno una sezione nel reparto. Elimina il reparto intero.', 'error');
+            return;
+        }
+        await db.from('categories').delete().eq('id', cat.id);
+        showToast(`Sezione "${cat.name}" eliminata`);
+        onRefresh();
+    };
+
     // ── Computed data ─────────────────────────────────────────────────────────
     const macroSections = Array.from(new Set(categories.map(c => c.section)));
 
@@ -642,14 +654,22 @@ export default function ProductManager({ restaurantId, categories, products, onR
                             <div key={cat.id} className="bg-white dark:bg-[#1C1C1C] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
                                 {/* Sub-cat header */}
                                 <div
-                                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1A1A1A] transition-colors border-b border-gray-100 dark:border-gray-800"
+                                    className="group flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1A1A1A] transition-colors border-b border-gray-100 dark:border-gray-800"
                                     onClick={() => setExpandedSubCats(prev => ({ ...prev, [cat.id]: !isExpanded }))}
                                 >
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-black text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest">{cat.name}</h3>
                                         <span className="text-[10px] font-black bg-[#008081]/10 text-[#008081] px-2 py-0.5 rounded-full">{catProds.length}</span>
                                     </div>
-                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={e => { e.stopPropagation(); handleDeleteSubCategory(cat); }}
+                                            className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                    </div>
                                 </div>
 
                                 {/* DnD Product list */}

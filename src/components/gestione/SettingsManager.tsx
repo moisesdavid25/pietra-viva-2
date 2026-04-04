@@ -384,7 +384,32 @@ export default function SettingsManager({
         </div>
       </Section>
 
-      {/* 7 — URL del Menù */}
+      {/* 7 — Menù del Giorno */}
+      <Section id="menugiorno" expanded={expanded === 'menugiorno'} onToggle={toggle} icon={BookOpen} title="Menù del Giorno">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">Attiva Menù del Giorno</p>
+            <p className="text-xs text-gray-400 mt-0.5">Mostra la sezione Menù del Giorno ai clienti nella home del ristorante.</p>
+          </div>
+          <button
+            onClick={async () => {
+              const current = settings.menu_del_giorno_enabled;
+              const newVal = current === 'true' ? 'false' : 'true';
+              setSettings(s => ({ ...s, menu_del_giorno_enabled: newVal }));
+              await db.from('settings').upsert(
+                { restaurant_id: restaurantId, key: 'menu_del_giorno_enabled', value: newVal },
+                { onConflict: 'restaurant_id,key' }
+              );
+              showToast(newVal === 'true' ? 'Menù del Giorno attivato' : 'Menù del Giorno disattivato');
+            }}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${settings.menu_del_giorno_enabled === 'true' ? 'bg-[#008081]' : 'bg-gray-200 dark:bg-gray-700'}`}
+          >
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${settings.menu_del_giorno_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+      </Section>
+
+      {/* 8 — URL del Menù */}
       <Section id="url" expanded={expanded === 'url'} onToggle={toggle} icon={Globe} title="URL del Menù">
         <div className="space-y-4">
           <div>
@@ -409,7 +434,7 @@ export default function SettingsManager({
         </div>
       </Section>
 
-      {/* 8 — Codice QR */}
+      {/* 9 — Codice QR */}
       {restaurantSlug && (
         <Section id="qr" expanded={expanded === 'qr'} onToggle={toggle} icon={QrCode} title="Codice QR del Menù">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm mx-auto">
@@ -428,7 +453,7 @@ export default function SettingsManager({
         </Section>
       )}
 
-      {/* 9 — Piano */}
+      {/* 10 — Piano */}
       <div className="bg-white dark:bg-[#262626] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Piano attuale</p>

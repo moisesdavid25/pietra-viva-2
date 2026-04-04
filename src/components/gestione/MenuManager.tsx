@@ -65,9 +65,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
     // Wizard State
     const [wizardMacro, setWizardMacro] = useState({ name: '', image: '', visible: true });
     const [wizardSubCats, setWizardSubCats] = useState<string[]>(['']);
-    const [wizardProduct, setWizardProduct] = useState({
-        name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0
-    });
+    const [wizardProducts, setWizardProducts] = useState<{ name: string; price: string; iva: number; description: string; image: string; active: boolean }[]>([]);
 
     // Cropper
     const [cropperState, setCropperState] = useState<{ src: string | null; aspect: number; callback: ((b64: string) => void) | null }>({ src: null, aspect: 1, callback: null });
@@ -107,6 +105,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             const validSubCats = wizardSubCats.filter(c => c.trim().length > 0);
             if (validSubCats.length === 0) return showToast('Inserisci almeno una sub-categoria', 'error');
             setWizardSubCats(validSubCats);
+            setWizardProducts(validSubCats.map(() => ({ name: '', price: '', iva: 10, description: '', image: '', active: true })));
             setView('wizard-3');
         } else if (view === 'wizard-3') {
             saveWizard();
@@ -123,20 +122,23 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             }).select().single();
             return data;
         }));
-        const targetCat = newCats[wizardProduct.subCategoryIndex];
-        if (targetCat && wizardProduct.name.trim()) {
-            await db.from('products').insert({
+        const productsToInsert = wizardProducts
+            .map((wp, idx) => ({ wp, cat: newCats[idx] }))
+            .filter(({ wp, cat }) => cat && wp.name.trim().length > 0)
+            .map(({ wp, cat }) => ({
                 restaurant_id: restaurantId,
-                category_id: targetCat.id,
-                name: wizardProduct.name.trim(),
-                price: parseFloat(wizardProduct.price.replace(',', '.')) || 0,
-                iva: wizardProduct.iva,
-                description: wizardProduct.description.trim(),
-                image_url: wizardProduct.image,
-                active: wizardProduct.active,
-            });
+                category_id: cat.id,
+                name: wp.name.trim(),
+                price: parseFloat(wp.price.replace(',', '.')) || 0,
+                iva: wp.iva,
+                description: wp.description.trim(),
+                image_url: wp.image,
+                active: wp.active,
+            }));
+        if (productsToInsert.length > 0) {
+            await db.from('products').insert(productsToInsert);
         }
-        setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
+        setWizardProducts([]);
         fetchData();
         setView('success');
     };
@@ -144,7 +146,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
     const resetWizard = () => {
         setWizardMacro({ name: '', image: '', visible: true });
         setWizardSubCats(['']);
-        setWizardProduct({ name: '', price: '', iva: 10, description: '', image: '', active: true, subCategoryIndex: 0 });
+        setWizardProducts([]);
     };
 
     // ── Visibility ────────────────────────────────────────────────────────────
@@ -678,44 +680,54 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                             <ChevronLeft className="w-5 h-5" /> Indietro
                         </button>
                         {renderProgressBar(3)}
-                        <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-5">
-                            <div className="text-center">
-                                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Il Primo Prodotto</h2>
-                                <p className="text-gray-400 text-sm mt-2">Aggiungi il primo piatto del tuo nuovo reparto</p>
+                        <div className="space-y-4">
+                            <div className="text-center mb-2">
+                                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Primi Prodotti</h2>
+                                <p className="text-gray-400 text-sm mt-1">Aggiungi un prodotto per ogni sezione (opzionale)</p>
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Sezione di destinazione</label>
-                                <select value={wizardProduct.subCategoryIndex} onChange={e => setWizardProduct({ ...wizardProduct, subCategoryIndex: parseInt(e.target.value) })} className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none">
-                                    {wizardSubCats.filter(c => c.trim().length > 0).map((sub, idx) => (
-                                        <option key={idx} value={idx}>{wizardMacro.name} › {sub}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nome Prodotto</label>
-                                <input type="text" value={wizardProduct.name} onChange={e => setWizardProduct({ ...wizardProduct, name: e.target.value })} placeholder="Es. Margherita" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prezzo (€)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
-                                        <input type="text" value={wizardProduct.price} onChange={e => setWizardProduct({ ...wizardProduct, price: e.target.value })} placeholder="8,50" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-8 pr-3 font-black text-xl text-[#008081] focus:ring-2 focus:ring-[#008081]/30 outline-none" />
+                            {wizardSubCats.map((sub, idx) => {
+                                const wp = wizardProducts[idx] || { name: '', price: '', iva: 10, description: '', image: '', active: true };
+                                const updateWp = (fields: Partial<typeof wp>) => {
+                                    setWizardProducts(prev => {
+                                        const next = [...prev];
+                                        next[idx] = { ...next[idx], ...fields };
+                                        return next;
+                                    });
+                                };
+                                return (
+                                    <div key={idx} className="bg-white dark:bg-[#1C1C1C] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-black text-[#008081] bg-[#008081]/10 px-2 py-0.5 rounded-full uppercase tracking-widest">{wizardMacro.name}</span>
+                                            <span className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{sub}</span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nome Prodotto</label>
+                                            <input type="text" value={wp.name} onChange={e => updateWp({ name: e.target.value })} placeholder="Es. Margherita" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Prezzo (€)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
+                                                    <input type="text" value={wp.price} onChange={e => updateWp({ price: e.target.value })} placeholder="8,50" className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-8 pr-3 font-black text-lg text-[#008081] focus:ring-2 focus:ring-[#008081]/30 outline-none" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">IVA</label>
+                                                <div className="relative">
+                                                    <select value={wp.iva} onChange={e => updateWp({ iva: parseInt(e.target.value) })} className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none appearance-none pr-8">
+                                                        <option value="4">4% Minim.</option>
+                                                        <option value="5">5% Ridotta</option>
+                                                        <option value="10">10% Ristor.</option>
+                                                        <option value="22">22% Ordinaria</option>
+                                                    </select>
+                                                    <Percent className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">IVA</label>
-                                    <div className="relative">
-                                        <select value={wizardProduct.iva} onChange={e => setWizardProduct({ ...wizardProduct, iva: parseInt(e.target.value) })} className="w-full bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl p-3 font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none appearance-none pr-8">
-                                            <option value="4">4% Minim.</option>
-                                            <option value="5">5% Ridotta</option>
-                                            <option value="10">10% Ristor.</option>
-                                            <option value="22">22% Ordinaria</option>
-                                        </select>
-                                        <Percent className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </div>
+                                );
+                            })}
                             <button onClick={handleNext} className="w-full bg-[#008081] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-600 active:scale-[0.98] transition-all">
                                 <Save className="w-5 h-5" /> Salva e Termina
                             </button>

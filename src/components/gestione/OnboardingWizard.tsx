@@ -29,8 +29,8 @@ export default function OnboardingWizard({ restaurantId, onComplete }: Onboardin
     const [prodPrice, setProdPrice] = useState('10.00');
 
     // Step 3: Sala (POS capability)
-    const [roomName, setRoomName] = useState('Sala Interna');
-    const [tableCount, setTableCount] = useState('10');
+    const [menuGiornoEnabled, setMenuGiornoEnabled] = useState(false);
+    const [zones, setZones] = useState([{ name: 'Sala Interna', tableCount: '10' }]);
 
     useEffect(() => {
         const fetchExisting = async () => {
@@ -127,27 +127,37 @@ export default function OnboardingWizard({ restaurantId, onComplete }: Onboardin
         }
     };
 
+    const buildTables = (count: number) => {
+        const cols = Math.min(count, Math.ceil(Math.sqrt(count)));
+        const rows = Math.ceil(count / cols);
+        const colSpacing = cols > 1 ? Math.floor(80 / cols) : 40;
+        const rowSpacing = rows > 1 ? Math.floor(80 / rows) : 40;
+        return Array.from({ length: count }, (_, i) => ({
+            id: (i + 1).toString(),
+            name: (i + 1).toString(),
+            numero: (i + 1).toString(),
+            stato: 'libero',
+            posti: 4,
+            x: 5 + (i % cols) * colSpacing,
+            y: 5 + Math.floor(i / cols) * rowSpacing,
+        }));
+    };
+
     const saveRoom = async () => {
-        if (!roomName.trim() || !tableCount) return;
+        const validZones = zones.filter(z => z.name.trim() && parseInt(z.tableCount) > 0);
+        if (validZones.length === 0) return;
         setLoading(true);
         setError('');
         try {
-            const count = parseInt(tableCount);
-            const tables = Array.from({ length: count }, (_, i) => ({
+            const sale = validZones.map((z, i) => ({
                 id: (i + 1).toString(),
-                numero: (i + 1).toString(),
-                stato: 'libero',
-                posti: 4
+                name: z.name,
+                tables: buildTables(parseInt(z.tableCount)),
             }));
-            
-            const sale = [{
-                id: '1',
-                name: roomName,
-                tables
-            }];
 
             await upsertSetting('sale', JSON.stringify(sale));
             await upsertSetting('wizard_completed', 'true');
+            await upsertSetting('menu_del_giorno_enabled', menuGiornoEnabled ? 'true' : 'false');
             
             setStep(4);
         } catch (err: any) {
@@ -280,22 +290,61 @@ export default function OnboardingWizard({ restaurantId, onComplete }: Onboardin
                     )}
 
                     {step === 3 && (
-                        <div className="animate-fade-in">
+                        <div className="animate-fade-in overflow-y-auto max-h-[60vh] pr-1">
                             <h2 className="text-3xl font-extrabold mb-2 dark:text-white">Preparazione Sala</h2>
-                            <p className="text-gray-500 mb-8">Ultimo step: configura lo spazio per abilitare il software di cassa e comande.</p>
-                            
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Nome Sala (Zona)</label>
-                                    <input value={roomName} onChange={e => setRoomName(e.target.value)} className="w-full p-4 bg-gray-50 dark:bg-[#1f1f1f] rounded-2xl outline-none focus:ring-2 focus:ring-[#008081]/30 dark:text-white" placeholder="Es. Sala Interna, Terrazza..." />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Numero Tavoli per questa sala</label>
-                                    <input value={tableCount} type="number" min="1" max="50" onChange={e => setTableCount(e.target.value)} className="w-full p-4 bg-gray-50 dark:bg-[#1f1f1f] rounded-2xl outline-none focus:ring-2 focus:ring-[#008081]/30 dark:text-white" />
-                                </div>
+                            <p className="text-gray-500 mb-6">Configura le zone del tuo locale. Puoi aggiungere più aree (es. Sala Interna + Terrazza).</p>
+
+                            <div className="space-y-4 mb-4">
+                                {zones.map((zone, idx) => (
+                                    <div key={idx} className="p-4 bg-gray-50 dark:bg-[#1f1f1f] rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Zona {idx + 1}</span>
+                                            {zones.length > 1 && (
+                                                <button type="button" onClick={() => setZones(z => z.filter((_, i) => i !== idx))} className="text-xs text-red-400 hover:text-red-600 font-bold">Rimuovi</button>
+                                            )}
+                                        </div>
+                                        <input
+                                            value={zone.name}
+                                            onChange={e => setZones(z => z.map((zo, i) => i === idx ? { ...zo, name: e.target.value } : zo))}
+                                            className="w-full p-3 bg-white dark:bg-[#262626] rounded-xl outline-none focus:ring-2 focus:ring-[#008081]/30 dark:text-white border border-gray-200 dark:border-gray-600 text-sm"
+                                            placeholder="Es. Sala Interna, Terrazza, Bar..."
+                                        />
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-xs font-bold text-gray-500 whitespace-nowrap">N° Tavoli:</label>
+                                            <input
+                                                value={zone.tableCount}
+                                                type="number" min="1" max="50"
+                                                onChange={e => setZones(z => z.map((zo, i) => i === idx ? { ...zo, tableCount: e.target.value } : zo))}
+                                                className="w-24 p-3 bg-white dark:bg-[#262626] rounded-xl outline-none focus:ring-2 focus:ring-[#008081]/30 dark:text-white border border-gray-200 dark:border-gray-600 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="mt-10 flex justify-end">
-                                <button onClick={saveRoom} disabled={loading || !roomName.trim() || !tableCount} className="bg-[#008081] hover:bg-teal-700 text-white font-bold py-3 px-10 rounded-full flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50">
+
+                            {zones.length < 4 && (
+                                <button type="button" onClick={() => setZones(z => [...z, { name: '', tableCount: '5' }])} className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-sm font-bold text-gray-400 hover:border-[#008081] hover:text-[#008081] transition-colors flex items-center justify-center gap-2 mb-4">
+                                    <PlusCircle className="w-4 h-4" /> Aggiungi zona
+                                </button>
+                            )}
+
+                            {/* Menù del Giorno toggle */}
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1f1f1f] rounded-2xl border border-gray-200 dark:border-gray-700">
+                                <div>
+                                    <p className="text-sm font-bold text-gray-800 dark:text-white">Offri il Menù del Giorno?</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Attiva se proponi un menù fisso giornaliero ai tuoi clienti.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setMenuGiornoEnabled(v => !v)}
+                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${menuGiornoEnabled ? 'bg-[#008081]' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${menuGiornoEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+
+                            <div className="mt-6 flex justify-end">
+                                <button onClick={saveRoom} disabled={loading || zones.every(z => !z.name.trim())} className="bg-[#008081] hover:bg-teal-700 text-white font-bold py-3 px-10 rounded-full flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50">
                                     {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'Entra in Leomenu'}
                                 </button>
                             </div>

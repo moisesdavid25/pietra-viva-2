@@ -34,12 +34,20 @@ export default function RegisterFlow() {
 
         const pendingOAuth = localStorage.getItem('pending_oauth_register');
 
-        db.auth.getSession().then(({ data: { session } }) => {
+        db.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user) {
                 if (pendingOAuth) {
-                    // New Google OAuth user — show role selection first
                     localStorage.removeItem('pending_oauth_register');
-                    setIsOAuthUser(true);
+                    // Distinguish new vs existing user by account age
+                    const createdAt = new Date(session.user.created_at).getTime();
+                    const ageSeconds = (Date.now() - createdAt) / 1000;
+                    if (ageSeconds < 60) {
+                        // Account created < 60s ago → truly new user, show role selection
+                        setIsOAuthUser(true);
+                        return;
+                    }
+                    // Existing user — redirect to their area
+                    redirectDone(session.user.id);
                     return;
                 }
                 redirectDone(session.user.id);
