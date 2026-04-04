@@ -133,6 +133,7 @@ export default function Landing() {
                         Inizia gratis <ArrowRight className="w-5 h-5" />
                     </Link>
                     <button onClick={async () => {
+                        localStorage.setItem('pending_oauth_register', 'true');
                         await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/register' } });
                     }} className="px-8 py-4 bg-white dark:bg-[#2A2A2A] border border-gray-200 dark:border-gray-700 font-extrabold rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 text-[17px] text-[#1A1A1A] dark:text-white whitespace-nowrap lg:w-auto w-full">
                         <svg className="w-5 h-5" viewBox="0 0 24 24">

@@ -35,6 +35,7 @@ export function HomeHero() {
                     Inizia il tuo account gratis <ArrowRight className="w-5 h-5"/>
                 </Link>
                 <button onClick={async () => {
+                    localStorage.setItem('pending_oauth_register', 'true');
                     await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/register' } });
                 }} className="w-full bg-white border border-gray-200 text-[#111827] px-7 py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5">
                     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">

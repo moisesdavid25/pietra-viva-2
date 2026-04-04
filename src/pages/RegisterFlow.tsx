@@ -12,6 +12,7 @@ export default function RegisterFlow() {
 
     // Step 1: Role
     const [role, setRole] = useState<'owner' | 'customer' | ''>('');
+    const [isOAuthUser, setIsOAuthUser] = useState(false);
 
     // Step 2: Account & Details
     const [email, setEmail] = useState('');
@@ -31,8 +32,16 @@ export default function RegisterFlow() {
             setRole(savedRole);
         }
 
+        const pendingOAuth = localStorage.getItem('pending_oauth_register');
+
         db.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
+                if (pendingOAuth) {
+                    // New Google OAuth user — show role selection first
+                    localStorage.removeItem('pending_oauth_register');
+                    setIsOAuthUser(true);
+                    return;
+                }
                 redirectDone(session.user.id);
             }
         });
@@ -63,6 +72,38 @@ export default function RegisterFlow() {
     };
 
 
+
+    const handleOAuthRoleSelect = async (selectedRole: 'owner' | 'customer') => {
+        setRole(selectedRole);
+        if (selectedRole === 'customer') {
+            navigate('/passport?wizard=true');
+        } else {
+            // owner: go to step 2 to collect business name
+            setStep(2);
+        }
+    };
+
+    const handleOAuthOwnerSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) throw new Error('Sessione scaduta');
+            const baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
+            const { error: resError } = await db.from('restaurants')
+                .insert({ user_id: user.id, name: businessName, slug, type: businessType });
+            if (resError && resError.code === '23505') throw new Error('Questo nome esiste già.');
+            if (resError) throw resError;
+            await db.rpc('upgrade_to_owner');
+            navigate('/gestione?wizard=true');
+        } catch (err: any) {
+            setError(err.message || 'Errore durante la registrazione.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleStep2Next = (e: React.FormEvent) => {
         e.preventDefault();
@@ -186,12 +227,12 @@ export default function RegisterFlow() {
                                 <h2 className="text-3xl font-bold mb-2">Scegli il tuo ruolo</h2>
                                 <p className="text-gray-500 mb-8">Sei proprietario di un'attività o cliente?</p>
                                 <div className="space-y-4">
-                                    <button onClick={() => { setRole('owner'); setStep(2); }} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
+                                    <button onClick={() => isOAuthUser ? handleOAuthRoleSelect('owner') : (setRole('owner'), setStep(2))} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
                                         <div className="p-3 bg-teal-50 group-hover:bg-[#008081] group-hover:text-white rounded-xl text-[#008081] transition-colors"><Store className="w-8 h-8"/></div>
                                         <div><h3 className="font-bold text-lg">Proprietario del locale</h3><p className="text-sm text-gray-500">Voglio creare il mio menù digitale</p></div>
                                         <ArrowRight className="w-5 h-5 ml-auto text-gray-400 group-hover:text-[#008081]" />
                                     </button>
-                                    <button onClick={() => { setRole('customer'); setStep(2); }} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
+                                    <button onClick={() => isOAuthUser ? handleOAuthRoleSelect('customer') : (setRole('customer'), setStep(2))} className="w-full text-left p-6 border-2 border-gray-100 hover:border-[#008081] rounded-2xl flex items-center gap-4 group transition-colors">
                                         <div className="p-3 bg-teal-50 group-hover:bg-[#008081] group-hover:text-white rounded-xl text-[#008081] transition-colors"><User className="w-8 h-8"/></div>
                                         <div><h3 className="font-bold text-lg">Cliente</h3><p className="text-sm text-gray-500">Voglio effettuare ordini</p></div>
                                         <ArrowRight className="w-5 h-5 ml-auto text-gray-400 group-hover:text-[#008081]" />
@@ -200,7 +241,28 @@ export default function RegisterFlow() {
                             </div>
                         )}
 
-                        {step === 2 && (
+                        {step === 2 && isOAuthUser && (
+                            <div className="animate-fade-in flex-1 flex flex-col">
+                                <h2 className="text-3xl font-bold mb-2">Il tuo ristorante</h2>
+                                <p className="text-gray-500 mb-8">Inserisci i dati della tua attività.</p>
+                                <form onSubmit={handleOAuthOwnerSubmit} className="flex-1 flex flex-col space-y-4">
+                                    <div><label className="text-xs font-bold text-gray-500 ml-2">Nome del Ristorante *</label><input type="text" required value={businessName} onChange={e=>setBusinessName(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl border border-gray-200"/></div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 ml-2">Tipologia *</label>
+                                        <select required value={businessType} onChange={e=>setBusinessType(e.target.value)} className="w-full p-3 bg-[#FBFBFB] rounded-2xl border border-gray-200">
+                                            <option value="Ristorante">Ristorante</option>
+                                            <option value="Pizzeria">Pizzeria</option>
+                                            <option value="Bar">Bar</option>
+                                            <option value="Gelateria">Gelateria</option>
+                                            <option value="Pub">Pub</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" disabled={loading} className="w-full text-white py-4 rounded-2xl font-bold bg-[#008081] hover:bg-teal-700 transition-colors mt-6">{loading ? 'Attendi...' : 'Crea il mio ristorante'}</button>
+                                </form>
+                            </div>
+                        )}
+
+                        {step === 2 && !isOAuthUser && (
                             <div className="animate-fade-in flex-1 flex flex-col">
                                 <h2 className="text-3xl font-bold mb-2">I tuoi dati</h2>
                                 <p className="text-gray-500 mb-8">Inserisci i tuoi dati personali.</p>
