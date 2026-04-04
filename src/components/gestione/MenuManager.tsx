@@ -125,18 +125,23 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
         const productsToInsert = wizardProducts
             .map((wp, idx) => ({ wp, cat: newCats[idx] }))
             .filter(({ wp, cat }) => cat && wp.name.trim().length > 0)
-            .map(({ wp, cat }) => ({
+            .map(({ wp, cat }, i) => ({
                 restaurant_id: restaurantId,
                 category_id: cat.id,
                 name: wp.name.trim(),
                 price: parseFloat(wp.price.replace(',', '.')) || 0,
-                iva: wp.iva,
-                description: wp.description.trim(),
-                image_url: wp.image,
-                active: wp.active,
+                description: wp.description?.trim() || '',
+                price_unit: null,
+                image_url: '',
+                sort_order: i,
+                active: true,
             }));
         if (productsToInsert.length > 0) {
-            await db.from('products').insert(productsToInsert);
+            const { error: insertError } = await db.from('products').insert(productsToInsert);
+            if (insertError) {
+                showToast('Errore nel salvataggio dei prodotti: ' + insertError.message, 'error');
+                return;
+            }
         }
         setWizardProducts([]);
         fetchData();

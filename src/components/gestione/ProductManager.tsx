@@ -259,19 +259,40 @@ function SortableRow({
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ProductManager({ restaurantId, categories, products, onRefresh, onBack }: Props) {
+export default function ProductManager({ restaurantId, categories: initialCategories, products: initialProducts, onRefresh, onBack }: Props) {
     const { showToast, ToastContainer } = useToast();
 
     const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedMacroCategory, setSelectedMacroCategory] = useState<string | null>(null);
     const [expandedSubCats, setExpandedSubCats] = useState<Record<string, boolean>>({});
-    const [localProducts, setLocalProducts] = useState<Product[]>(products);
+    const [localCategories, setLocalCategories] = useState<Category[]>(initialCategories);
+    const [localProducts, setLocalProducts] = useState<Product[]>(initialProducts);
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
     const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [showAddSubCat, setShowAddSubCat] = useState(false);
+    const [newSubCatName, setNewSubCatName] = useState('');
+    const [savingSubCat, setSavingSubCat] = useState(false);
+    const [loadingData, setLoadingData] = useState(true);
 
-    useEffect(() => { setLocalProducts(products); }, [products]);
+    // Internal fetch — always gets fresh data directly from DB
+    const fetchLocal = useCallback(async () => {
+        const [{ data: cats }, { data: prods }] = await Promise.all([
+            db.from('categories').select('id,section,name,position').eq('restaurant_id', restaurantId).order('position', { ascending: true }).order('id'),
+            db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }).order('id'),
+        ]);
+        if (cats) setLocalCategories(cats);
+        if (prods) setLocalProducts(prods);
+        setLoadingData(false);
+        onRefresh();
+    }, [restaurantId, onRefresh]);
+
+    // Always fetch fresh on mount — never trust potentially stale parent props
+    useEffect(() => {
+        setLoadingData(true);
+        fetchLocal();
+    }, [restaurantId]);
 
     // DnD sensors — supports both mouse and touch
     const sensors = useSensors(
@@ -286,7 +307,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
         setLocalProducts(prev => prev.map(p => p.id === product.id ? { ...p, name: trimmed } : p));
         await db.from('products').update({ name: trimmed }).eq('id', product.id);
         showToast('✓ Nome aggiornato');
-        onRefresh();
+        fetchLocal();
     };
 
     const handleInlineSavePrice = async (product: Product, rawVal: string) => {
@@ -295,7 +316,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
         setLocalProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: newPrice } : p));
         await db.from('products').update({ price: newPrice }).eq('id', product.id);
         showToast('✓ Prezzo aggiornato');
-        onRefresh();
+        fetchLocal();
     };
 
     // ── Full Save (drawer) ────────────────────────────────────────────────────
@@ -331,20 +352,19 @@ export default function ProductManager({ restaurantId, categories, products, onR
             showToast('✓ Prodotto aggiornato');
         }
         setEditingProduct(null);
-        onRefresh();
+        fetchLocal();
     };
 
     // ── Delete with Undo ──────────────────────────────────────────────────────
     const handleDeleteProduct = (id: string) => {
         setPendingDeleteId(id);
-        setLocalProducts(prev => prev.map(p => p.id === id ? p : p));
+        setLocalProducts(prev => prev.filter(p => p.id !== id));
         showToast('Prodotto eliminato — tocca ANNULLA per ripristinare', 'info');
         if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
         undoTimerRef.current = setTimeout(async () => {
             await db.from('products').delete().eq('id', id);
-            setLocalProducts(prev => prev.filter(p => p.id !== id));
             setPendingDeleteId(null);
-            onRefresh();
+            fetchLocal();
         }, 4000);
     };
 
@@ -360,7 +380,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
         setLocalProducts(prev => prev.map(p => p.id === product.id ? { ...p, active: newActive } : p));
         await db.from('products').update({ active: newActive }).eq('id', product.id);
         showToast(newActive ? 'Prodotto visibile nel menù' : 'Prodotto nascosto dal menù', newActive ? 'success' : 'info');
-        onRefresh();
+        fetchLocal();
     };
 
     // ── Drag & Drop reorder ───────────────────────────────────────────────────
@@ -382,7 +402,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
         });
 
         await Promise.all(reordered.map((p, i) => db.from('products').update({ sort_order: i }).eq('id', p.id)));
-        onRefresh();
+        fetchLocal();
     };
 
     // ── Image Upload → Supabase Storage ──────────────────────────────────────
@@ -435,35 +455,54 @@ export default function ProductManager({ restaurantId, categories, products, onR
 
     // ── Delete macro section ──────────────────────────────────────────────────
     const handleDeleteMacroCategory = async (macroName: string) => {
-        const ids = categories.filter(c => c.section === macroName).map(c => c.id);
+        const ids = localCategories.filter(c => c.section === macroName).map(c => c.id);
         if (ids.length === 0) return;
         await db.from('categories').delete().in('id', ids);
         setSelectedMacroCategory(null);
         showToast(`Reparto "${macroName}" eliminato`);
-        onRefresh();
+        fetchLocal();
     };
 
     // ── Delete single sub-category ────────────────────────────────────────────
     const handleDeleteSubCategory = async (cat: Category) => {
-        const macroSubCount = categories.filter(c => c.section === cat.section).length;
+        const macroSubCount = localCategories.filter(c => c.section === cat.section).length;
         if (macroSubCount <= 1) {
             showToast('Devi avere almeno una sezione nel reparto. Elimina il reparto intero.', 'error');
             return;
         }
         await db.from('categories').delete().eq('id', cat.id);
         showToast(`Sezione "${cat.name}" eliminata`);
-        onRefresh();
+        fetchLocal();
+    };
+
+    // ── Add sub-category ─────────────────────────────────────────────────────
+    const handleAddSubCategory = async () => {
+        const name = newSubCatName.trim();
+        if (!name || !selectedMacroCategory) return;
+        setSavingSubCat(true);
+        const maxPos = localCategories.filter(c => c.section === selectedMacroCategory).reduce((m, c) => Math.max(m, c.position ?? 0), 0);
+        await db.from('categories').insert({
+            restaurant_id: restaurantId,
+            section: selectedMacroCategory,
+            name,
+            position: maxPos + 1,
+        });
+        setNewSubCatName('');
+        setShowAddSubCat(false);
+        setSavingSubCat(false);
+        showToast(`✓ Sezione "${name}" creata`);
+        fetchLocal();
     };
 
     // ── Computed data ─────────────────────────────────────────────────────────
-    const macroSections = Array.from(new Set(categories.map(c => c.section)));
+    const macroSections = Array.from(new Set(localCategories.map(c => c.section)));
 
     const filteredProducts = searchQuery.trim()
         ? localProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase()))
         : localProducts;
 
     return (
-        <div className="space-y-4 animate-fade-in pb-24 relative">
+        <div className="space-y-4 animate-fade-in pb-24 relative w-full max-w-3xl mx-auto">
 
             {/* ── Full Edit Drawer ─────────────────────────────────────────── */}
             {editingProduct && (
@@ -501,7 +540,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Categoria *</label>
                                 <select className="w-full p-3 bg-gray-50 dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl font-bold focus:ring-2 focus:ring-[#008081]/30 outline-none" value={editingProduct.category_id || ''} onChange={e => setEditingProduct({ ...editingProduct, category_id: e.target.value })}>
                                     <option value="">Seleziona Categoria</option>
-                                    {categories.map(c => (
+                                    {localCategories.map(c => (
                                         <option key={c.id} value={c.id}>{c.section} › {c.name}</option>
                                     ))}
                                 </select>
@@ -566,8 +605,16 @@ export default function ProductManager({ restaurantId, categories, products, onR
                 </div>
             </div>
 
+            {/* ── Loading state ─────────────────────────────────────────── */}
+            {loadingData && (
+                <div className="flex items-center justify-center py-16 gap-3">
+                    <div className="w-6 h-6 border-2 border-[#008081] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm text-gray-400 font-medium">Caricamento prodotti...</p>
+                </div>
+            )}
+
             {/* ── Macro Category List ────────────────────────────────────── */}
-            {!selectedMacroCategory ? (
+            {!loadingData && !selectedMacroCategory ? (
                 <div className="space-y-3 pt-1">
                     {macroSections.length === 0 && (
                         <div className="text-center py-16 text-gray-400 text-sm font-medium">
@@ -576,9 +623,9 @@ export default function ProductManager({ restaurantId, categories, products, onR
                         </div>
                     )}
                     {macroSections.map(macro => {
-                        const count = localProducts.filter(p => categories.find(c => c.id === p.category_id)?.section === macro).length;
-                        const hidden = localProducts.filter(p => categories.find(c => c.id === p.category_id)?.section === macro && !p.active).length;
-                        const noPhoto = localProducts.filter(p => categories.find(c => c.id === p.category_id)?.section === macro && !p.image_url).length;
+                        const count = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro).length;
+                        const hidden = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro && !p.active).length;
+                        const noPhoto = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro && !p.image_url).length;
 
                         return (
                             <button
@@ -623,7 +670,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
                                     )}
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">{product.name}</p>
-                                        <p className="text-[10px] text-gray-400 font-medium">{categories.find(c => c.id === product.category_id)?.section}</p>
+                                        <p className="text-[10px] text-gray-400 font-medium">{localCategories.find(c => c.id === product.category_id)?.section}</p>
                                     </div>
                                     <span className="font-black text-sm text-[#008081]">€{product.price.toFixed(2)}</span>
                                     <button onClick={() => setEditingProduct({ ...product })} className="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center transition-colors flex-shrink-0">
@@ -634,37 +681,100 @@ export default function ProductManager({ restaurantId, categories, products, onR
                         </div>
                     )}
                 </div>
-            ) : (
+            ) : !loadingData ? (
                 /* ── Drill-Down: DnD Spreadsheet ──────────────────────── */
                 <div className="space-y-3">
-                    {/* Add product CTA */}
-                    <button
-                        onClick={() => setEditingProduct({ image_url: '', category_id: categories.find(c => c.section === selectedMacroCategory)?.id || '' })}
-                        className="w-full bg-[#008081] text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-700 hover:scale-[1.01] active:scale-[0.99] transition-all"
-                    >
-                        <Plus className="w-5 h-5" /> Aggiungi Prodotto in {selectedMacroCategory}
-                    </button>
+                    {/* Stats row */}
+                    {(() => {
+                        const totalInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory).length;
+                        const hiddenInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory && !p.active).length;
+                        const noPhotoInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory && !p.image_url).length;
+                        const subCatCount = localCategories.filter(c => c.section === selectedMacroCategory).length;
+                        return (
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-black text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{subCatCount} sezioni</span>
+                                <span className="text-[11px] font-black text-[#008081] bg-[#008081]/10 px-2.5 py-1 rounded-full">{totalInMacro} prodotti</span>
+                                {hiddenInMacro > 0 && <span className="text-[11px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full">{hiddenInMacro} nascosti</span>}
+                                {noPhotoInMacro > 0 && <span className="text-[11px] font-black text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2.5 py-1 rounded-full">{noPhotoInMacro} senza foto</span>}
+                            </div>
+                        );
+                    })()}
+
+                    {/* Action buttons row */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setEditingProduct({ image_url: '', category_id: localCategories.find(c => c.section === selectedMacroCategory)?.id || '' })}
+                            className="bg-[#008081] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#008081]/20 hover:bg-teal-700 hover:scale-[1.01] active:scale-[0.99] transition-all text-sm"
+                        >
+                            <Plus className="w-4 h-4" /> Aggiungi Prodotto
+                        </button>
+                        <button
+                            onClick={() => { setShowAddSubCat(s => !s); setNewSubCatName(''); }}
+                            className={`py-3 rounded-2xl font-bold flex items-center justify-center gap-2 text-sm border-2 transition-all hover:scale-[1.01] active:scale-[0.99] ${showAddSubCat ? 'bg-[#008081]/10 border-[#008081] text-[#008081]' : 'bg-white dark:bg-[#1C1C1C] border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#008081] hover:text-[#008081]'}`}
+                        >
+                            <Plus className="w-4 h-4" /> Nuova Sezione
+                        </button>
+                    </div>
+
+                    {/* Inline add sub-category form */}
+                    {showAddSubCat && (
+                        <div className="bg-teal-50 dark:bg-teal-900/10 border-2 border-[#008081]/30 rounded-2xl p-4 space-y-3">
+                            <p className="text-[10px] font-black text-[#008081] uppercase tracking-widest">Nuova Sezione in "{selectedMacroCategory}"</p>
+                            <div className="flex gap-2">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Es. Pizze Speciali"
+                                    value={newSubCatName}
+                                    onChange={e => setNewSubCatName(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddSubCategory(); if (e.key === 'Escape') { setShowAddSubCat(false); setNewSubCatName(''); } }}
+                                    className="flex-1 bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 font-bold text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#008081]/30 outline-none"
+                                />
+                                <button
+                                    onClick={handleAddSubCategory}
+                                    disabled={!newSubCatName.trim() || savingSubCat}
+                                    className="bg-[#008081] text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-700 disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                                >
+                                    <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => { setShowAddSubCat(false); setNewSubCatName(''); }}
+                                    className="bg-gray-100 dark:bg-gray-800 text-gray-500 px-3 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Sub-category groups with DnD */}
-                    {categories.filter(c => c.section === selectedMacroCategory).map(cat => {
+                    {localCategories.filter(c => c.section === selectedMacroCategory).map(cat => {
                         const catProds = localProducts.filter(p => p.category_id === cat.id);
-                        const isExpanded = expandedSubCats[cat.id] !== false;
+                        const isExpanded = expandedSubCats[cat.id] === true;
 
                         return (
                             <div key={cat.id} className="bg-white dark:bg-[#1C1C1C] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
                                 {/* Sub-cat header */}
                                 <div
-                                    className="group flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1A1A1A] transition-colors border-b border-gray-100 dark:border-gray-800"
+                                    className="group flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1A1A1A] transition-colors"
                                     onClick={() => setExpandedSubCats(prev => ({ ...prev, [cat.id]: !isExpanded }))}
                                 >
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-black text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest">{cat.name}</h3>
                                         <span className="text-[10px] font-black bg-[#008081]/10 text-[#008081] px-2 py-0.5 rounded-full">{catProds.length}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={e => { e.stopPropagation(); setEditingProduct({ image_url: '', category_id: cat.id }); }}
+                                            className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-[#008081] hover:bg-teal-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                            title="Aggiungi prodotto in questa sezione"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
                                         <button
                                             onClick={e => { e.stopPropagation(); handleDeleteSubCategory(cat); }}
                                             className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                            title="Elimina sezione"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
@@ -683,9 +793,17 @@ export default function ProductManager({ restaurantId, categories, products, onR
                                             items={catProds.map(p => p.id)}
                                             strategy={verticalListSortingStrategy}
                                         >
-                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/50 border-t border-gray-100 dark:border-gray-800">
                                                 {catProds.length === 0 && (
-                                                    <p className="text-center text-xs text-gray-400 py-4 font-medium">Nessun prodotto in questa sezione</p>
+                                                    <div className="flex flex-col items-center py-6 gap-2">
+                                                        <p className="text-xs text-gray-400 font-medium">Nessun prodotto in questa sezione</p>
+                                                        <button
+                                                            onClick={() => setEditingProduct({ image_url: '', category_id: cat.id })}
+                                                            className="text-[11px] font-bold text-[#008081] hover:underline flex items-center gap-1"
+                                                        >
+                                                            <Plus className="w-3 h-3" /> Aggiungi il primo prodotto
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 {catProds.map(product => (
                                                     <SortableRow
@@ -708,8 +826,8 @@ export default function ProductManager({ restaurantId, categories, products, onR
                         );
                     })}
 
-                    {/* Delete macro section */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    {/* Danger zone */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                         <button
                             onClick={() => handleDeleteMacroCategory(selectedMacroCategory)}
                             className="w-full bg-red-50 text-red-500 dark:bg-red-900/10 dark:text-red-400 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all border border-red-100 dark:border-red-900/30 text-sm"
@@ -721,7 +839,7 @@ export default function ProductManager({ restaurantId, categories, products, onR
                         </p>
                     </div>
                 </div>
-            )}
+            ) : null}
 
             <ToastContainer />
         </div>
