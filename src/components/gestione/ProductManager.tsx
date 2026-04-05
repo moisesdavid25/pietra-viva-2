@@ -288,11 +288,15 @@ export default function ProductManager({ restaurantId, categories: initialCatego
         onRefresh();
     }, [restaurantId, onRefresh]);
 
+    useEffect(() => {
+        return () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); };
+    }, []);
+
     // Always fetch fresh on mount — never trust potentially stale parent props
     useEffect(() => {
         setLoadingData(true);
         fetchLocal();
-    }, [restaurantId]);
+    }, [restaurantId, fetchLocal]);
 
     // DnD sensors — supports both mouse and touch
     const sensors = useSensors(
@@ -480,22 +484,37 @@ export default function ProductManager({ restaurantId, categories: initialCatego
         const name = newSubCatName.trim();
         if (!name || !selectedMacroCategory) return;
         setSavingSubCat(true);
-        const maxPos = localCategories.filter(c => c.section === selectedMacroCategory).reduce((m, c) => Math.max(m, c.position ?? 0), 0);
-        await db.from('categories').insert({
-            restaurant_id: restaurantId,
-            section: selectedMacroCategory,
-            name,
-            position: maxPos + 1,
-        });
-        setNewSubCatName('');
-        setShowAddSubCat(false);
-        setSavingSubCat(false);
-        showToast(`✓ Sezione "${name}" creata`);
-        fetchLocal();
+        try {
+            const maxPos = localCategories.filter(c => c.section === selectedMacroCategory).reduce((m, c) => Math.max(m, c.position ?? 0), 0);
+            const { error } = await db.from('categories').insert({
+                restaurant_id: restaurantId,
+                section: selectedMacroCategory,
+                name,
+                position: maxPos + 1,
+            });
+            if (error) { showToast('Errore nel salvataggio della sezione: ' + error.message, 'error'); return; }
+            setNewSubCatName('');
+            setShowAddSubCat(false);
+            showToast(`✓ Sezione "${name}" creata`);
+            fetchLocal();
+        } finally {
+            setSavingSubCat(false);
+        }
     };
 
     // ── Computed data ─────────────────────────────────────────────────────────
     const macroSections = Array.from(new Set(localCategories.map(c => c.section)));
+    const categoryMap = new Map<string, Category>(localCategories.map(c => [c.id, c]));
+
+    const macroProdsForSelected = selectedMacroCategory
+        ? localProducts.filter(p => categoryMap.get(p.category_id)?.section === selectedMacroCategory)
+        : [];
+    const macroStats = {
+        total: macroProdsForSelected.length,
+        hidden: macroProdsForSelected.filter(p => !p.active).length,
+        noPhoto: macroProdsForSelected.filter(p => !p.image_url).length,
+        subCatCount: selectedMacroCategory ? localCategories.filter(c => c.section === selectedMacroCategory).length : 0,
+    };
 
     const filteredProducts = searchQuery.trim()
         ? localProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -623,9 +642,10 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                         </div>
                     )}
                     {macroSections.map(macro => {
-                        const count = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro).length;
-                        const hidden = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro && !p.active).length;
-                        const noPhoto = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === macro && !p.image_url).length;
+                        const macroProds = localProducts.filter(p => categoryMap.get(p.category_id)?.section === macro);
+                        const count = macroProds.length;
+                        const hidden = macroProds.filter(p => !p.active).length;
+                        const noPhoto = macroProds.filter(p => !p.image_url).length;
 
                         return (
                             <button
@@ -685,20 +705,12 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                 /* ── Drill-Down: DnD Spreadsheet ──────────────────────── */
                 <div className="space-y-3">
                     {/* Stats row */}
-                    {(() => {
-                        const totalInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory).length;
-                        const hiddenInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory && !p.active).length;
-                        const noPhotoInMacro = localProducts.filter(p => localCategories.find(c => c.id === p.category_id)?.section === selectedMacroCategory && !p.image_url).length;
-                        const subCatCount = localCategories.filter(c => c.section === selectedMacroCategory).length;
-                        return (
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[11px] font-black text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{subCatCount} sezioni</span>
-                                <span className="text-[11px] font-black text-[#008081] bg-[#008081]/10 px-2.5 py-1 rounded-full">{totalInMacro} prodotti</span>
-                                {hiddenInMacro > 0 && <span className="text-[11px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full">{hiddenInMacro} nascosti</span>}
-                                {noPhotoInMacro > 0 && <span className="text-[11px] font-black text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2.5 py-1 rounded-full">{noPhotoInMacro} senza foto</span>}
-                            </div>
-                        );
-                    })()}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-black text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{macroStats.subCatCount} sezioni</span>
+                        <span className="text-[11px] font-black text-[#008081] bg-[#008081]/10 px-2.5 py-1 rounded-full">{macroStats.total} prodotti</span>
+                        {macroStats.hidden > 0 && <span className="text-[11px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full">{macroStats.hidden} nascosti</span>}
+                        {macroStats.noPhoto > 0 && <span className="text-[11px] font-black text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2.5 py-1 rounded-full">{macroStats.noPhoto} senza foto</span>}
+                    </div>
 
                     {/* Action buttons row */}
                     <div className="grid grid-cols-2 gap-3">
