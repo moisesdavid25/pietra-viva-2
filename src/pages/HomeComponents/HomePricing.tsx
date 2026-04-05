@@ -23,9 +23,12 @@ export function HomePricing() {
                     <div className="p-6 md:p-8 rounded-2xl border-2 border-[#008081] bg-teal-50/60 relative overflow-hidden shadow-[0_4px_20px_rgba(0,128,129,0.12)]">
                         <div className="absolute top-0 right-0 bg-[#008081] text-white text-[10px] font-black px-3 py-1.5 rounded-bl-lg uppercase tracking-widest shadow-sm">The Leomenu Way</div>
                         <span className="inline-block bg-[#008081] text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest mb-3">Più scelto</span>
-                        <p className="text-[#008081] text-xs md:text-sm uppercase tracking-widest font-black mb-1">Aggiornamenti istantanei</p>
-                        <p className="text-4xl md:text-5xl font-extrabold text-[#111827]">0€</p>
-                        <p className="text-gray-600 mt-3 text-sm font-medium leading-relaxed">Prova gratuita con accesso totale. Sperimenta l'impatto reale sulle vendite senza impegni.</p>
+                        <p className="text-[#008081] text-xs md:text-sm uppercase tracking-widest font-black mb-1">Piano annuale · tutto incluso</p>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-4xl md:text-5xl font-extrabold text-[#111827]">€17</p>
+                          <span className="text-gray-500 font-semibold text-base">/mese</span>
+                        </div>
+                        <p className="text-gray-600 mt-3 text-sm font-medium leading-relaxed">14 giorni di prova gratuita con accesso totale. Nessuna carta di credito richiesta.</p>
                     </div>
                 </div>
             </div>

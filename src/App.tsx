@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import SearchPortal from './pages/SearchPortal';
 import RestaurantHome from './pages/RestaurantHome';
 import Profile from './pages/Profile';
-import GlobalPassport from './pages/GlobalPassport';
+import CartaFedelta from './pages/CartaFedelta';
 import MenuPage from './pages/Menu';
 import MenuDelGiorno from './pages/MenuDelGiorno';
 import Gestione from './pages/Gestione';
@@ -146,7 +146,7 @@ export default function App() {
         {/* Auth & Platform Routes */}
         <Route path="/login" element={<GuestRoute><Auth type="login" /></GuestRoute>} />
         <Route path="/register" element={<RegisterFlow />} />
-        <Route path="/passport" element={<GlobalPassport />} />
+        <Route path="/passport" element={<CartaFedelta />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

@@ -1,124 +1,171 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, WifiOff, Users, Database, Server, Smartphone, Lock, ArrowRight, Activity } from 'lucide-react';
+import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
+
+const OBJECTIONS = [
+  {
+    fear: '"E se il Wi-Fi è giù durante il servizio?"',
+    answer: 'Il menù Leomenu vive online, ma il tuo cliente lo apre dal suo telefono con la sua connessione — non dalla tua rete. Il Wi-Fi del locale non c\'entra. Anche se il tuo router smette di funzionare a metà cena, il menù resta online senza problemi.',
+  },
+  {
+    fear: '"Il mio staff anziano non lo userà mai."',
+    answer: 'L\'unica cosa che deve fare il tuo staff è mostrare un QR code. Lo stampate una volta, lo attaccate al tavolo, finito. Gli aggiornamenti li fai tu dal telefono — nessuno in sala deve toccare niente.',
+  },
+  {
+    fear: '"Ho paura di perdere i dati — piatti, foto, tutto."',
+    answer: 'I tuoi dati vengono salvati automaticamente su server europei, ogni giorno. Non c\'è nulla da scaricare, nulla da fare. Se domani cambi dispositivo o dimentichi la password, il tuo menù è ancora lì — intatto.',
+  },
+  {
+    fear: '"E se decido che non fa per me?"',
+    answer: 'Disdici quando vuoi, da solo, in un click. Nessuna telefonata, nessuna email, nessun ufficio da contattare. I tuoi dati restano tuoi e puoi esportarli prima di andare. Nessun costo nascosto, nessuna penale.',
+  },
+  {
+    fear: '"Sono solo — chi mi aiuta se ho problemi?"',
+    answer: 'Noi. C\'è una chat di supporto raggiungibile direttamente dall\'app e una guida in italiano che risponde alle domande più comuni. Non sei abbandonato il giorno dopo l\'iscrizione.',
+  },
+];
+
+const GUARANTEES = [
+  '14 giorni gratis. Nessuna carta richiesta.',
+  'Disdici in un click, in qualsiasi momento.',
+  'I tuoi dati sono tuoi. Sempre.',
+];
 
 export default function Sicurezza() {
   return (
-    <div className="pt-20 pb-0 bg-[#F9FAFB] min-h-screen font-sans selection:bg-[#008081] selection:text-white overflow-hidden">
-      
-      {/* 1. Hero Section (Authority & Trust) */}
-      <div className="max-w-4xl mx-auto text-center px-6 md:px-12 mb-20 relative z-10 pt-10">
-        <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-8 border border-gray-100">
-          <ShieldCheck className="w-8 h-8 text-[#008081]" />
-        </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold text-[#111827] mb-6 tracking-tight leading-tight">
-          Nessun imprevisto.<br />
-          <span className="text-gray-400">Mai.</span>
-        </h1>
-        <p className="text-lg md:text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
-          Sappiamo che il sabato sera non ammette ritardi tecnici. Leomenu è un'infrastruttura pensata per sopravvivere e scalare, a prova di blackout e di personale "poco tecnologico".
-        </p>
-      </div>
+    <div className="bg-white font-sans selection:bg-[#008081] selection:text-white overflow-hidden">
 
-      {/* 2. Uptime Stats Banner */}
-      <div className="bg-[#111827] py-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center relative z-10">
-          <div className="border-b md:border-b-0 md:border-r border-gray-800 pb-8 md:pb-0">
-            <div className="text-5xl font-black text-white mb-2 tracking-tighter">99.9%</div>
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Uptime Garantito</p>
+      {/* ─── 1. HERO ─────────────────────────────────────────── */}
+      <section className="bg-[#111827] pt-28 pb-20 px-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#008081]/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="max-w-3xl mx-auto text-center relative z-10">
+          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/20">
+            <MessageCircle className="w-8 h-8 text-[#008081]" />
           </div>
-          <div className="border-b md:border-b-0 md:border-r border-gray-800 pb-8 md:pb-0">
-            <div className="text-5xl font-black text-white mb-2 tracking-tighter flex justify-center items-center gap-1">
-               0.2<span className="text-2xl">sec</span>
-            </div>
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Tempo medio di caricamento</p>
-          </div>
-          <div>
-            <div className="text-5xl font-black text-[#008081] mb-2 tracking-tighter">GDPR</div>
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Dati conformi e protetti (UE)</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. The 4 Big Objections (Killed) */}
-      <div className="max-w-7xl mx-auto px-6 py-24">
-        
-        <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
-          
-          {/* Objection 1: Internet Caído */}
-          <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-shadow relative overflow-hidden group">
-            <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
-              <WifiOff className="w-7 h-7 text-red-500" />
-            </div>
-            <h3 className="text-2xl font-extrabold text-[#111827] mb-4">"Ma se si rompe il Wi-Fi del locale?"</h3>
-            <p className="text-gray-500 leading-relaxed font-medium mb-6">
-              Leomenu è leggero e ottimizzato. I tuoi clienti utilizzeranno la loro rete cellulare (4G/5G) per scansionare il QR. Pesa pochissimi kilobyte, garantendo l'apertura in decimi di secondo anche in zone con scarsa copertura telefonica. Il servizio non si ferma mai.
-            </p>
-          </div>
-
-          {/* Objection 2: Personal Viejo */}
-          <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-shadow relative overflow-hidden group">
-            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
-              <Users className="w-7 h-7 text-blue-500" />
-            </div>
-            <h3 className="text-2xl font-extrabold text-[#111827] mb-4">"Il mio staff non è tecnologico."</h3>
-            <p className="text-gray-500 leading-relaxed font-medium mb-6">
-              Abbiamo progettato il pannello "Gestione" pensando a schermi touch e a dita veloci. Nessun menù nascosto, nessuna terminologia informatica. Curva di apprendimento reale stimata: <strong>5 minuti</strong> per il cameriere meno esperto della tua brigata.
-            </p>
-          </div>
-
-          {/* Objection 3: Clientela Clásica */}
-          <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-shadow relative overflow-hidden group">
-            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center mb-6">
-              <Smartphone className="w-7 h-7 text-orange-500" />
-            </div>
-            <h3 className="text-2xl font-extrabold text-[#111827] mb-4">"I miei clienti odiano scansionare i QR."</h3>
-            <p className="text-gray-500 leading-relaxed font-medium mb-6">
-              Non ti chiediamo di bruciare i menù di carta oggi stesso. Applica la <em>Transizione Ibrida</em>: i clienti abituali/frettolosi useranno Leomenu tagliando le file, liberando i tuoi camerieri per dedicare maggiore cura e tempo alla clientela più esigente o storica.
-            </p>
-          </div>
-
-          {/* Objection 4: Data Privacy */}
-          <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-shadow relative overflow-hidden group">
-            <div className="w-14 h-14 bg-teal-50 rounded-2xl flex items-center justify-center mb-6">
-              <Database className="w-7 h-7 text-[#008081]" />
-            </div>
-            <h3 className="text-2xl font-extrabold text-[#111827] mb-4">"Dove finiscono i menù e le email dei miei clienti?"</h3>
-            <p className="text-gray-500 leading-relaxed font-medium mb-6">
-              Tutti i dati, le fotografie dei tuoi piatti e gli iscritti al tuo Passport risedono in server Cloud sicuri situati sul suolo Europeo. Sei tu l'unico prorietario dei tuoi dati, nel rispetto totale del nuovo GDPR sulla privacy. Nessuna rivendita di dati a terzi.
-            </p>
-          </div>
-
-        </div>
-      </div>
-
-      {/* 4. Enterprise-Grade Badge */}
-      <section className="bg-white border-y border-gray-200 py-16">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <Server className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-[#111827] mb-4">Infrastruttura Enterprise a portata di piccola impresa.</h2>
-          <p className="text-gray-500 font-medium leading-relaxed">
-            Scaliamo dinamicamente. Che tu riceva 10 clienti in un martedì piovoso, o 500 scansioni contemporanee la sera di San Silvestro, il nostro backend si adatta istantaneamente per mantenere la latenza a zero.
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 tracking-tight leading-tight">
+            Hai dubbi? Bene.<br />
+            <span className="text-[#008081]">Vuol dire che stai scegliendo con la testa.</span>
+          </h1>
+          <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto leading-relaxed">
+            Qui non trovi slide patinate. Trovi risposte dirette alle domande che ti stai già facendo.
           </p>
         </div>
       </section>
 
-      {/* 5. Bottom CTA Section */}
-      <section className="bg-[#111827] py-24 px-6 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <Lock className="w-12 h-12 text-[#008081] mx-auto mb-6" />
-          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
-            Prova la solidità del sistema oggi.
-          </h2>
-          <p className="text-lg text-gray-400 font-medium mb-10 max-w-2xl mx-auto">
-            Carica i tuoi piatti, fai crash-test dal tuo telefono, scollegalo dal wi-fi e vedi tu stesso la reattività della piattaforma con la prova di 14 giorni.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register" className="w-full sm:w-auto bg-[#008081] text-white font-extrabold px-8 py-4 rounded-xl hover:bg-teal-500 hover:shadow-[0_0_20px_rgba(0,128,129,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2">
-              Avvia il tuo Trial Sicuro <ArrowRight className="w-5 h-5" />
-            </Link>
+      {/* ─── 2. STATS BAR ────────────────────────────────────── */}
+      <section className="bg-[#0f1a1a] py-12 px-6 border-b border-gray-800">
+        <div className="max-w-3xl mx-auto grid grid-cols-3 gap-8 text-center">
+          {[
+            { val: '99.9%', label: 'Uptime garantito' },
+            { val: 'GDPR', label: 'Dati protetti, server UE' },
+            { val: '<2s', label: 'Tempo di caricamento' },
+          ].map((s, i) => (
+            <div key={i}>
+              <p className="text-3xl md:text-4xl font-black text-[#008081] mb-1">{s.val}</p>
+              <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest leading-snug">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── 3. OBJECTION CARDS (chat bubble style) ──────────── */}
+      <section className="bg-[#F9FAFB] py-24 px-6">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-xs font-black text-gray-400 uppercase tracking-widest mb-12">Le domande che ci fai di più</p>
+          <div className="space-y-8">
+            {OBJECTIONS.map((obj, i) => (
+              <div key={i} className="space-y-3">
+                {/* Question bubble — owner voice */}
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] bg-white border border-gray-200 rounded-3xl rounded-tl-md px-6 py-4 shadow-sm">
+                    <p className="text-[#111827] font-extrabold text-base leading-snug">{obj.fear}</p>
+                  </div>
+                </div>
+                {/* Answer bubble — Leomenu voice */}
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] bg-[#008081] rounded-3xl rounded-tr-md px-6 py-4 shadow-md">
+                    <p className="text-white font-medium text-sm leading-relaxed">{obj.answer}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── 4. GUARANTEE BLOCK ──────────────────────────────── */}
+      <section className="bg-white py-20 px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="border-2 border-[#008081] rounded-3xl p-8 md:p-12 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#008081] to-teal-400" />
+            <p className="text-xs font-black text-[#008081] uppercase tracking-widest mb-6">Le nostre garanzie</p>
+            <div className="space-y-5">
+              {GUARANTEES.map((g, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <CheckCircle2 className="w-6 h-6 text-[#008081] shrink-0" />
+                  <p className="text-xl md:text-2xl font-extrabold text-[#111827]">{g}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 5. SUPPORT PROMISE ──────────────────────────────── */}
+      <section className="bg-[#F9FAFB] py-16 px-6 border-y border-gray-100">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+            <div className="flex items-start gap-5">
+              <div className="w-12 h-12 bg-[#008081] rounded-2xl flex items-center justify-center shrink-0">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="font-extrabold text-[#111827] text-lg mb-2">Supporto vero, in italiano.</p>
+                <p className="text-gray-500 font-medium leading-relaxed text-sm">
+                  Ogni ristoratore che usa Leomenu ha accesso al supporto in italiano — vero, non un bot. Se c'è un problema durante il servizio, lo risolviamo insieme.
+                </p>
+              </div>
+            </div>
+            {/* Fake chat preview */}
+            <div className="mt-6 bg-[#F9FAFB] rounded-2xl p-4 border border-gray-100 space-y-3">
+              <div className="flex gap-3 items-start">
+                <div className="w-7 h-7 bg-gray-200 rounded-full shrink-0 flex items-center justify-center text-[10px] font-black text-gray-500">TU</div>
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-3 py-2">
+                  <p className="text-xs font-semibold text-[#111827]">Non riesco ad aggiungere una foto al piatto.</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">14:32</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start flex-row-reverse">
+                <div className="w-7 h-7 bg-[#008081] rounded-full shrink-0 flex items-center justify-center text-[10px] font-black text-white">LS</div>
+                <div className="bg-[#008081] rounded-2xl rounded-tr-sm px-3 py-2">
+                  <p className="text-xs font-semibold text-white">Certo! Vai su Gestione → prodotto → icona fotocamera. Vuoi che ti guido passo per passo?</p>
+                  <p className="text-[10px] text-teal-200 mt-0.5">14:33 · Letto ✓✓</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 6. FINAL CTA ────────────────────────────────────── */}
+      <section className="bg-[#111827] py-24 px-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#008081]/15 rounded-full blur-[100px] pointer-events-none" />
+        <div className="max-w-2xl mx-auto text-center relative z-10">
+          <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight">
+            Smetti di rimandare.<br />Prova gratis, decidi dopo.
+          </h2>
+          <p className="text-gray-400 font-medium mb-10">
+            Non ti chiediamo la carta di credito. Ti chiediamo solo di provarlo.
+          </p>
+          <Link
+            to="/register"
+            className="inline-flex items-center gap-2 bg-[#008081] text-white font-extrabold px-8 py-4 rounded-full hover:bg-teal-500 hover:shadow-[0_0_30px_rgba(0,128,129,0.5)] transition-all text-lg"
+          >
+            Inizia i 14 giorni gratuiti <ArrowRight className="w-5 h-5" />
+          </Link>
+          <p className="text-gray-600 text-xs font-bold uppercase tracking-widest mt-6">
+            Nessuna carta · Nessun impegno · Disdici quando vuoi
+          </p>
         </div>
       </section>
 

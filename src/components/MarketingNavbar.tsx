@@ -22,10 +22,9 @@ export function MarketingNavbar() {
   }, [location.pathname]);
 
   const navLinks = [
-    { name: 'Funzionalità', path: '/funzionalita' },
+    { name: 'Come Funziona', path: '/funzionalita' },
     { name: 'Prezzi', path: '/prezzi' },
     { name: 'Sicurezza', path: '/sicurezza' },
-    { name: 'Come Funziona', path: '/come-funziona' },
   ];
 
   return (
