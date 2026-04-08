@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Home from './pages/Home';
 import SearchPortal from './pages/SearchPortal';
 import RestaurantHome from './pages/RestaurantHome';
@@ -19,6 +19,8 @@ import UpdatePassword from './pages/UpdatePassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Termini from './pages/Termini';
 import Contatti from './pages/Contatti';
+import CookiePolicy from './pages/CookiePolicy';
+import { CookieBanner } from './components/CookieBanner';
 import db from './db';
 import LeoAdmin from './pages/LeoAdmin';
 
@@ -30,7 +32,6 @@ import Sicurezza from './pages/Marketing/Sicurezza';
 import ComeFunziona from './pages/Marketing/ComeFunziona';
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,44 +42,30 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
           const { data: roleData, error } = await db.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
           if (error || !roleData) {
             await db.auth.signOut();
-            setLoading(false);
             return;
           }
-          
+
           if (roleData.role === 'admin') {
             navigate('/leomenu-admin', { replace: true });
-            setLoading(false);
           } else if (roleData.role === 'owner') {
             const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', session.user.id).neq('slug', 'demo').limit(1).maybeSingle();
             if (resData?.slug) {
-                navigate(`/${resData.slug}/gestione`, { replace: true });
-                setLoading(false);
+              navigate(`/${resData.slug}/gestione`, { replace: true });
             } else {
-                await db.auth.signOut();
-                navigate('/register', { replace: true });
-                setLoading(false);
-                return;
+              await db.auth.signOut();
+              navigate('/register', { replace: true });
             }
           } else {
             navigate('/passport', { replace: true });
-            setLoading(false);
           }
         } catch (e) {
           await db.auth.signOut();
-          setLoading(false);
         }
-      } else {
-        setLoading(false);
       }
     }
     checkAuth();
   }, [navigate]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FBFBFB] dark:bg-[#1A1A1A]">
-      <div className="w-8 h-8 rounded-full border-4 border-[#008081] border-t-transparent animate-spin"></div>
-    </div>
-  );
   return <>{children}</>;
 }
 
@@ -130,6 +117,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <GlobalThemeProvider>
+      <CookieBanner />
       <Routes>
         {/* Marketing Web Ecosystem */}
         <Route element={<GuestRoute><MarketingLayout /></GuestRoute>}>
@@ -155,6 +143,7 @@ export default function App() {
         <Route path="/terms" element={<Termini />} />
         <Route path="/contatti" element={<Contatti />} />
         <Route path="/contact" element={<Contatti />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/gestione" element={<Gestione />} />
         <Route path="/:slug/gestione" element={<Gestione />} />

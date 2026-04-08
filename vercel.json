@@ -8,6 +8,7 @@
     { "source": "/menu/el-encuentro",  "destination": "/el-encuentro",            "permanent": true }
   ],
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

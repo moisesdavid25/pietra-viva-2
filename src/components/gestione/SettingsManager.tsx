@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Camera, ChevronDown, ChevronRight, Settings, BookOpen, Upload,
   AlertTriangle, Trash2, Save, Phone, Link2, Music, MapPin,
-  Clock, Wifi, FileText, Eye, EyeOff, Copy, QrCode, Globe,
+  Clock, Wifi, FileText, Eye, EyeOff, Copy, QrCode, Globe, CreditCard,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import db from '../../db';
 import ImageCropperModal from '../ImageCropperModal';
 import { useToast } from '../Toast';
+import { useStripeCheckout, type PlanKey } from '../../hooks/useStripeCheckout';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,63 @@ function Section({
       <div className={`transition-all duration-300 ease-in-out ${expanded ? 'max-h-[2000px] opacity-100 p-5 border-t' : 'max-h-0 opacity-0 overflow-hidden p-0'} ${danger ? 'border-red-100 dark:border-red-900/30' : 'border-gray-100 dark:border-gray-800'}`}>
         {children}
       </div>
+    </div>
+  );
+}
+
+// ── Subscription Panel ────────────────────────────────────────────────────────
+
+const PLANS: { key: PlanKey; label: string; price: string; period: string; badge: string | null }[] = [
+  { key: 'mensile',    label: 'Mensile',    price: '€29',  period: '/mese',       badge: null },
+  { key: 'semestrale', label: 'Semestrale', price: '€22',  period: '/mese',       badge: '-24%' },
+  { key: 'annuale',    label: 'Annuale',    price: '€17',  period: '/mese',       badge: '-41%' },
+];
+
+function SubscriptionPanel({ subscriptionTier, restaurantId }: { subscriptionTier: string; restaurantId: string }) {
+  const { startCheckout, loading, error } = useStripeCheckout();
+  const isActive = subscriptionTier !== 'trial';
+
+  return (
+    <div className="bg-white dark:bg-[#262626] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-[#008081]/10 flex items-center justify-center text-[#008081]">
+          <CreditCard className="w-4 h-4" />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Piano attuale</p>
+          <span className="font-bold text-gray-800 dark:text-gray-200 capitalize">
+            {subscriptionTier === 'trial' ? '🕐 Trial gratuito' : `✅ ${subscriptionTier}`}
+          </span>
+        </div>
+      </div>
+
+      {!isActive && (
+        <>
+          <p className="text-xs text-gray-500 mb-4">Scegli un piano per continuare ad usare Leomenu dopo il trial:</p>
+          <div className="grid grid-cols-3 gap-2">
+            {PLANS.map(plan => (
+              <button
+                key={plan.key}
+                onClick={() => startCheckout(plan.key, restaurantId)}
+                disabled={loading !== null}
+                className="relative flex flex-col items-center p-3 rounded-xl border-2 border-[#008081] bg-teal-50/50 dark:bg-[#008081]/10 hover:bg-teal-100/60 transition-all disabled:opacity-60"
+              >
+                {plan.badge && (
+                  <span className="absolute -top-2 right-2 bg-[#008081] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{plan.badge}</span>
+                )}
+                <span className="text-xs font-black text-gray-700 dark:text-gray-300 mb-1">{plan.label}</span>
+                <span className="text-lg font-black text-[#008081]">{plan.price}</span>
+                <span className="text-[10px] text-gray-400">{plan.period}</span>
+                {loading === plan.key && (
+                  <span className="mt-1 text-[10px] text-[#008081] font-bold">Caricamento...</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+          <p className="text-[10px] text-gray-400 mt-3 text-center">14 giorni di prova gratuita inclusi · Annulla quando vuoi</p>
+        </>
+      )}
     </div>
   );
 }
@@ -453,18 +511,8 @@ export default function SettingsManager({
         </Section>
       )}
 
-      {/* 10 — Piano */}
-      <div className="bg-white dark:bg-[#262626] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Piano attuale</p>
-          <span className="font-bold text-gray-700 dark:text-gray-300 capitalize">
-            {subscriptionTier === 'trial' ? 'Trial gratuito' : subscriptionTier}
-          </span>
-        </div>
-        <button disabled className="px-4 py-2 bg-gray-100 dark:bg-[#1A1A1A] text-gray-500 text-xs font-bold rounded-xl cursor-not-allowed border border-gray-200 dark:border-gray-700">
-          Upgrade (presto)
-        </button>
-      </div>
+      {/* 10 — Piano & Abbonamento */}
+      <SubscriptionPanel subscriptionTier={subscriptionTier} restaurantId={restaurantId} />
 
       {/* 10 — Elimina Account */}
       <Section id="danger" expanded={expanded === 'danger'} onToggle={toggle} icon={AlertTriangle} title="Elimina account" danger>

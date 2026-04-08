@@ -5,7 +5,7 @@ import { Calculator, TrendingUp, Printer, ChevronRight } from 'lucide-react';
 // ── Cost constants (Italian market, conservative estimates) ──────────────────
 const BASE_PRINT_COST = 50;       // € base cost for design/setup
 const COST_PER_MENU_UNIT = 3.5;   // € per physical menu printed
-const LEOMENU_ANNUAL_COST = 180;  // € / year (€15/month plan)
+const LEOMENU_ANNUAL_COST = 204;  // € / year (€17/month plan)
 
 function formatEuro(value: number): string {
   return new Intl.NumberFormat('it-IT', {
@@ -160,10 +160,10 @@ export function HomeRoiCalculator() {
                 <TrendingUp className="w-4 h-4" /> Con Leomenu
               </p>
               <p className="text-4xl font-black text-[#008081]">
-                180 €<span className="text-lg text-teal-600/70 font-bold tracking-tight">/anno</span>
+                204 €<span className="text-lg text-teal-600/70 font-bold tracking-tight">/anno</span>
               </p>
               <p className="text-sm text-teal-600 mt-1 font-medium bg-teal-100/50 inline-block px-2 py-0.5 rounded-md">
-                solo 15 €/mese
+                solo 17 €/mese
               </p>
             </div>
 

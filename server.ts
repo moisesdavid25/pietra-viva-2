@@ -1,14 +1,114 @@
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import db from './src/db.ts';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const MARKETING_ROUTES = [
+  '/',
+  '/funzionalita',
+  '/prezzi',
+  '/sicurezza',
+  '/come-funziona',
+  '/contatti',
+  '/privacy-policy',
+  '/privacy',
+  '/termini-condizioni',
+  '/terms',
+];
+
+const PAGE_META: Record<string, { title: string; description: string }> = {
+  '/': {
+    title: 'Leomenu - Il menù digitale per il tuo ristorante',
+    description: 'Crea il menù QR del tuo ristorante in 15 minuti. Aggiornamenti in tempo reale, fidelizzazione clienti e zero costi di stampa.',
+  },
+  '/funzionalita': {
+    title: 'Funzionalità - Leomenu',
+    description: 'QR code, NFC, aggiornamenti in tempo reale, fidelizzazione clienti e analisi avanzate per il tuo ristorante.',
+  },
+  '/prezzi': {
+    title: 'Prezzi - Leomenu',
+    description: 'Piani semplici e trasparenti per il tuo menù digitale. Inizia gratis, senza carta di credito.',
+  },
+  '/sicurezza': {
+    title: 'Sicurezza - Leomenu',
+    description: 'I tuoi dati e quelli dei tuoi clienti sono protetti con i massimi standard di sicurezza.',
+  },
+  '/come-funziona': {
+    title: 'Come Funziona - Leomenu',
+    description: 'Scopri come creare il tuo menù digitale in pochi minuti con Leomenu.',
+  },
+  '/contatti': {
+    title: 'Contatti - Leomenu',
+    description: 'Hai domande? Contatta il team di Leomenu.',
+  },
+  '/privacy-policy': {
+    title: 'Privacy Policy - Leomenu',
+    description: 'Informativa sulla privacy di Leomenu.',
+  },
+  '/privacy': {
+    title: 'Privacy Policy - Leomenu',
+    description: 'Informativa sulla privacy di Leomenu.',
+  },
+  '/termini-condizioni': {
+    title: 'Termini e Condizioni - Leomenu',
+    description: 'Termini e condizioni di utilizzo di Leomenu.',
+  },
+  '/terms': {
+    title: 'Termini e Condizioni - Leomenu',
+    description: 'Termini e condizioni di utilizzo di Leomenu.',
+  },
+};
+
+function injectSSR(template: string, appHtml: string, routePath: string): string {
+  const meta = PAGE_META[routePath] ?? PAGE_META['/'];
+  return template
+    .replace(/<title>.*?<\/title>/, `<title>${meta.title}</title>`)
+    .replace(/(<meta name="description" content=")[^"]*(")/,`$1${meta.description}$2`)
+    .replace('<!--ssr-outlet-->', appHtml)
+    .replace('<div id="root">', '<div id="root" data-ssr="true">');
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const isProd = process.env.NODE_ENV === 'production';
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // ── Robots & Sitemap ────────────────────────────────────────────────────────
+
+  app.get('/robots.txt', (_req, res) => {
+    res.set('Content-Type', 'text/plain').send(
+      `User-agent: *\nAllow: /\n\nSitemap: https://leomenu.it/sitemap.xml`
+    );
+  });
+
+  app.get('/sitemap.xml', (_req, res) => {
+    const base = 'https://leomenu.it';
+    const pages = [
+      { url: '/', priority: '1.0' },
+      { url: '/funzionalita', priority: '0.8' },
+      { url: '/prezzi', priority: '0.8' },
+      { url: '/come-funziona', priority: '0.8' },
+      { url: '/sicurezza', priority: '0.7' },
+      { url: '/contatti', priority: '0.6' },
+    ];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
+      .map(
+        (p) =>
+          `  <url>\n    <loc>${base}${p.url}</loc>\n    <priority>${p.priority}</priority>\n    <changefreq>monthly</changefreq>\n  </url>`
+      )
+      .join('\n')}\n</urlset>`;
+    res.set('Content-Type', 'application/xml').send(xml);
+  });
+
+  // ── API Routes ──────────────────────────────────────────────────────────────
 
   app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
@@ -45,12 +145,8 @@ async function startServer() {
     const menu = [];
     for (const cat of (categories || [])) {
       const { data: products } = await db.from('products').select('*').eq('category_id', cat.id).order('sort_order', { ascending: true }).order('id');
-      menu.push({
-        ...cat,
-        products: products || []
-      });
+      menu.push({ ...cat, products: products || [] });
     }
-
     res.json(menu);
   });
 
@@ -113,14 +209,47 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  // ── SSR + Static Serving ────────────────────────────────────────────────────
+
+  if (!isProd) {
+    // Dev mode: Vite handles client-side assets; SSR uses direct tsx import
+    // (avoids Vite module runner isolation that breaks react-router context)
+    const { render } = await import('./src/entry-server.tsx');
+
     const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+      server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== 'true' },
+      appType: 'custom',
     });
+
+    // SSR for marketing routes
+    app.get(MARKETING_ROUTES, async (req, res, next) => {
+      try {
+        const rawTemplate = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        const template = await vite.transformIndexHtml(req.originalUrl, rawTemplate);
+        const appHtml = render(req.path);
+        const html = injectSSR(template, appHtml, req.path);
+        res.status(200).set('Content-Type', 'text/html').end(html);
+      } catch (e) {
+        next(e);
+      }
+    });
+
     app.use(vite.middlewares);
+
+    // SPA fallback for all other routes
+    app.get('*', async (req, res) => {
+      const rawTemplate = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+      const template = await vite.transformIndexHtml(req.originalUrl, rawTemplate);
+      res.status(200).set('Content-Type', 'text/html').end(template);
+    });
   } else {
-    app.use(express.static('dist'));
+    // Production: serve pre-built static files (prerendered by scripts/prerender.ts)
+    app.use(express.static(path.resolve(__dirname, 'dist')));
+
+    // SPA fallback for all other routes
+    app.get('*', (_req, res) => {
+      res.sendFile(path.resolve(__dirname, 'dist/index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
