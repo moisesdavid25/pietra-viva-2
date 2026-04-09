@@ -151,11 +151,15 @@ export default function SettingsManager({
 
   useEffect(() => {
     if (!restaurantId) return;
-    db.from('settings').select('*').eq('restaurant_id', restaurantId).maybeSingle().then(({ data }) => {
-      if (data) {
-        setSettings(data);
-        if (data.opening_hours) {
-          try { setWeekHours(JSON.parse(data.opening_hours)); } catch { /* use default */ }
+    db.from('settings').select('key,value').eq('restaurant_id', restaurantId).then(({ data }) => {
+      if (data && data.length > 0) {
+        const obj: Record<string, string> = {};
+        for (const row of data) {
+          if (row.key) obj[row.key] = row.value ?? '';
+        }
+        setSettings(obj);
+        if (obj.opening_hours) {
+          try { setWeekHours(JSON.parse(obj.opening_hours)); } catch { /* use default */ }
         }
       }
     });
@@ -193,9 +197,15 @@ export default function SettingsManager({
     const safeSettings: Record<string, string> = { ...settings };
     delete (safeSettings as Record<string, unknown>).id;
     delete (safeSettings as Record<string, unknown>).restaurant_id;
+    delete (safeSettings as Record<string, unknown>).key;
+    delete (safeSettings as Record<string, unknown>).value;
     safeSettings.opening_hours = JSON.stringify(weekHours);
 
-    const { error } = await db.from('settings').upsert({ restaurant_id: restaurantId, ...safeSettings });
+    const rows = Object.entries(safeSettings)
+      .filter(([k]) => !!k)
+      .map(([key, value]) => ({ restaurant_id: restaurantId, key, value: String(value ?? '') }));
+
+    const { error } = await db.from('settings').upsert(rows, { onConflict: 'restaurant_id,key' });
     setIsUploading(false);
     if (!error) showToast('✅ Impostazioni salvate!', 'success');
     else showToast('❌ Errore: ' + error.message, 'error');
@@ -244,287 +254,334 @@ export default function SettingsManager({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="pt-4 flex flex-col gap-3 pb-24 w-full">
+    <div className="pt-4 pb-24 w-full max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      {/* Header + Save button */}
-      <div className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex justify-between items-center">
-        <div>
-          <h3 className="font-bold text-gray-900 dark:text-white">Impostazioni App</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Gestisci l'aspetto della tua app.</p>
-        </div>
-        <button
-          onClick={handleSaveSettings} disabled={isUploading}
-          className={`px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md transition-all ${isUploading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#008081] text-white hover:bg-teal-700'}`}
-        >
-          <Save className="w-4 h-4" /> Salva
-        </button>
-      </div>
+        {/* ── Left column (2/3): accordion sections ─────────────────────── */}
+        <div className="lg:col-span-2 flex flex-col gap-3">
 
-      {/* 1 — Profilo Locale */}
-      <Section id="profilo" expanded={expanded === 'profilo'} onToggle={toggle} icon={Settings} title="Profilo Locale">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={LABEL_CLS}>Nome del Negozio</label>
-            <input type="text" value={restaurantName} onChange={e => setRestaurantName(e.target.value)}
-              placeholder="Es. Pizzeria Bella Napoli" className={INPUT_CLS} />
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Frase / Sottotitolo</label>
-            <input type="text" value={settings.restaurant_subtitle || ''} onChange={e => setSettings({ ...settings, restaurant_subtitle: e.target.value })}
-              placeholder="Es. L'arte della vera pizza" className={INPUT_CLS} />
-            <p className="text-[10px] text-gray-400 mt-1">Sostituisce "Menu Digitale" in homepage se compilato.</p>
-          </div>
-        </div>
-      </Section>
-
-      {/* 2 — Link & Social */}
-      <Section id="social" expanded={expanded === 'social'} onToggle={toggle} icon={Link2} title="Link & Social">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {([
-            { key: 'phone_number', label: 'Telefono', Icon: Phone, type: 'tel', placeholder: '+39 02 1234567' },
-            { key: 'instagram_url', label: 'Instagram', Icon: Link2, type: 'url', placeholder: 'https://instagram.com/tuolocale' },
-            { key: 'facebook_url', label: 'Facebook', Icon: Link2, type: 'url', placeholder: 'https://facebook.com/tuolocale' },
-            { key: 'tiktok_url', label: 'TikTok', Icon: Music, type: 'url', placeholder: 'https://tiktok.com/@tuolocale' },
-            { key: 'google_maps_url', label: 'Google Maps', Icon: MapPin, type: 'url', placeholder: 'https://maps.app.goo.gl/...' },
-          ] as const).map(({ key, label, Icon, type, placeholder }) => (
-            <div key={key}>
-              <label className={LABEL_CLS}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Icon className="w-3 h-3 text-[#008081]" />
-                  {label}
-                </span>
-              </label>
-              <input type={type} value={settings[key] || ''} onChange={e => setSettings({ ...settings, [key]: e.target.value })}
-                placeholder={placeholder} className={INPUT_CLS} />
+          {/* Header + Save button */}
+          <div className="bg-white dark:bg-[#262626] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Impostazioni App</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Gestisci l'aspetto della tua app.</p>
             </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* 3 — Identità Visiva */}
-      <Section id="visiva" expanded={expanded === 'visiva'} onToggle={toggle} icon={BookOpen} title="Identità Visiva">
-        <div className="space-y-6">
-          <div>
-            <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-1">Logo</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Immagine circolare mostrata in testata (ritaglio 1:1).</p>
-            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-              const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
-              if (!validateFile(file)) return;
-              openCropper(file, 1, b64 => setSettings({ ...settings, logo_url: b64 }));
-            }} />
-            <button onClick={() => logoInputRef.current?.click()}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#008081] text-[#008081] font-bold hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all w-full justify-center">
-              <Upload className="w-4 h-4" /> Importa / Carica Logo
+            <button
+              onClick={handleSaveSettings} disabled={isUploading}
+              className={`px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md transition-all ${isUploading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#008081] text-white hover:bg-teal-700'}`}
+            >
+              <Save className="w-4 h-4" /> Salva
             </button>
-            {settings.logo_url && (
-              <img src={settings.logo_url} alt="Logo" className="mt-3 h-28 w-28 object-contain rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white shadow-sm mx-auto" />
-            )}
           </div>
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-1">Sfondo Intestazione (Cover)</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Immagine panoramica 16:9 dietro al logo.</p>
-            <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
-              const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
-              if (!validateFile(file)) return;
-              openCropper(file, 16 / 9, b64 => setSettings({ ...settings, cover_image_url: b64 }));
-            }} />
-            <button onClick={() => coverInputRef.current?.click()}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#008081] text-[#008081] font-bold hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all w-full justify-center">
-              <Camera className="w-4 h-4" /> Carica Foto di Copertina
-            </button>
-            {settings.cover_image_url && (
-              <img src={settings.cover_image_url} alt="Cover" className="mt-3 w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
-            )}
-          </div>
-        </div>
-      </Section>
 
-      {/* 4 — Dati Fiscali */}
-      <Section id="fiscale" expanded={expanded === 'fiscale'} onToggle={toggle} icon={FileText} title="Dati Fiscali">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={LABEL_CLS}>Ragione Sociale / Nome Attività</label>
-            <input type="text" value={settings.ragione_sociale || ''} onChange={e => setSettings({ ...settings, ragione_sociale: e.target.value })}
-              placeholder="Es. Pizzeria Bella Napoli S.r.l." className={INPUT_CLS} />
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Partita IVA</label>
-            <input type="text" value={settings.piva || ''} onChange={e => setSettings({ ...settings, piva: e.target.value })}
-              placeholder="IT12345678901" className={`${INPUT_CLS} ${!pivaValid ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10' : ''}`} />
-            {!pivaValid
-              ? <p className="text-[11px] font-bold text-red-500 mt-1">Formato: IT + 11 cifre</p>
-              : <p className="text-[10px] text-gray-400 mt-1">11 cifre, precedute da IT</p>}
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Codice Fiscale</label>
-            <input type="text" value={settings.codice_fiscale || ''} onChange={e => setSettings({ ...settings, codice_fiscale: e.target.value })}
-              placeholder="Es. RSSMRC80A01H501U" className={INPUT_CLS} />
-            <p className="text-[10px] text-gray-400 mt-1">Solo se diverso dalla Partita IVA</p>
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Codice SDI</label>
-            <input type="text" value={settings.codice_sdi || ''} onChange={e => setSettings({ ...settings, codice_sdi: e.target.value })}
-              placeholder="Es. ABCDE12" maxLength={7} className={`${INPUT_CLS} ${!sdiValid ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10' : ''}`} />
-            {!sdiValid
-              ? <p className="text-[11px] font-bold text-red-500 mt-1">7 caratteri richiesti</p>
-              : <p className="text-[10px] text-gray-400 mt-1">Per la fatturazione elettronica</p>}
-          </div>
-          <div className="md:col-span-2">
-            <label className={LABEL_CLS}>PEC (Posta Elettronica Certificata)</label>
-            <input type="email" value={settings.pec || ''} onChange={e => setSettings({ ...settings, pec: e.target.value })}
-              placeholder="azienda@pec.it" className={INPUT_CLS} />
-          </div>
-        </div>
-      </Section>
-
-      {/* 5 — Orari di Apertura */}
-      <Section id="orari" expanded={expanded === 'orari'} onToggle={toggle} icon={Clock} title="Orari di Apertura">
-        <div className="space-y-0.5">
-          {DAYS.map(({ key, label }) => {
-            const day = weekHours[key] ?? { open: '12:00', close: '22:00', closed: false };
-            return (
-              <div key={key} className="flex items-center gap-3 py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                <span className="w-9 text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase flex-shrink-0">{label}</span>
-
-                {/* Toggle */}
-                <div onClick={() => setWeekHours(p => ({ ...p, [key]: { ...day, closed: !day.closed } }))}
-                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${day.closed ? 'bg-gray-300 dark:bg-gray-600' : 'bg-[#008081]'}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${day.closed ? 'translate-x-0.5' : 'translate-x-[18px]'}`} />
-                </div>
-                <span className={`text-[10px] font-bold w-12 flex-shrink-0 ${day.closed ? 'text-gray-400' : 'text-[#008081]'}`}>
-                  {day.closed ? 'Chiuso' : 'Aperto'}
-                </span>
-
-                {/* Times */}
-                <div className="flex items-center gap-1.5 flex-1">
-                  <input type="time" value={day.open} disabled={day.closed}
-                    onChange={e => setWeekHours(p => ({ ...p, [key]: { ...day, open: e.target.value } }))}
-                    className="flex-1 px-2 py-1.5 text-xs font-bold bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-[#008081]/40 focus:border-[#008081] outline-none disabled:opacity-40 transition-all" />
-                  <span className="text-xs text-gray-400 font-bold flex-shrink-0">→</span>
-                  <input type="time" value={day.close} disabled={day.closed}
-                    onChange={e => setWeekHours(p => ({ ...p, [key]: { ...day, close: e.target.value } }))}
-                    className="flex-1 px-2 py-1.5 text-xs font-bold bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-[#008081]/40 focus:border-[#008081] outline-none disabled:opacity-40 transition-all" />
-                </div>
+          {/* 1 — Profilo Locale */}
+          <Section id="profilo" expanded={expanded === 'profilo'} onToggle={toggle} icon={Settings} title="Profilo Locale">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL_CLS}>Nome del Negozio</label>
+                <input type="text" value={restaurantName} onChange={e => setRestaurantName(e.target.value)}
+                  placeholder="Es. Pizzeria Bella Napoli" className={INPUT_CLS} />
               </div>
-            );
-          })}
-        </div>
-        <p className="text-[10px] text-gray-400 mt-3">Salvati con il pulsante "Salva" in alto.</p>
-      </Section>
-
-      {/* 6 — WiFi Ospiti */}
-      <Section id="wifi" expanded={expanded === 'wifi'} onToggle={toggle} icon={Wifi} title="WiFi Ospiti">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={LABEL_CLS}>Nome Rete (SSID)</label>
-            <input type="text" value={settings.wifi_ssid || ''} onChange={e => setSettings({ ...settings, wifi_ssid: e.target.value })}
-              placeholder="Es. Ristorante_Guest" className={INPUT_CLS} />
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Password WiFi</label>
-            <div className="relative">
-              <input type={wifiVisible ? 'text' : 'password'} value={settings.wifi_password || ''}
-                onChange={e => setSettings({ ...settings, wifi_password: e.target.value })}
-                placeholder="Es. benvenuto2024" className={`${INPUT_CLS} pr-20`} />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                <button type="button" onClick={() => setWifiVisible(v => !v)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                  {wifiVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-                <button type="button" onClick={() => copyToClipboard(settings.wifi_password || '', 'Password copiata!')}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-[#008081] transition-colors">
-                  <Copy className="w-4 h-4" />
-                </button>
+              <div>
+                <label className={LABEL_CLS}>Frase / Sottotitolo</label>
+                <input type="text" value={settings.restaurant_subtitle || ''} onChange={e => setSettings({ ...settings, restaurant_subtitle: e.target.value })}
+                  placeholder="Es. L'arte della vera pizza" className={INPUT_CLS} />
+                <p className="text-[10px] text-gray-400 mt-1">Sostituisce "Menu Digitale" in homepage se compilato.</p>
               </div>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Visibile solo a te — condividi a voce con i clienti.</p>
-          </div>
-        </div>
-      </Section>
+          </Section>
 
-      {/* 7 — Menù del Giorno */}
-      <Section id="menugiorno" expanded={expanded === 'menugiorno'} onToggle={toggle} icon={BookOpen} title="Menù del Giorno">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">Attiva Menù del Giorno</p>
-            <p className="text-xs text-gray-400 mt-0.5">Mostra la sezione Menù del Giorno ai clienti nella home del ristorante.</p>
-          </div>
-          <button
-            onClick={async () => {
-              const current = settings.menu_del_giorno_enabled;
-              const newVal = current === 'true' ? 'false' : 'true';
-              setSettings(s => ({ ...s, menu_del_giorno_enabled: newVal }));
-              await db.from('settings').upsert(
-                { restaurant_id: restaurantId, key: 'menu_del_giorno_enabled', value: newVal },
-                { onConflict: 'restaurant_id,key' }
-              );
-              showToast(newVal === 'true' ? 'Menù del Giorno attivato' : 'Menù del Giorno disattivato');
-            }}
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${settings.menu_del_giorno_enabled === 'true' ? 'bg-[#008081]' : 'bg-gray-200 dark:bg-gray-700'}`}
-          >
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${settings.menu_del_giorno_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
-      </Section>
+          {/* 2 — Link & Social */}
+          <Section id="social" expanded={expanded === 'social'} onToggle={toggle} icon={Link2} title="Link & Social">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {([
+                { key: 'phone_number', label: 'Telefono', Icon: Phone, type: 'tel', placeholder: '+39 02 1234567' },
+                { key: 'instagram_url', label: 'Instagram', Icon: Link2, type: 'url', placeholder: 'https://instagram.com/tuolocale' },
+                { key: 'facebook_url', label: 'Facebook', Icon: Link2, type: 'url', placeholder: 'https://facebook.com/tuolocale' },
+                { key: 'tiktok_url', label: 'TikTok', Icon: Music, type: 'url', placeholder: 'https://tiktok.com/@tuolocale' },
+                { key: 'google_maps_url', label: 'Google Maps', Icon: MapPin, type: 'url', placeholder: 'https://maps.app.goo.gl/...' },
+              ] as const).map(({ key, label, Icon, type, placeholder }) => (
+                <div key={key}>
+                  <label className={LABEL_CLS}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon className="w-3 h-3 text-[#008081]" />
+                      {label}
+                    </span>
+                  </label>
+                  <input type={type} value={settings[key] || ''} onChange={e => setSettings({ ...settings, [key]: e.target.value })}
+                    placeholder={placeholder} className={INPUT_CLS} />
+                </div>
+              ))}
+            </div>
+          </Section>
 
-      {/* 8 — URL del Menù */}
-      <Section id="url" expanded={expanded === 'url'} onToggle={toggle} icon={Globe} title="URL del Menù">
-        <div className="space-y-4">
-          <div>
-            <label className={LABEL_CLS}>Link pubblico del tuo menù</label>
-            <div className="relative">
-              <input readOnly value={`https://leomenu.it/${restaurantSlug}`}
-                className={`${INPUT_CLS} pr-12 cursor-default bg-gray-100 dark:bg-[#252525] text-[#008081] font-bold`} />
-              <button onClick={() => copyToClipboard(`https://leomenu.it/${restaurantSlug}`, 'Link copiato!')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-[#008081] transition-colors">
-                <Copy className="w-4 h-4" />
+          {/* 3 — Identità Visiva */}
+          <Section id="visiva" expanded={expanded === 'visiva'} onToggle={toggle} icon={BookOpen} title="Identità Visiva">
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-1">Logo</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Immagine circolare mostrata in testata (ritaglio 1:1).</p>
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+                  if (!validateFile(file)) return;
+                  openCropper(file, 1, b64 => setSettings({ ...settings, logo_url: b64 }));
+                }} />
+                <button onClick={() => logoInputRef.current?.click()}
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#008081] text-[#008081] font-bold hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all w-full justify-center">
+                  <Upload className="w-4 h-4" /> Importa / Carica Logo
+                </button>
+                {settings.logo_url && (
+                  <img src={settings.logo_url} alt="Logo" className="mt-3 h-28 w-28 object-contain rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white shadow-sm mx-auto" />
+                )}
+              </div>
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-1">Sfondo Intestazione (Cover)</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Immagine panoramica 16:9 dietro al logo.</p>
+                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+                  if (!validateFile(file)) return;
+                  openCropper(file, 16 / 9, b64 => setSettings({ ...settings, cover_image_url: b64 }));
+                }} />
+                <button onClick={() => coverInputRef.current?.click()}
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#008081] text-[#008081] font-bold hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all w-full justify-center">
+                  <Camera className="w-4 h-4" /> Carica Foto di Copertina
+                </button>
+                {settings.cover_image_url && (
+                  <img src={settings.cover_image_url} alt="Cover" className="mt-3 w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
+                )}
+              </div>
+            </div>
+          </Section>
+
+          {/* 4 — Dati Fiscali */}
+          <Section id="fiscale" expanded={expanded === 'fiscale'} onToggle={toggle} icon={FileText} title="Dati Fiscali">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL_CLS}>Ragione Sociale / Nome Attività</label>
+                <input type="text" value={settings.ragione_sociale || ''} onChange={e => setSettings({ ...settings, ragione_sociale: e.target.value })}
+                  placeholder="Es. Pizzeria Bella Napoli S.r.l." className={INPUT_CLS} />
+              </div>
+              <div>
+                <label className={LABEL_CLS}>Partita IVA</label>
+                <input type="text" value={settings.piva || ''} onChange={e => setSettings({ ...settings, piva: e.target.value })}
+                  placeholder="IT12345678901" className={`${INPUT_CLS} ${!pivaValid ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10' : ''}`} />
+                {!pivaValid
+                  ? <p className="text-[11px] font-bold text-red-500 mt-1">Formato: IT + 11 cifre</p>
+                  : <p className="text-[10px] text-gray-400 mt-1">11 cifre, precedute da IT</p>}
+              </div>
+              <div>
+                <label className={LABEL_CLS}>Codice Fiscale</label>
+                <input type="text" value={settings.codice_fiscale || ''} onChange={e => setSettings({ ...settings, codice_fiscale: e.target.value })}
+                  placeholder="Es. RSSMRC80A01H501U" className={INPUT_CLS} />
+                <p className="text-[10px] text-gray-400 mt-1">Solo se diverso dalla Partita IVA</p>
+              </div>
+              <div>
+                <label className={LABEL_CLS}>Codice SDI</label>
+                <input type="text" value={settings.codice_sdi || ''} onChange={e => setSettings({ ...settings, codice_sdi: e.target.value })}
+                  placeholder="Es. ABCDE12" maxLength={7} className={`${INPUT_CLS} ${!sdiValid ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10' : ''}`} />
+                {!sdiValid
+                  ? <p className="text-[11px] font-bold text-red-500 mt-1">7 caratteri richiesti</p>
+                  : <p className="text-[10px] text-gray-400 mt-1">Per la fatturazione elettronica</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className={LABEL_CLS}>PEC (Posta Elettronica Certificata)</label>
+                <input type="email" value={settings.pec || ''} onChange={e => setSettings({ ...settings, pec: e.target.value })}
+                  placeholder="azienda@pec.it" className={INPUT_CLS} />
+              </div>
+            </div>
+          </Section>
+
+          {/* 5 — Orari di Apertura */}
+          <Section id="orari" expanded={expanded === 'orari'} onToggle={toggle} icon={Clock} title="Orari di Apertura">
+            <div className="space-y-0.5">
+              {DAYS.map(({ key, label }) => {
+                const day = weekHours[key] ?? { open: '12:00', close: '22:00', closed: false };
+                return (
+                  <div key={key} className="flex items-center gap-3 py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <span className="w-9 text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase flex-shrink-0">{label}</span>
+                    <div onClick={() => setWeekHours(p => ({ ...p, [key]: { ...day, closed: !day.closed } }))}
+                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${day.closed ? 'bg-gray-300 dark:bg-gray-600' : 'bg-[#008081]'}`}>
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${day.closed ? 'translate-x-0.5' : 'translate-x-[18px]'}`} />
+                    </div>
+                    <span className={`text-[10px] font-bold w-12 flex-shrink-0 ${day.closed ? 'text-gray-400' : 'text-[#008081]'}`}>
+                      {day.closed ? 'Chiuso' : 'Aperto'}
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <input type="time" value={day.open} disabled={day.closed}
+                        onChange={e => setWeekHours(p => ({ ...p, [key]: { ...day, open: e.target.value } }))}
+                        className="flex-1 px-2 py-1.5 text-xs font-bold bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-[#008081]/40 focus:border-[#008081] outline-none disabled:opacity-40 transition-all" />
+                      <span className="text-xs text-gray-400 font-bold flex-shrink-0">→</span>
+                      <input type="time" value={day.close} disabled={day.closed}
+                        onChange={e => setWeekHours(p => ({ ...p, [key]: { ...day, close: e.target.value } }))}
+                        className="flex-1 px-2 py-1.5 text-xs font-bold bg-gray-50 dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-[#008081]/40 focus:border-[#008081] outline-none disabled:opacity-40 transition-all" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-3">Salvati con il pulsante "Salva" in alto.</p>
+          </Section>
+
+          {/* 6 — WiFi Ospiti */}
+          <Section id="wifi" expanded={expanded === 'wifi'} onToggle={toggle} icon={Wifi} title="WiFi Ospiti">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL_CLS}>Nome Rete (SSID)</label>
+                <input type="text" value={settings.wifi_ssid || ''} onChange={e => setSettings({ ...settings, wifi_ssid: e.target.value })}
+                  placeholder="Es. Ristorante_Guest" className={INPUT_CLS} />
+              </div>
+              <div>
+                <label className={LABEL_CLS}>Password WiFi</label>
+                <div className="relative">
+                  <input type={wifiVisible ? 'text' : 'password'} value={settings.wifi_password || ''}
+                    onChange={e => setSettings({ ...settings, wifi_password: e.target.value })}
+                    placeholder="Es. benvenuto2024" className={`${INPUT_CLS} pr-20`} />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                    <button type="button" onClick={() => setWifiVisible(v => !v)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                      {wifiVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <button type="button" onClick={() => copyToClipboard(settings.wifi_password || '', 'Password copiata!')}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-[#008081] transition-colors">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Visibile solo a te — condividi a voce con i clienti.</p>
+              </div>
+            </div>
+          </Section>
+
+          {/* 7 — Coperto / Servizio */}
+          <Section id="coperto" expanded={expanded === 'coperto'} onToggle={toggle} icon={CreditCard} title="Coperto / Servizio">
+            <div className="space-y-4">
+              <p className="text-xs text-gray-400">Importo addebitato per persona seduta al tavolo. Impostalo a 0 per disabilitarlo. Il cameriere lo vedrà calcolato automaticamente nel ticket in base ai coperti effettivi.</p>
+              <div className="max-w-[160px]">
+                <label className={LABEL_CLS}>Prezzo a persona (€)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">€</span>
+                  <input
+                    type="number" min="0" step="0.50"
+                    value={settings.coperto_price || '0'}
+                    onChange={e => setSettings({ ...settings, coperto_price: e.target.value })}
+                    onBlur={async () => {
+                      const val = parseFloat(settings.coperto_price || '0') || 0;
+                      const normalized = val.toFixed(2);
+                      setSettings(s => ({ ...s, coperto_price: normalized }));
+                      await db.from('settings').upsert(
+                        { restaurant_id: restaurantId, key: 'coperto_price', value: normalized },
+                        { onConflict: 'restaurant_id,key' }
+                      );
+                      showToast('Coperto aggiornato');
+                    }}
+                    className={`${INPUT_CLS} pl-7`}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              {parseFloat(settings.coperto_price || '0') > 0 && (
+                <div className="flex items-center gap-2 text-[11px] font-bold text-[#008081] bg-[#008081]/5 border border-[#008081]/20 rounded-xl px-3 py-2">
+                  <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                  Es. tavolo con 4 persone → coperto €{(parseFloat(settings.coperto_price) * 4).toFixed(2)}
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* 8 — Menù del Giorno */}
+          <Section id="menugiorno" expanded={expanded === 'menugiorno'} onToggle={toggle} icon={BookOpen} title="Menù del Giorno">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-gray-800 dark:text-white">Attiva Menù del Giorno</p>
+                <p className="text-xs text-gray-400 mt-0.5">Mostra la sezione Menù del Giorno ai clienti nella home del ristorante.</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const current = settings.menu_del_giorno_enabled;
+                  const newVal = current === 'true' ? 'false' : 'true';
+                  setSettings(s => ({ ...s, menu_del_giorno_enabled: newVal }));
+                  await db.from('settings').upsert(
+                    { restaurant_id: restaurantId, key: 'menu_del_giorno_enabled', value: newVal },
+                    { onConflict: 'restaurant_id,key' }
+                  );
+                  showToast(newVal === 'true' ? 'Menù del Giorno attivato' : 'Menù del Giorno disattivato');
+                }}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${settings.menu_del_giorno_enabled === 'true' ? 'bg-[#008081]' : 'bg-gray-200 dark:bg-gray-700'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${settings.menu_del_giorno_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Condividi sui social o stampalo sul materiale promozionale.</p>
-          </div>
-          <div>
-            <label className={LABEL_CLS}>Il tuo identificativo univoco (slug)</label>
-            <div className="flex items-center px-3 py-2.5 bg-gray-100 dark:bg-[#252525] rounded-xl border border-gray-200 dark:border-gray-700">
-              <span className="text-sm font-black text-gray-700 dark:text-gray-300">{restaurantSlug}</span>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">Per modificare lo slug contatta il supporto.</p>
-          </div>
-        </div>
-      </Section>
+          </Section>
 
-      {/* 9 — Codice QR */}
-      {restaurantSlug && (
-        <Section id="qr" expanded={expanded === 'qr'} onToggle={toggle} icon={QrCode} title="Codice QR del Menù">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm mx-auto">
-            Stampa questo QR code per permettere ai clienti di visualizzare il menù dal loro smartphone.
-          </p>
-          <div className="flex flex-col items-center bg-gray-50 dark:bg-[#1A1A1A] p-6 rounded-2xl border border-gray-200 dark:border-gray-700 max-w-sm mx-auto">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-              <QRCodeSVG id={`qr-${restaurantSlug}`} value={`https://leomenu.it/${restaurantSlug}`}
-                size={180} level="H" includeMargin={false} fgColor="#000000" />
+        </div>{/* end left column */}
+
+        {/* ── Right column (1/3): URL, QR, Piano ────────────────────────── */}
+        <div className="flex flex-col gap-3">
+
+          {/* URL del Menù */}
+          <Section id="url" expanded={expanded === 'url'} onToggle={toggle} icon={Globe} title="URL del Menù">
+            <div className="space-y-4">
+              <div>
+                <label className={LABEL_CLS}>Link pubblico del tuo menù</label>
+                <div className="relative">
+                  <input readOnly value={`https://leomenu.it/${restaurantSlug}`}
+                    className={`${INPUT_CLS} pr-12 cursor-default bg-gray-100 dark:bg-[#252525] text-[#008081] font-bold`} />
+                  <button onClick={() => copyToClipboard(`https://leomenu.it/${restaurantSlug}`, 'Link copiato!')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-[#008081] transition-colors">
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Condividi sui social o stampalo sul materiale promozionale.</p>
+              </div>
+              <div>
+                <label className={LABEL_CLS}>Il tuo identificativo univoco (slug)</label>
+                <div className="flex items-center px-3 py-2.5 bg-gray-100 dark:bg-[#252525] rounded-xl border border-gray-200 dark:border-gray-700">
+                  <span className="text-sm font-black text-gray-700 dark:text-gray-300">{restaurantSlug}</span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Per modificare lo slug contatta il supporto.</p>
+              </div>
             </div>
-            <button onClick={downloadQR}
-              className="mt-6 border-2 border-[#008081] bg-[#008081]/10 text-[#008081] hover:bg-[#008081] hover:text-white transition-all duration-300 py-2.5 px-6 rounded-xl font-bold flex items-center gap-2 w-full justify-center">
-              Scarica in Alta Risoluzione
+          </Section>
+
+          {/* Codice QR */}
+          {restaurantSlug && (
+            <Section id="qr" expanded={expanded === 'qr'} onToggle={toggle} icon={QrCode} title="Codice QR del Menù">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">
+                Stampa questo QR code per permettere ai clienti di visualizzare il menù.
+              </p>
+              <div className="flex flex-col items-center bg-gray-50 dark:bg-[#1A1A1A] p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                  <QRCodeSVG id={`qr-${restaurantSlug}`} value={`https://leomenu.it/${restaurantSlug}`}
+                    size={160} level="H" includeMargin={false} fgColor="#000000" />
+                </div>
+                <button onClick={downloadQR}
+                  className="mt-4 border-2 border-[#008081] bg-[#008081]/10 text-[#008081] hover:bg-[#008081] hover:text-white transition-all duration-300 py-2.5 px-6 rounded-xl font-bold flex items-center gap-2 w-full justify-center">
+                  Scarica in Alta Risoluzione
+                </button>
+              </div>
+            </Section>
+          )}
+
+          {/* Piano & Abbonamento */}
+          <SubscriptionPanel subscriptionTier={subscriptionTier} restaurantId={restaurantId} />
+
+        </div>{/* end right column */}
+
+        {/* Elimina Account — spans left column only */}
+        <div className="lg:col-span-2">
+          <Section id="danger" expanded={expanded === 'danger'} onToggle={toggle} icon={AlertTriangle} title="Elimina account" danger>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              L'eliminazione rimuoverà <strong>definitivamente</strong> il ristorante, tutte le categorie, i prodotti e gli ordini.
+            </p>
+            <p className="text-xs font-black text-red-500 mb-4 uppercase tracking-wide">⚠ Azione irreversibile</p>
+            <button onClick={handleDeleteAccount}
+              className="w-full py-3 px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm">
+              <Trash2 className="w-4 h-4" /> Elimina Account e Ristorante
             </button>
-          </div>
-        </Section>
-      )}
+          </Section>
+        </div>
 
-      {/* 10 — Piano & Abbonamento */}
-      <SubscriptionPanel subscriptionTier={subscriptionTier} restaurantId={restaurantId} />
-
-      {/* 10 — Elimina Account */}
-      <Section id="danger" expanded={expanded === 'danger'} onToggle={toggle} icon={AlertTriangle} title="Elimina account" danger>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          L'eliminazione rimuoverà <strong>definitivamente</strong> il ristorante, tutte le categorie, i prodotti e gli ordini.
-        </p>
-        <p className="text-xs font-black text-red-500 mb-4 uppercase tracking-wide">⚠ Azione irreversibile</p>
-        <button onClick={handleDeleteAccount}
-          className="w-full py-3 px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm">
-          <Trash2 className="w-4 h-4" /> Elimina Account e Ristorante
-        </button>
-      </Section>
+      </div>{/* end grid */}
 
       <ImageCropperModal
         imageSrc={cropperState.src} aspect={cropperState.aspect}

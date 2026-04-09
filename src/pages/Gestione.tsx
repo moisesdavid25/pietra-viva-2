@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft, Trash2, Edit2, ChevronLeft,
   ClipboardList, BookOpen, BarChart3, Users,
-  Sliders, Settings2, Plus, Save, Command, Search, Zap, CheckCircle2, AlertCircle
+  Sliders, Settings2, Plus, Save, Command, Search, Zap, CheckCircle2, AlertCircle,
+  LayoutDashboard, QrCode, LogOut,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropperModal from '../components/ImageCropperModal';
@@ -17,6 +18,7 @@ import ProductManager from '../components/gestione/ProductManager';
 import OnboardingWizard from '../components/gestione/OnboardingWizard';
 import OrdiniManager from '../components/gestione/OrdiniManager';
 import SettingsManager from '../components/gestione/SettingsManager';
+import TavoliManager from '../components/gestione/TavoliManager';
 import { useRestaurantAuth } from '../hooks/useRestaurantAuth';
 import { useGestioneData } from '../hooks/useGestioneData';
 import { useMenuCombo } from '../hooks/useMenuCombo';
@@ -49,9 +51,11 @@ export default function Gestione() {
   const [activeTab, setActiveTab] = useState<
     | 'dashboard' | 'ordini' | 'products' | 'menus'
     | 'settings' | 'business_intelligence' | 'fidelizzazione' | 'personalizzazione'
+    | 'tavoli'
   >('dashboard');
   const [productView, setProductView] = useState<'hub' | 'listino'>('hub');
   const [showWizard, setShowWizard] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const location = useLocation();
 
   // ── Hook 3: Menù del Giorno CRUD ──────────────────────────────────────────
@@ -66,7 +70,42 @@ export default function Gestione() {
 
   useEffect(() => {
     if (location.search.includes('wizard=true')) setShowWizard(true);
+    if (location.search.includes('upgrade=success')) {
+      showToast(`🎉 Abbonamento attivato! Benvenuto nel piano ${subscriptionTier}.`, 'success');
+    }
   }, [location.search]);
+
+  // ── Fetch trial end date ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!restaurantId || subscriptionTier !== 'trial') return;
+    import('../db').then(({ default: db }) => {
+      db.from('restaurants').select('subscription_ends_at').eq('id', restaurantId).maybeSingle().then(({ data }) => {
+        if (data?.subscription_ends_at) setTrialEndsAt(data.subscription_ends_at as string);
+      });
+    });
+  }, [restaurantId, subscriptionTier]);
+
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+    : null;
+
+  // ── NAV_ITEMS ─────────────────────────────────────────────────────────────
+  const NAV_ITEMS: { id: string; icon: React.ReactNode; label: string; isRoute?: boolean }[] = [
+    { id: 'dashboard',             icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard' },
+    { id: 'ordini',                icon: <ClipboardList className="w-4 h-4" />,   label: 'Ordini' },
+    { id: 'products',              icon: <BookOpen className="w-4 h-4" />,         label: 'Menù' },
+    { id: 'business_intelligence', icon: <BarChart3 className="w-4 h-4" />,       label: 'Analitiche' },
+    { id: 'fidelizzazione',        icon: <Users className="w-4 h-4" />,            label: 'CRM' },
+    { id: 'personalizzazione',     icon: <QrCode className="w-4 h-4" />,           label: 'QR & MKTG' },
+    { id: 'tavoli',                 icon: <LayoutDashboard className="w-4 h-4" />,  label: 'Tavoli' },
+    { id: 'settings',              icon: <Settings2 className="w-4 h-4" />,        label: 'Impostazioni' },
+    { id: 'cameriere',             icon: <Sliders className="w-4 h-4" />,          label: 'LeoPOS', isRoute: true },
+  ];
+
+  const handleNavClick = (item: { id: string; isRoute?: boolean }) => {
+    if (item.isRoute) navigate(`/${restaurantSlug}/cameriere`);
+    else setActiveTab(item.id as any);
+  };
 
   const handleBack = () => {
     if (editingMenu) {
@@ -97,10 +136,48 @@ export default function Gestione() {
         />
       )}
 
-      <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+      {/* ── Desktop Sidebar ─────────────────────────────────────────────── */}
+      <div className="hidden md:flex h-screen fixed left-0 top-0 w-56 bg-white dark:bg-[#141414] border-r border-gray-100 dark:border-gray-800 flex-col z-40">
+        {/* Logo + restaurant info */}
+        <div className="p-5 border-b border-gray-100 dark:border-gray-800">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Leomenu</p>
+          <p className="font-black text-gray-900 dark:text-white text-sm truncate mt-0.5">{restaurantName}</p>
+          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-[#008081] mt-1 inline-block">
+            {subscriptionTier === 'trial' ? 'Trial' : subscriptionTier}
+          </span>
+        </div>
+        {/* Nav items */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleNavClick(item)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeTab === item.id
+                  ? 'bg-[#008081] text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        {/* Bottom: logout */}
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+          >
+            <LogOut className="w-4 h-4" /> Esci
+          </button>
+        </div>
+      </div>
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
+      <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased md:ml-56">
+
+        {/* ── Header (mobile only) ────────────────────────────────────────── */}
+        <header className="md:hidden sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
           <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <ArrowLeft className="w-6 h-6 text-[#008080]" />
           </button>
@@ -110,9 +187,9 @@ export default function Gestione() {
           </button>
         </header>
 
-        {/* ── Sub-header back bar ─────────────────────────────────────────── */}
+        {/* ── Sub-header back bar (mobile only) ──────────────────────────── */}
         {activeTab !== 'dashboard' && (
-          <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1A1A] sticky top-0 z-10">
+          <div className="md:hidden flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1A1A] sticky top-0 z-10">
             <button
               onClick={() => {
                 if (activeTab === 'products' && productView === 'listino') {
@@ -138,7 +215,7 @@ export default function Gestione() {
 
           {/* Dashboard (B2B Command Center) */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-8 animate-fade-in max-w-6xl mx-auto py-2">
+            <div className="space-y-8 animate-fade-in max-w-6xl mx-auto py-2 w-full">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-2">
                 <div>
                   <h2 className="text-[2rem] font-black font-sans text-[#1A1A1A] dark:text-[#FDFCF0] tracking-tight mb-1 leading-none">
@@ -146,15 +223,30 @@ export default function Gestione() {
                   </h2>
                   <p className="text-gray-500 font-bold text-sm">Actionable Insights & Panoramica B2B.</p>
                 </div>
-                <button 
+                <button
                   onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'k', 'ctrlKey': true}))}
                   className="hidden md:flex items-center gap-2 bg-white dark:bg-[#151515] border border-gray-200 dark:border-gray-800 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm shadow-gray-200/50 dark:shadow-none hover:border-[#008081] transition-all group"
                 >
-                   <Search className="w-4 h-4 text-gray-400 group-hover:text-[#008081]" />
-                   <span className="text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">Cerca / Comandi Rapidi</span>
-                   <kbd className="ml-2 bg-gray-50 dark:bg-[#252525] rounded px-1.5 py-0.5 text-[10px] uppercase font-mono border border-gray-200 dark:border-gray-700 text-gray-400 group-hover:text-[#008081] shadow-sm">Ctrl K</kbd>
+                  <Search className="w-4 h-4 text-gray-400 group-hover:text-[#008081]" />
+                  <span className="text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">Cerca / Comandi Rapidi</span>
+                  <kbd className="ml-2 bg-gray-50 dark:bg-[#252525] rounded px-1.5 py-0.5 text-[10px] uppercase font-mono border border-gray-200 dark:border-gray-700 text-gray-400 group-hover:text-[#008081] shadow-sm">Ctrl K</kbd>
                 </button>
               </div>
+
+              {/* Trial banner */}
+              {subscriptionTier === 'trial' && (
+                <div className="mx-2 flex items-center justify-between gap-4 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-xl px-4 py-3">
+                  <p className="text-sm font-bold text-teal-800 dark:text-teal-300">
+                    🕐 Sei in trial gratuito{trialDaysLeft !== null ? ` — ${trialDaysLeft} giorni rimanenti` : ''}. Attiva un piano per continuare.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className="flex-shrink-0 text-xs font-black bg-[#008081] text-white px-3 py-1.5 rounded-lg hover:bg-teal-600 transition-colors"
+                  >
+                    Attiva ora
+                  </button>
+                </div>
+              )}
 
               {/* Actionable Insights Board */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -203,6 +295,7 @@ export default function Gestione() {
                       { id: 'products', icon: <BookOpen />, title: 'Menù Diretto', subtitle: 'Catalogo & Prezzi', bg: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
                       { id: 'business_intelligence', icon: <BarChart3 />, title: 'Analitiche', subtitle: 'Dashboard Vendite', bg: 'bg-purple-50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
                       { id: 'fidelizzazione', icon: <Users />, title: 'CRM & Audience', subtitle: 'Carta Fedeltà', bg: 'bg-teal-50 dark:bg-teal-900/10 border-[#008081]/20', text: 'text-[#008081]' },
+                      { id: 'tavoli', icon: <LayoutDashboard />, title: 'Gestione Tavoli', subtitle: 'Planimetria sala', bg: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/20', text: 'text-violet-600 dark:text-violet-400' },
                       { id: 'cameriere', icon: <Sliders />, title: 'LeoPOS Mobile', subtitle: 'Terminale sala', bg: 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', isRoute: true },
                       { id: 'personalizzazione', icon: <Settings2 />, title: 'Scansione & MKTG', subtitle: 'Strumenti QR', bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
                       { id: 'settings', icon: <Settings2 />, title: 'Impostazioni', subtitle: 'Fiscale & WiFi', bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400' }
@@ -339,6 +432,11 @@ export default function Gestione() {
             </div>
           )}
 
+          {/* Tavoli */}
+          {activeTab === 'tavoli' && restaurantId && (
+            <TavoliManager restaurantId={restaurantId} />
+          )}
+
           {/* Impostazioni */}
           {activeTab === 'settings' && restaurantId && (
             <SettingsManager
@@ -384,7 +482,9 @@ export default function Gestione() {
       />
 
       <ToastContainer />
-      <BottomNav restaurantSlug={restaurantSlug || ''} />
+      <div className="md:hidden">
+        <BottomNav restaurantSlug={restaurantSlug || ''} />
+      </div>
     </>
   );
 }
