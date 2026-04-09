@@ -50,7 +50,11 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
           } else if (roleData.role === 'owner') {
             const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', session.user.id).neq('slug', 'demo').limit(1).maybeSingle();
             if (resData?.slug) {
-              navigate(`/${resData.slug}/gestione`, { replace: true });
+              if (window.location.hostname === 'leomenu.it') {
+                window.location.href = 'https://app.leomenu.it/gestione';
+              } else {
+                navigate('/gestione', { replace: true });
+              }
             } else {
               await db.auth.signOut();
               navigate('/register', { replace: true });
