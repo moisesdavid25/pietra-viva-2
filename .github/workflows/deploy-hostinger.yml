@@ -38,5 +38,4 @@ jobs:
           server-dir: /public_html/
           exclude: |
             **/.htaccess
-          dangerous-clean-slate: false
-          dry-run: false
+          dangerous-clean-slate: true
