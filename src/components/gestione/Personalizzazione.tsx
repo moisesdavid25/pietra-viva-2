@@ -30,7 +30,7 @@ interface Props {
   restaurantSlug?: string;
 }
 
-type Tab = 'qr' | 'extras';
+type Tab = 'qr';
 
 // ── QR Download util ──────────────────────────────────────────────────────────
 
@@ -288,7 +288,7 @@ function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; res
 
 // ── Extras Manager (preserved from original) ──────────────────────────────────
 
-function ExtrasManager({ restaurantId }: { restaurantId: string }) {
+export function ExtrasManager({ restaurantId }: { restaurantId: string }) {
   const [extras, setExtras] = useState<ProductExtra[]>([]);
   const [categoriesList, setCategoriesList] = useState<{ name: string; section: string; position: number }[]>([]);
   const [isEditing, setIsEditing] = useState<Partial<ProductExtra> | null>(null);
@@ -479,7 +479,6 @@ export default function Personalizzazione({ restaurantId, restaurantSlug = '' }:
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'qr', label: 'QR Manager', icon: QrCode },
-    { id: 'extras', label: 'Extra & Upsell', icon: Sliders },
   ];
 
   return (
@@ -513,7 +512,6 @@ export default function Personalizzazione({ restaurantId, restaurantSlug = '' }:
             </div>
           )
       )}
-      {tab === 'extras' && <ExtrasManager restaurantId={restaurantId} />}
     </div>
   );
 }

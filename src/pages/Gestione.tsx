@@ -96,7 +96,7 @@ export default function Gestione() {
     { id: 'products',              icon: <BookOpen className="w-4 h-4" />,         label: 'Menù' },
     { id: 'business_intelligence', icon: <BarChart3 className="w-4 h-4" />,       label: 'Analitiche' },
     { id: 'fidelizzazione',        icon: <Users className="w-4 h-4" />,            label: 'CRM' },
-    { id: 'personalizzazione',     icon: <QrCode className="w-4 h-4" />,           label: 'QR & MKTG' },
+    { id: 'personalizzazione',     icon: <QrCode className="w-4 h-4" />,           label: 'QR' },
     { id: 'tavoli',                 icon: <LayoutDashboard className="w-4 h-4" />,  label: 'Tavoli' },
     { id: 'settings',              icon: <Settings2 className="w-4 h-4" />,        label: 'Impostazioni' },
     { id: 'cameriere',             icon: <Sliders className="w-4 h-4" />,          label: 'LeoPOS', isRoute: true },

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon, LayoutGrid, Calendar, Tag, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon, LayoutGrid, Calendar, Tag, X, Sliders } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import db from '../../db';
 import ImageCropperModal from '../ImageCropperModal';
 import { useToast } from '../Toast';
+import { ExtrasManager } from './Personalizzazione';
 
 interface Props {
     restaurantId: string;
@@ -25,7 +26,7 @@ interface Product {
     image_url: string;
 }
 
-type ViewState = 'hub' | 'wizard-1' | 'wizard-2' | 'wizard-3' | 'success' | 'bundle-editor';
+type ViewState = 'hub' | 'wizard-1' | 'wizard-2' | 'wizard-3' | 'success' | 'bundle-editor' | 'extras';
 
 interface MenuBundle {
     id?: number;
@@ -436,6 +437,19 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                                 <p className="text-[10px] text-gray-400 font-semibold">{bundles.length} bundle</p>
                             </div>
                         </button>
+
+                        <button
+                            onClick={() => setView('extras')}
+                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-purple-200 dark:hover:border-purple-900/30 hover:shadow-md transition-all text-left"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <Sliders className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Extra & Upsell</p>
+                                <p className="text-[10px] text-gray-400 font-semibold">Suggerimenti rapidi</p>
+                            </div>
+                        </button>
                     </div>
 
                 </motion.div>
@@ -759,6 +773,18 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ══════════════════════════════════════════════════════════
+                EXTRAS VIEW
+            ══════════════════════════════════════════════════════════ */}
+            {view === 'extras' && (
+                <div className="space-y-4">
+                    <button onClick={() => setView('hub')} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm mb-2">
+                        <ChevronLeft className="w-5 h-5" /> Menù Diretto
+                    </button>
+                    <ExtrasManager restaurantId={restaurantId} />
+                </div>
+            )}
 
             {/* Cropper */}
             <ImageCropperModal
