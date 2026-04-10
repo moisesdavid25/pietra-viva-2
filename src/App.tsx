@@ -117,6 +117,16 @@ function GlobalThemeProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Si estamos en leomenu.it y la ruta no es de marketing, redirigir a app.leomenu.it
+if (typeof window !== 'undefined' && window.location.hostname === 'leomenu.it') {
+  const path = window.location.pathname;
+  const marketingPaths = ['/', '/funzionalita', '/prezzi', '/sicurezza', '/come-funziona', '/contatti', '/privacy-policy', '/termini-condizioni', '/cookie-policy'];
+  const isMarketing = marketingPaths.some(r => path === r || path.startsWith(r + '/'));
+  if (!isMarketing) {
+    window.location.href = 'https://app.leomenu.it' + path + window.location.search;
+  }
+}
+
 export default function App() {
   return (
     <BrowserRouter>
