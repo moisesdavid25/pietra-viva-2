@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 import db from '../../db';
 
@@ -31,12 +30,12 @@ export function HomeHero() {
 
             {/* Buttons — always stacked, full-width on mobile */}
             <div className="flex flex-col items-stretch gap-3 w-full sm:max-w-sm lg:max-w-none">
-                <Link to="/register" className="w-full bg-[#008081] hover:bg-teal-600 text-white px-7 py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,128,129,0.3)] hover:shadow-[0_8px_20px_rgba(0,128,129,0.4)] hover:-translate-y-0.5">
+                <a href="https://app.leomenu.it/register" className="w-full bg-[#008081] hover:bg-teal-600 text-white px-7 py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,128,129,0.3)] hover:shadow-[0_8px_20px_rgba(0,128,129,0.4)] hover:-translate-y-0.5">
                     Inizia il tuo account gratis <ArrowRight className="w-5 h-5"/>
-                </Link>
+                </a>
                 <button onClick={async () => {
                     localStorage.setItem('pending_oauth_register', 'true');
-                    await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/register' } });
+                    await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://app.leomenu.it/register' } });
                 }} className="w-full bg-white border border-gray-200 text-[#111827] px-7 py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5">
                     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

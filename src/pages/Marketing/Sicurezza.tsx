@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 
 const OBJECTIONS = [
@@ -157,12 +156,12 @@ export default function Sicurezza() {
           <p className="text-gray-400 font-medium mb-10">
             Non ti chiediamo la carta di credito. Ti chiediamo solo di provarlo.
           </p>
-          <Link
-            to="/register"
+          <a
+            href="https://app.leomenu.it/register"
             className="inline-flex items-center gap-2 bg-[#008081] text-white font-extrabold px-8 py-4 rounded-full hover:bg-teal-500 hover:shadow-[0_0_30px_rgba(0,128,129,0.5)] transition-all text-lg"
           >
             Inizia i 14 giorni gratuiti <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
           <p className="text-gray-600 text-xs font-bold uppercase tracking-widest mt-6">
             Nessuna carta · Nessun impegno · Disdici quando vuoi
           </p>

@@ -45,12 +45,12 @@ export default function Funzionalita() {
             Leomenu ti dà gli strumenti che i grandi usano da anni — senza tecnici, senza corsi, senza costi assurdi. Pronti in un giorno.
           </p>
 
-          <Link
-            to="/register"
+          <a
+            href="https://app.leomenu.it/register"
             className="inline-flex items-center gap-2 bg-[#008081] text-white font-extrabold px-8 py-4 rounded-full hover:bg-teal-500 hover:shadow-[0_0_24px_rgba(0,128,129,0.4)] transition-all text-lg"
           >
             Inizia gratis per 14 giorni <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
 
           <div className="mt-14 flex flex-col items-center gap-2 text-gray-600">
             <span className="text-xs font-bold uppercase tracking-widest">Scopri le funzioni</span>
@@ -419,12 +419,12 @@ export default function Funzionalita() {
             Non ti chiediamo la carta di credito. Ti chiediamo solo di provarlo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/register"
+            <a
+              href="https://app.leomenu.it/register"
               className="bg-[#008081] text-white font-extrabold px-8 py-4 rounded-full hover:bg-teal-500 hover:shadow-[0_0_30px_rgba(0,128,129,0.5)] transition-all flex items-center justify-center gap-2 text-lg"
             >
               Crea il tuo menu gratis <ArrowRight className="w-5 h-5" />
-            </Link>
+            </a>
             <Link
               to="/prezzi"
               className="border border-white/20 text-white font-extrabold px-8 py-4 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center text-lg"

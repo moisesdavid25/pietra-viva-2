@@ -152,12 +152,12 @@ export default function Prezzi() {
               ))}
             </div>
 
-            <Link
-              to="/register"
+            <a
+              href="https://app.leomenu.it/register"
               className="block w-full text-center py-4 rounded-xl bg-[#008081] text-white font-extrabold text-lg hover:bg-teal-500 hover:shadow-[0_0_24px_rgba(0,128,129,0.4)] transition-all active:scale-95"
             >
               Inizia ora, paghi dopo <ArrowRight className="inline w-5 h-5 ml-1" />
-            </Link>
+            </a>
 
             <p className="text-center text-xs text-gray-600 mt-4 flex justify-center items-center gap-1.5 font-bold">
               <Shield className="w-3.5 h-3.5" />
@@ -264,12 +264,12 @@ export default function Prezzi() {
           <p className="text-gray-400 font-medium mb-10">
             Non ti chiediamo la carta di credito. Ti chiediamo solo di provarlo.
           </p>
-          <Link
-            to="/register"
+          <a
+            href="https://app.leomenu.it/register"
             className="inline-flex items-center gap-2 bg-[#008081] text-white font-extrabold px-8 py-4 rounded-full hover:bg-teal-500 hover:shadow-[0_0_30px_rgba(0,128,129,0.5)] transition-all text-lg"
           >
             Inizia ora, paghi dopo <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
           <p className="text-gray-600 text-xs font-bold uppercase tracking-widest mt-6">
             Nessuna carta · 14 giorni gratis · Disdici in un click
           </p>

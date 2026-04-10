@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import db from '../../db';
 
@@ -56,17 +55,17 @@ export function HomePricing() {
                     ))}
                 </ul>
 
-                <Link
-                    to="/register"
+                <a
+                    href="https://app.leomenu.it/register"
                     className="w-full bg-[#008081] text-white hover:bg-teal-600 hover:shadow-[0_10px_15px_-3px_rgba(0,150,136,0.4)] py-4 rounded-lg font-bold text-lg transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
                     Crea il tuo account gratis <ArrowRight className="w-5 h-5" />
-                </Link>
+                </a>
 
                 <button
                     onClick={async () => {
                         localStorage.setItem('pending_oauth_register', 'true');
-                        await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/register' } });
+                        await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://app.leomenu.it/register' } });
                     }}
                     className="w-full mt-3 bg-white border border-gray-200 text-[#111827] py-4 rounded-lg font-bold text-base transition-all hover:shadow-md flex items-center justify-center gap-3"
                 >

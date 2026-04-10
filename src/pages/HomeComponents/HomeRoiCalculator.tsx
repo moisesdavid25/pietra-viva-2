@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { Calculator, TrendingUp, Printer, ChevronRight } from 'lucide-react';
 
 // ── Cost constants (Italian market, conservative estimates) ──────────────────
@@ -185,13 +184,13 @@ export function HomeRoiCalculator() {
             </div>
 
             {/* CTA */}
-            <Link
-              to="/register"
+            <a
+              href="https://app.leomenu.it/register"
               className="flex items-center justify-center gap-2 w-full bg-[#008081] text-white font-bold py-4 rounded-2xl hover:bg-teal-600 transition-all hover:shadow-lg hover:shadow-[#008081]/30 hover:-translate-y-0.5 active:translate-y-0 text-base"
             >
               Inizia gratis — nessuna carta richiesta
               <ChevronRight className="w-5 h-5" />
-            </Link>
+            </a>
             <p className="text-center text-xs text-gray-400">
               Piano gratuito disponibile · Upgrade in qualsiasi momento
             </p>
