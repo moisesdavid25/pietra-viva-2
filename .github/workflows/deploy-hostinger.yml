@@ -39,3 +39,4 @@ jobs:
           exclude: |
             **/.htaccess
           dangerous-clean-slate: false
+          dry-run: false
