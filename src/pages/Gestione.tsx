@@ -3,7 +3,7 @@ import {
   ArrowLeft, Trash2, Edit2, ChevronLeft,
   ClipboardList, BookOpen, BarChart3, Users,
   Sliders, Settings2, Plus, Save, Command, Search, Zap, CheckCircle2, AlertCircle,
-  LayoutDashboard, QrCode, LogOut,
+  LayoutDashboard, QrCode, LogOut, ExternalLink,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropperModal from '../components/ImageCropperModal';
@@ -163,8 +163,16 @@ export default function Gestione() {
             </button>
           ))}
         </nav>
-        {/* Bottom: logout */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800">
+        {/* Bottom: vedi menù + logout */}
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
+          {restaurantSlug && (
+            <button
+              onClick={() => navigate(`/${restaurantSlug}`)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all"
+            >
+              <ExternalLink className="w-4 h-4" /> Vedi Menù
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
@@ -182,9 +190,20 @@ export default function Gestione() {
             <ArrowLeft className="w-6 h-6 text-[#008080]" />
           </button>
           <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">Gestione</h1>
-          <button onClick={handleLogout} className="text-xs font-bold text-red-500 uppercase px-2 hover:bg-red-50 dark:hover:bg-red-900/20 py-1 rounded transition-colors">
-            Esci
-          </button>
+          <div className="flex items-center gap-1">
+            {restaurantSlug && (
+              <button
+                onClick={() => navigate(`/${restaurantSlug}`)}
+                className="p-2 rounded-full text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+                title="Vedi Menù"
+              >
+                <ExternalLink className="w-5 h-5" />
+              </button>
+            )}
+            <button onClick={handleLogout} className="text-xs font-bold text-red-500 uppercase px-2 hover:bg-red-50 dark:hover:bg-red-900/20 py-1 rounded transition-colors">
+              Esci
+            </button>
+          </div>
         </header>
 
         {/* ── Sub-header back bar (mobile only) ──────────────────────────── */}

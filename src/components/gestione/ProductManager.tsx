@@ -18,6 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useToast } from '../Toast';
 import db from '../../db';
+import { AllergenGrid, ALLERGENS } from './AllergensManager';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ interface Product {
     image_url: string;
     sort_order?: number;
     active?: boolean;
+    allergens?: string[];
 }
 
 interface Props {
@@ -341,6 +343,7 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                 image_url: editingProduct.image_url || '',
                 sort_order: editingProduct.sort_order || 0,
                 active: true,
+                allergens: editingProduct.allergens || [],
             });
             showToast('✓ Prodotto creato');
         } else {
@@ -352,6 +355,7 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                 price_unit: editingProduct.price_unit || null,
                 image_url: editingProduct.image_url || '',
                 sort_order: editingProduct.sort_order,
+                allergens: editingProduct.allergens || [],
             }).eq('id', editingProduct.id!).eq('restaurant_id', restaurantId);
             showToast('✓ Prodotto aggiornato');
         }
@@ -575,6 +579,21 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                                             <X className="w-3 h-3" /> Rimuovi
                                         </button>
                                     </div>
+                                )}
+                            </div>
+
+                            {/* Allergeni */}
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Allergeni presenti</label>
+                                <AllergenGrid
+                                    selected={editingProduct.allergens || []}
+                                    onChange={ids => setEditingProduct({ ...editingProduct, allergens: ids })}
+                                    size="sm"
+                                />
+                                {(editingProduct.allergens || []).length > 0 && (
+                                    <p className="text-[10px] text-amber-600 font-bold mt-2">
+                                        {(editingProduct.allergens || []).map(id => ALLERGENS.find(a => a.id === id)?.emoji).join(' ')} {(editingProduct.allergens || []).length} allergeni selezionati
+                                    </p>
                                 )}
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, ArrowLeft } from 'lucide-react';
+import { X, Plus, Minus, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { ALLERGENS } from '../gestione/AllergensManager';
 
 interface ProductExtra {
     id: string;
@@ -16,6 +17,7 @@ interface Product {
     price_unit: string | null;
     image_url: string;
     base_ingredients?: string[];
+    allergens?: string[];
     category_id?: string;
 }
 
@@ -132,6 +134,26 @@ export default function ProductModal({ product, extras, isOpen, onClose, onAddTo
                             <p className="text-gray-600 dark:text-gray-400 text-center sm:text-left text-base mb-8 leading-relaxed max-w-md w-full">
                                 {product.description}
                             </p>
+                        )}
+
+                        {/* Allergen Section */}
+                        {product.allergens && product.allergens.length > 0 && (
+                            <div className="w-full max-w-md mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                    <p className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Allergeni presenti</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {ALLERGENS.filter(a => product.allergens!.includes(a.id)).map(a => (
+                                        <span key={a.id} className="flex items-center gap-1 bg-white dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 px-2.5 py-1 rounded-lg text-xs font-bold text-amber-800 dark:text-amber-300">
+                                            {a.emoji} {a.label}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-amber-600 dark:text-amber-500 leading-relaxed">
+                                    In caso di allergie o intolleranze gravi, informa sempre il nostro personale prima di ordinare.
+                                </p>
+                            </div>
                         )}
 
                         {/* Quick Suggestions / Suggerimenti Rapidi */}
