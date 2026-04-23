@@ -1,7 +1,7 @@
-import { ArrowLeft, Star, Plus, Droplets, Wine, Zap, ShieldAlert, X } from 'lucide-react';
+import { ArrowLeft, Plus, Droplets, Wine, Zap, ShieldAlert, X } from 'lucide-react';
 import { ALLERGENS } from '../components/gestione/AllergensManager';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import clsx from 'clsx';
 import { useCart } from '../hooks/useCart';
 import db from '../db';
@@ -34,80 +34,145 @@ interface Category {
   products: Product[];
 }
 
+interface SectionData {
+  name: string;
+  categories: Category[];
+}
+
 export default function MenuPage() {
-  const { slug, section } = useParams<{ slug: string; section: string }>();
+  const { slug, section: sectionParam } = useParams<{ slug: string; section: string }>();
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [allData, setAllData] = useState<SectionData[]>([]);
+  const [orderedSections, setOrderedSections] = useState<string[]>([]);
+  const [activeSection, setActiveSection] = useState<string>(sectionParam || '');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [menuDelGiornoEnabled, setMenuDelGiornoEnabled] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const { addToCart } = useCart(slug || null);
   const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
-
   const [extras, setExtras] = useState<ProductExtra[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
   const [allergenFilter, setAllergenFilter] = useState<string[]>([]);
   const [showAllergenPanel, setShowAllergenPanel] = useState(false);
 
+  const sectionTabsRef = useRef<HTMLDivElement>(null);
+  const catTabsRef = useRef<HTMLDivElement>(null);
+
+  // ── Load ALL data once ──────────────────────────────────────────────────
   useEffect(() => {
-    async function loadMenu() {
-      if (!section || !slug) return;
+    async function loadAll() {
+      if (!slug) return;
       const { data: resData } = await db.from('restaurants').select('id').eq('slug', slug).single();
       if (!resData) { setNotFound(true); setLoading(false); return; }
 
-      const { data: cats, error: catError } = await db.from('categories')
-        .select('id,name,position,active,section')
-        .eq('section', section).eq('restaurant_id', resData.id).eq('active', true)
-        .order('position', { ascending: true }).order('id');
+      const [{ data: settingsData }, { data: allCats }, { data: extrasData }] = await Promise.all([
+        db.from('settings').select('key,value').eq('restaurant_id', resData.id),
+        db.from('categories')
+          .select('id,name,position,active,section')
+          .eq('restaurant_id', resData.id).eq('active', true)
+          .order('position', { ascending: true }).order('id'),
+        db.from('product_extras').select('id,name,category,price,available').eq('restaurant_id', resData.id).eq('available', true),
+      ]);
 
-      if (catError || !cats) return;
-
-      const { data: extrasData } = await db.from('product_extras').select('id,name,category,price,available').eq('restaurant_id', resData.id).eq('available', true);
       if (extrasData) setExtras(extrasData);
 
-      const menuData: Category[] = [];
-      for (const cat of cats) {
-        const { data: prods } = await db.from('products')
-          .select('id,name,description,price,price_unit,image_url,sort_order,active,category_id,allergens')
-          .eq('category_id', cat.id).eq('active', true)
-          .order('sort_order', { ascending: true }).order('id');
-        if (prods && prods.length > 0) menuData.push({ ...cat, products: prods });
+      const settings: Record<string, string> = {};
+      if (settingsData) settingsData.forEach((s: any) => { settings[s.key] = s.value; });
+
+      const mdgEnabled = settings.visibility_menu !== 'false' && settings.menu_del_giorno_enabled !== 'false';
+      setMenuDelGiornoEnabled(mdgEnabled);
+
+      if (!allCats || allCats.length === 0) { setLoading(false); return; }
+
+      // Build ordered section list (preserving DB order, filtered by visibility)
+      const seen = new Set<string>();
+      const sectionOrder: string[] = [];
+      for (const c of allCats) {
+        if (!seen.has(c.section)) {
+          seen.add(c.section);
+          const key = `visibility_${c.section.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
+          if (settings[key] !== 'false') sectionOrder.push(c.section);
+        }
+      }
+      setOrderedSections(sectionOrder);
+
+      // Load products for all categories in parallel
+      const catIds = allCats.map((c: any) => c.id);
+      const { data: allProds } = await db.from('products')
+        .select('id,name,description,price,price_unit,image_url,sort_order,active,category_id,allergens')
+        .in('category_id', catIds).eq('active', true)
+        .order('sort_order', { ascending: true }).order('id');
+
+      const prodsByCat: Record<string, Product[]> = {};
+      if (allProds) {
+        for (const p of allProds) {
+          if (!prodsByCat[p.category_id]) prodsByCat[p.category_id] = [];
+          prodsByCat[p.category_id].push(p);
+        }
       }
 
-      setCategories(menuData);
-      if (menuData.length > 0) {
-        const saved = sessionStorage.getItem(`category_${slug}_${section}`);
-        setActiveCategory(saved && menuData.some(c => c.id === saved) ? saved : menuData[0].id);
+      // Build section → categories → products tree
+      const sectionMap: Record<string, Category[]> = {};
+      for (const cat of allCats) {
+        const prods = prodsByCat[cat.id] || [];
+        if (prods.length === 0) continue; // skip empty categories
+        if (!sectionMap[cat.section]) sectionMap[cat.section] = [];
+        sectionMap[cat.section].push({ ...cat, products: prods });
       }
+
+      const data: SectionData[] = sectionOrder
+        .filter(s => sectionMap[s] && sectionMap[s].length > 0)
+        .map(s => ({ name: s, categories: sectionMap[s] }));
+
+      setAllData(data);
+
+      // Set initial active section
+      const initial = sectionParam && data.find(d => d.name === sectionParam)
+        ? sectionParam
+        : data[0]?.name || '';
+      setActiveSection(initial);
+
+      const initSection = data.find(d => d.name === initial);
+      if (initSection && initSection.categories.length > 0) {
+        setActiveCategory(initSection.categories[0].id);
+      }
+
       setLoading(false);
     }
-    loadMenu();
-  }, [section, slug]);
+    loadAll();
+  }, [slug, sectionParam]);
 
-  useEffect(() => {
-    const handleScroll = () => sessionStorage.setItem(`scroll_${slug}_${section}`, window.scrollY.toString());
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [slug, section]);
-
-  useEffect(() => {
-    if (loading) return;
-    const activeCatData = categories.find(c => c.id === activeCategory);
-    if (categories.length > 0 && activeCategory && activeCatData) {
-      const savedScroll = sessionStorage.getItem(`scroll_${slug}_${section}`);
-      if (savedScroll && savedScroll !== '0' && activeCatData.products.length > 0) {
-        setTimeout(() => requestAnimationFrame(() => window.scrollTo(0, parseInt(savedScroll, 10))), 100);
-      } else {
-        window.scrollTo(0, 0);
-      }
+  // ── Reset active category when section changes ──────────────────────────
+  const switchSection = useCallback((name: string) => {
+    setActiveSection(name);
+    const sec = allData.find(d => d.name === name);
+    if (sec && sec.categories.length > 0) {
+      setActiveCategory(sec.categories[0].id);
     }
-  }, [loading, categories, activeCategory, slug, section]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll section pill into view
+    setTimeout(() => {
+      const btn = sectionTabsRef.current?.querySelector(`[data-section="${name}"]`) as HTMLElement | null;
+      btn?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }, [allData]);
 
-  const isVino = section === 'Vino e Drinks';
-
-  if (notFound) return <NotFound />;
+  const scrollToCategory = useCallback((catId: string) => {
+    setActiveCategory(catId);
+    const el = document.getElementById(`cat-${catId}`);
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - 170;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+    // Scroll cat pill into view
+    setTimeout(() => {
+      const btn = catTabsRef.current?.querySelector(`[data-cat="${catId}"]`) as HTMLElement | null;
+      btn?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }, []);
 
   const handleAddToCart = (product: Product, customizations?: any) => {
     addToCart({ id: product.id, name: product.name, price: product.price, price_unit: product.price_unit, image_url: product.image_url, customizations });
@@ -115,21 +180,40 @@ export default function MenuPage() {
     setTimeout(() => setAddedItems(prev => ({ ...prev, [product.id]: false })), 1500);
   };
 
-  return (
-    <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased transition-colors duration-200">
+  if (notFound) return <NotFound />;
 
-      {/* ── Header ── full width bg, inner constrained */}
+  const activeSectionData = allData.find(d => d.name === activeSection);
+  const displayedCategories = activeSectionData?.categories || [];
+  const isVino = activeSection === 'Vino e Drinks';
+
+  // Total sections to display in row 1 (+ menu del giorno if enabled)
+  const allSectionNames = [...orderedSections.filter(s => allData.some(d => d.name === s))];
+
+  return (
+    <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased">
+
+      {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
       <header className="sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <ArrowLeft className="w-6 h-6 text-[#008081]" />
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          <button
+            onClick={() => navigate(`/${slug}`)}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5 text-[#008081]" />
           </button>
-          <h1 className="font-sans text-[1.2rem] font-black tracking-[0.2em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none mt-1">{section}</h1>
+
+          {/* Section name — centered, updates with active section */}
+          <h1 className="font-black text-base tracking-[0.15em] uppercase text-center flex-grow text-[#1A1A1A] dark:text-white leading-none truncate">
+            {loading ? '' : activeSection}
+          </h1>
+
           <button
             onClick={() => setShowAllergenPanel(p => !p)}
             className={clsx(
-              'relative p-2 rounded-full transition-colors',
-              allergenFilter.length > 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+              'relative p-2 rounded-full transition-colors flex-shrink-0',
+              allergenFilter.length > 0
+                ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
             )}
             title="Filtra per allergeni"
           >
@@ -143,26 +227,107 @@ export default function MenuPage() {
         </div>
       </header>
 
-      {/* ── Allergen filter panel ── */}
+      {/* ══ ROW 1 — Macro-sezioni (sections) ════════════════════════════════ */}
+      <div className="sticky top-14 z-40 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800">
+        <div className="max-w-5xl mx-auto">
+          <div
+            ref={sectionTabsRef}
+            className="px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar"
+          >
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-9 w-20 rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse flex-shrink-0" />
+                ))
+              : <>
+                  {allSectionNames.map(sec => (
+                    <button
+                      key={sec}
+                      data-section={sec}
+                      onClick={() => switchSection(sec)}
+                      className={clsx(
+                        'flex-shrink-0 px-4 h-9 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap border',
+                        activeSection === sec
+                          ? 'bg-[#008081] text-white border-transparent shadow-md shadow-[#008081]/25'
+                          : 'bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-[#008081] hover:text-[#008081]'
+                      )}
+                    >
+                      {sec}
+                    </button>
+                  ))}
+                  {menuDelGiornoEnabled && (
+                    <button
+                      onClick={() => navigate(`/${slug}/menu-del-giorno`)}
+                      className="flex-shrink-0 px-4 h-9 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap border bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-teal-400 hover:text-teal-600"
+                    >
+                      ✦ Menu del Giorno
+                    </button>
+                  )}
+                </>
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* ══ ROW 2 — Sub-categorie ════════════════════════════════════════════ */}
+      <div className="sticky top-[calc(3.5rem+3rem)] z-30 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800/60">
+        <div className="max-w-5xl mx-auto">
+          <div
+            ref={catTabsRef}
+            className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar"
+          >
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-8 w-24 rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse flex-shrink-0" />
+                ))
+              : displayedCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    data-cat={cat.id}
+                    onClick={() => scrollToCategory(cat.id)}
+                    className={clsx(
+                      'flex-shrink-0 px-3.5 h-8 rounded-full text-[11px] font-bold uppercase tracking-wide transition-all duration-200 whitespace-nowrap border',
+                      activeCategory === cat.id
+                        ? 'bg-[#008081]/10 text-[#008081] border-[#008081]/40 dark:bg-[#008081]/20 dark:border-[#008081]/50'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    {cat.name}
+                  </button>
+                ))
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* ══ ALLERGEN PANEL ══════════════════════════════════════════════════ */}
       {showAllergenPanel && (
-        <div className="sticky top-[65px] z-40 bg-white dark:bg-[#1A1A1A] border-b border-amber-200 dark:border-amber-800 shadow-md">
+        <div className="bg-white dark:bg-[#1A1A1A] border-b border-amber-200 dark:border-amber-800 shadow-md">
           <div className="max-w-5xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Seleziona allergeni da evitare</p>
+              <p className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                Seleziona allergeni da evitare
+              </p>
               {allergenFilter.length > 0 && (
-                <button onClick={() => setAllergenFilter([])} className="text-xs font-bold text-gray-400 hover:text-gray-700 flex items-center gap-1">
+                <button
+                  onClick={() => setAllergenFilter([])}
+                  className="text-xs font-bold text-gray-400 hover:text-gray-700 flex items-center gap-1"
+                >
                   <X className="w-3 h-3" /> Rimuovi filtri
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 sm:grid-cols-14 gap-1.5">
               {ALLERGENS.map(a => {
                 const active = allergenFilter.includes(a.id);
                 return (
-                  <button key={a.id}
+                  <button
+                    key={a.id}
                     onClick={() => setAllergenFilter(prev => active ? prev.filter(id => id !== a.id) : [...prev, a.id])}
-                    className={clsx('flex flex-col items-center gap-0.5 p-1.5 rounded-xl border-2 transition-all',
-                      active ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-[#262626]'
+                    className={clsx(
+                      'flex flex-col items-center gap-0.5 p-1.5 rounded-xl border-2 transition-all',
+                      active
+                        ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                        : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-[#262626]'
                     )}
                     title={a.label}
                   >
@@ -175,64 +340,37 @@ export default function MenuPage() {
               })}
             </div>
             {allergenFilter.length > 0 && (
-              <p className="text-[10px] text-amber-600 font-bold mt-2 text-center">I piatti con questi allergeni appaiono attenuati</p>
+              <p className="text-[10px] text-amber-600 font-bold mt-2 text-center">
+                I piatti con questi allergeni appaiono attenuati
+              </p>
             )}
           </div>
         </div>
       )}
 
-      {/* ── Category tabs ── full width bg, inner scrollable */}
-      <div className="sticky top-[65px] z-40 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800 shadow-sm">
-        <div className="max-w-5xl mx-auto">
-          <div className="px-4 py-3 overflow-x-auto whitespace-nowrap no-scrollbar flex gap-2">
-            {loading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="min-w-[90px] h-[60px] rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                ))
-              : categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setActiveCategory(cat.id);
-                    sessionStorage.setItem(`category_${slug}_${section}`, cat.id);
-                    const el = document.getElementById(`category-${cat.id}`);
-                    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.pageYOffset - 140, behavior: 'smooth' });
-                  }}
-                  className={clsx(
-                    'flex flex-col items-center justify-center min-w-[90px] h-[60px] rounded-2xl transition-all duration-300 border px-3',
-                    activeCategory === cat.id
-                      ? 'bg-gradient-to-br from-[#008081] to-teal-600 text-white shadow-md shadow-[#008081]/30 border-transparent scale-105'
-                      : 'bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800 hover:border-[#008081] hover:shadow-sm'
-                  )}
-                >
-                  <span className="text-[11px] font-bold tracking-wide uppercase text-center w-full truncate">{cat.name}</span>
-                  <span className={clsx('w-5 h-0.5 mt-1.5 rounded-full', activeCategory === cat.id ? 'bg-white/50' : 'bg-gray-200 dark:bg-gray-700')} />
-                </button>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-
-      {/* ── Products ── */}
+      {/* ══ PRODUCTS ════════════════════════════════════════════════════════ */}
       <main className="flex-grow pb-28 pt-6">
-        <div className="max-w-5xl mx-auto px-4 space-y-14">
+        <div className="max-w-5xl mx-auto px-4 space-y-12">
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="rounded-3xl overflow-hidden bg-gray-100 dark:bg-gray-800 animate-pulse h-64" />
               ))}
             </div>
+          ) : displayedCategories.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <p className="text-lg font-bold">Nessun prodotto disponibile</p>
+            </div>
           ) : (
-            categories.map(category => (
-              <div key={category.id} id={`category-${category.id}`} className="scroll-mt-40">
+            displayedCategories.map(category => (
+              <div key={category.id} id={`cat-${category.id}`} className="scroll-mt-44">
                 {/* Category heading */}
-                <h2 className="text-xl sm:text-2xl font-black font-sans text-[#1A1A1A] dark:text-[#FDFCF0] mb-5 tracking-tight flex items-center gap-3">
+                <h2 className="text-xl sm:text-2xl font-black text-[#1A1A1A] dark:text-[#FDFCF0] mb-5 tracking-tight flex items-center gap-3">
                   <span className="w-6 h-[2px] bg-[#008081] rounded-full flex-shrink-0" />
                   {category.name}
                 </h2>
 
-                {/* Product grid — responsive columns */}
+                {/* Product grid */}
                 <div className={clsx(
                   'grid gap-4',
                   isVino
@@ -277,7 +415,9 @@ export default function MenuPage() {
                               onClick={e => { e.stopPropagation(); handleAddToCart(product); }}
                               className={clsx(
                                 'rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-8 h-8 flex-shrink-0',
-                                addedItems[product.id] ? 'bg-green-500 text-white scale-110' : 'bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg active:scale-95'
+                                addedItems[product.id]
+                                  ? 'bg-green-500 text-white scale-110'
+                                  : 'bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg active:scale-95'
                               )}
                             >
                               {addedItems[product.id] ? <span className="text-xs font-bold">✓</span> : <Plus className="w-3.5 h-3.5" />}
@@ -296,16 +436,16 @@ export default function MenuPage() {
                           hasConflict && 'opacity-40'
                         )}
                       >
-                        {/* Image */}
                         <div className="relative h-40 sm:h-44 w-full overflow-hidden flex-shrink-0">
                           <img alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={product.image_url} loading="lazy" decoding="async" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                           <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10">
-                            <span className="text-white font-bold text-sm tracking-wide">{product.price.toFixed(2)}€{product.price_unit || ''}</span>
+                            <span className="text-white font-bold text-sm tracking-wide">
+                              {product.price.toFixed(2)}€{product.price_unit || ''}
+                            </span>
                           </div>
                         </div>
 
-                        {/* Content */}
                         <div className="p-4 flex flex-col flex-grow">
                           <div className="flex justify-between items-start gap-3">
                             <div className="flex-grow min-w-0">
@@ -316,12 +456,16 @@ export default function MenuPage() {
                               {prodAllergens.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {ALLERGENS.filter(a => prodAllergens.includes(a.id)).map(a => (
-                                    <span key={a.id} title={a.label} className={clsx(
-                                      'text-[9px] px-1.5 py-0.5 rounded-md border font-bold',
-                                      allergenFilter.includes(a.id)
-                                        ? 'bg-amber-100 border-amber-400 text-amber-700 dark:bg-amber-900/30 dark:border-amber-600 dark:text-amber-400'
-                                        : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-white/5 dark:border-white/10'
-                                    )}>
+                                    <span
+                                      key={a.id}
+                                      title={a.label}
+                                      className={clsx(
+                                        'text-[9px] px-1.5 py-0.5 rounded-md border font-bold',
+                                        allergenFilter.includes(a.id)
+                                          ? 'bg-amber-100 border-amber-400 text-amber-700 dark:bg-amber-900/30 dark:border-amber-600 dark:text-amber-400'
+                                          : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-white/5 dark:border-white/10'
+                                      )}
+                                    >
                                       {a.emoji} {a.label}
                                     </span>
                                   ))}
@@ -331,8 +475,10 @@ export default function MenuPage() {
                             <div
                               onClick={e => { e.stopPropagation(); handleAddToCart(product); }}
                               className={clsx(
-                                'rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-10 h-10 flex-shrink-0',
-                                addedItems[product.id] ? 'bg-green-500 text-white scale-110' : 'bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg active:scale-95 cursor-pointer'
+                                'rounded-full shadow-md transition-all duration-300 flex items-center justify-center w-10 h-10 flex-shrink-0 cursor-pointer',
+                                addedItems[product.id]
+                                  ? 'bg-green-500 text-white scale-110'
+                                  : 'bg-gradient-to-tr from-[#008081] to-teal-400 text-white hover:shadow-lg active:scale-95'
                               )}
                             >
                               {addedItems[product.id] ? <span className="text-lg font-bold">✓</span> : <Plus className="w-5 h-5" />}
@@ -349,7 +495,7 @@ export default function MenuPage() {
         </div>
       </main>
 
-      {/* ── Footer viral ── */}
+      {/* ══ FOOTER ══════════════════════════════════════════════════════════ */}
       <div className="pb-36 pt-8 flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity">
         <Link to="/" target="_blank" className="flex flex-col items-center gap-1 group">
           <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500 group-hover:text-[#008081] transition-colors">Powered by</span>
@@ -357,17 +503,20 @@ export default function MenuPage() {
             <div className="bg-[#008081] text-white p-0.5 rounded-md shadow-sm"><Zap className="w-3 h-3 fill-white" /></div>
             <span className="font-extrabold text-lg tracking-tighter text-gray-800 dark:text-gray-200 group-hover:text-[#008081] transition-colors">Leomenu</span>
           </div>
-          <span className="text-[10px] font-black text-gray-500 bg-gray-200 dark:bg-gray-800 px-4 py-1.5 rounded-full group-hover:bg-teal-50 group-hover:text-[#008081] transition-colors border border-transparent group-hover:border-teal-100">Crea il tuo menù gratis</span>
+          <span className="text-[10px] font-black text-gray-500 bg-gray-200 dark:bg-gray-800 px-4 py-1.5 rounded-full group-hover:bg-teal-50 group-hover:text-[#008081] transition-colors border border-transparent group-hover:border-teal-100">
+            Crea il tuo menù gratis
+          </span>
         </Link>
       </div>
 
       <BottomNav />
 
+      {/* ══ PRODUCT MODAL ══════════════════════════════════════════════════ */}
       {selectedProduct && (
         <ProductModal
           product={selectedProduct}
           extras={extras.filter(e => {
-            const productCategory = categories.find(c => c.products.some(p => p.id === selectedProduct.id));
+            const productCategory = displayedCategories.find(c => c.products.some(p => p.id === selectedProduct.id));
             const catName = productCategory ? productCategory.name.toLowerCase().trim() : '';
             const eCats = (e.category || []).map((c: string) => c.toLowerCase().trim());
             return eCats.includes(catName) || eCats.includes('global');
