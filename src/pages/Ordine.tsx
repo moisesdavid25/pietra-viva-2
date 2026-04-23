@@ -495,7 +495,7 @@ export default function OrdinePage() {
                         <textarea
                             value={noteText}
                             onChange={e => setNoteText(e.target.value)}
-                            placeholder="Es. senza sale, ben cotto, senza cipolla..."
+                            placeholder="Inserisci la tua richiesta..."
                             rows={3}
                             autoFocus
                             className="w-full p-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl text-sm text-[#1A1A1A] dark:text-white outline-none focus:ring-2 focus:ring-[#008081] resize-none transition-all"

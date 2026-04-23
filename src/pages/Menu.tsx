@@ -228,7 +228,7 @@ export default function MenuPage() {
 
             {/* Cart icon */}
             <button
-              onClick={() => navigate(`/${slug}/ordine`)}
+              onClick={() => navigate(`/${slug}/ordini`)}
               className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
               title="Il tuo ordine"
             >
