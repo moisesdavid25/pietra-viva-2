@@ -78,8 +78,16 @@ export function useCart(slug: string | null) {
 
     const clearCart = () => updateCart([]);
 
+    const addNote = (cartItemId: string, note: string) => {
+        updateCart(cart.map(item =>
+            item.cartItemId === cartItemId
+                ? { ...item, customizations: { removed: item.customizations?.removed || [], added: item.customizations?.added || [], notes: note } }
+                : item
+        ));
+    };
+
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    return { cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice };
+    return { cart, addToCart, removeFromCart, updateQuantity, clearCart, addNote, totalItems, totalPrice };
 }

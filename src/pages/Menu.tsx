@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Droplets, Wine, Zap, ShieldAlert, X } from 'lucide-react';
+import { ArrowLeft, Plus, Droplets, Wine, Zap, ShieldAlert, X, ShoppingBag } from 'lucide-react';
 import { ALLERGENS } from '../components/gestione/AllergensManager';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -51,7 +51,7 @@ export default function MenuPage() {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { addToCart } = useCart(slug || null);
+  const { addToCart, totalItems } = useCart(slug || null);
   const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
   const [extras, setExtras] = useState<ProductExtra[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -207,23 +207,39 @@ export default function MenuPage() {
             {loading ? '' : activeSection}
           </h1>
 
-          <button
-            onClick={() => setShowAllergenPanel(p => !p)}
-            className={clsx(
-              'relative p-2 rounded-full transition-colors flex-shrink-0',
-              allergenFilter.length > 0
-                ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
-            )}
-            title="Filtra per allergeni"
-          >
-            <ShieldAlert className="w-5 h-5" />
-            {allergenFilter.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                {allergenFilter.length}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => setShowAllergenPanel(p => !p)}
+              className={clsx(
+                'relative p-2 rounded-full transition-colors',
+                allergenFilter.length > 0
+                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+              )}
+              title="Filtra per allergeni"
+            >
+              <ShieldAlert className="w-5 h-5" />
+              {allergenFilter.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {allergenFilter.length}
+                </span>
+              )}
+            </button>
+
+            {/* Cart icon */}
+            <button
+              onClick={() => navigate(`/${slug}/ordine`)}
+              className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
+              title="Il tuo ordine"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#008081] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -269,7 +285,7 @@ export default function MenuPage() {
       </div>
 
       {/* ══ ROW 2 — Sub-categorie ════════════════════════════════════════════ */}
-      <div className="sticky top-[calc(3.5rem+3rem)] z-30 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800/60">
+      <div className="sticky top-28 z-30 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800/60">
         <div className="max-w-5xl mx-auto">
           <div
             ref={catTabsRef}
