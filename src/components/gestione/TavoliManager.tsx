@@ -241,7 +241,7 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
         <div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white">Gestione Tavoli</h2>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white">Tavoli</h2>
           <p className="text-sm text-gray-500 font-bold mt-0.5">Configura la planimetria della tua sala</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">

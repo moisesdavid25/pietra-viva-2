@@ -205,7 +205,7 @@ export default function OrdiniManager({ restaurantId }: OrdiniManagerProps) {
     <div className="space-y-4 animate-fade-in w-full h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex justify-between items-center mb-2 flex-shrink-0">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Live Orders (Kanban)</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ordini</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">Trascina le card per aggiornare lo stato in tempo reale</p>
         </div>
         <div className="flex gap-2">

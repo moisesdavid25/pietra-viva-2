@@ -7,7 +7,7 @@ import { useCart } from '../hooks/useCart';
 import db from '../db';
 import BottomNav from '../components/BottomNav';
 import NotFound from '../components/NotFound';
-import ProductModal from '../components/menu/ProductModal';
+// ProductModal replaced by ProductDetail page navigation;
 
 interface ProductExtra {
   id: string;
@@ -54,7 +54,6 @@ export default function MenuPage() {
   const { addToCart, totalItems } = useCart(slug || null);
   const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
   const [extras, setExtras] = useState<ProductExtra[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [allergenFilter, setAllergenFilter] = useState<string[]>([]);
   const [showAllergenPanel, setShowAllergenPanel] = useState(false);
 
@@ -174,6 +173,15 @@ export default function MenuPage() {
     }, 50);
   }, []);
 
+  const openProduct = useCallback((product: Product, categoryName: string) => {
+    const filteredExtras = extras.filter(e => {
+      const catName = categoryName.toLowerCase().trim();
+      const eCats = (e.category || []).map((c: string) => c.toLowerCase().trim());
+      return eCats.includes(catName) || eCats.includes('global');
+    });
+    navigate(`/${slug}/product/${product.id}`, { state: { product, extras: filteredExtras } });
+  }, [extras, slug, navigate]);
+
   const handleAddToCart = (product: Product, customizations?: any) => {
     addToCart({ id: product.id, name: product.name, price: product.price, price_unit: product.price_unit, image_url: product.image_url, customizations });
     setAddedItems(prev => ({ ...prev, [product.id]: true }));
@@ -229,7 +237,7 @@ export default function MenuPage() {
             {/* Cart icon */}
             <button
               onClick={() => navigate(`/${slug}/ordini`)}
-              className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
+              className="relative p-2 rounded-full hover:bg-[#008081]/10 transition-colors text-[#008081]"
               title="Il tuo ordine"
             >
               <ShoppingBag className="w-5 h-5" />
@@ -401,7 +409,7 @@ export default function MenuPage() {
                       /* ── Vino card — horizontal ── */
                       <button
                         key={product.id}
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => openProduct(product, category.name)}
                         className={clsx(
                           'w-full text-left group relative bg-white dark:bg-[#252525] rounded-3xl p-4 shadow-sm hover:shadow-lg border border-gray-200 dark:border-white/5 flex gap-4 transition-all duration-300 hover:-translate-y-1',
                           hasConflict && 'opacity-40'
@@ -446,7 +454,7 @@ export default function MenuPage() {
                       /* ── Food card — vertical ── */
                       <button
                         key={product.id}
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => openProduct(product, category.name)}
                         className={clsx(
                           'w-full text-left group bg-white dark:bg-[#262626] rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-200 dark:border-gray-800 relative flex flex-col',
                           hasConflict && 'opacity-40'
@@ -527,21 +535,6 @@ export default function MenuPage() {
 
       <BottomNav />
 
-      {/* ══ PRODUCT MODAL ══════════════════════════════════════════════════ */}
-      {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          extras={extras.filter(e => {
-            const productCategory = displayedCategories.find(c => c.products.some(p => p.id === selectedProduct.id));
-            const catName = productCategory ? productCategory.name.toLowerCase().trim() : '';
-            const eCats = (e.category || []).map((c: string) => c.toLowerCase().trim());
-            return eCats.includes(catName) || eCats.includes('global');
-          })}
-          isOpen={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddToCart={handleAddToCart}
-        />
-      )}
     </div>
   );
 }

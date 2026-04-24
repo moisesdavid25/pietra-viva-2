@@ -188,7 +188,7 @@ export default function CRMAndAudience({ restaurantId }: Props) {
             {/* Header / Top KPIs */}
             <div className="flex items-center justify-between mb-2">
                <div>
-                  <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Panoramica Audience</h2>
+                  <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">CRM</h2>
                   <p className="text-sm font-bold text-gray-500">Analisi comportamentale e Wallet retention.</p>
                </div>
             </div>

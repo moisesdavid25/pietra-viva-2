@@ -381,7 +381,7 @@ export default function BusinessIntelligence({ restaurantId }: Props) {
       {/* ── Header + Time Range ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Intelligence & Analytics</h2>
+          <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Analitiche</h2>
           <p className="text-sm font-bold text-gray-500">Monitoraggio KPI operativi in tempo reale.</p>
         </div>
         <div className="bg-gray-100 dark:bg-[#1A1A1A] p-1 rounded-xl flex shadow-inner shrink-0 relative">

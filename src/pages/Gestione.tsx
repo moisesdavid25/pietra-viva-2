@@ -222,9 +222,17 @@ export default function Gestione() {
               <ChevronLeft className="w-6 h-6" />
             </button>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">
-              {activeTab === 'products' && productView === 'listino'
-                ? 'Listino Prodotti'
-                : activeTab.replace('_', ' ')}
+              {({
+                dashboard: 'Dashboard',
+                ordini: 'Ordini',
+                products: productView === 'listino' ? 'Listino Prodotti' : 'Menù',
+                business_intelligence: 'Analitiche',
+                fidelizzazione: 'CRM',
+                personalizzazione: 'QR',
+                tavoli: 'Tavoli',
+                settings: 'Impostazioni',
+                menus: 'Menu del Giorno',
+              } as Record<string, string>)[activeTab] || activeTab}
             </h2>
           </div>
         )}
@@ -310,13 +318,13 @@ export default function Gestione() {
                  <h3 className="font-black text-xs text-gray-400 uppercase tracking-widest mb-4 px-2">Ecosistema Leomenu</h3>
                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { id: 'ordini', icon: <ClipboardList />, title: 'Gestione Ordini', subtitle: 'Ricevitore', bg: 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/20', text: 'text-orange-600 dark:text-orange-400' },
-                      { id: 'products', icon: <BookOpen />, title: 'Menù Diretto', subtitle: 'Catalogo & Prezzi', bg: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
+                      { id: 'ordini', icon: <ClipboardList />, title: 'Ordini', subtitle: 'Ricevitore', bg: 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/20', text: 'text-orange-600 dark:text-orange-400' },
+                      { id: 'products', icon: <BookOpen />, title: 'Menù', subtitle: 'Catalogo & Prezzi', bg: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
                       { id: 'business_intelligence', icon: <BarChart3 />, title: 'Analitiche', subtitle: 'Dashboard Vendite', bg: 'bg-purple-50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
-                      { id: 'fidelizzazione', icon: <Users />, title: 'CRM & Audience', subtitle: 'Carta Fedeltà', bg: 'bg-teal-50 dark:bg-teal-900/10 border-[#008081]/20', text: 'text-[#008081]' },
-                      { id: 'tavoli', icon: <LayoutDashboard />, title: 'Gestione Tavoli', subtitle: 'Planimetria sala', bg: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/20', text: 'text-violet-600 dark:text-violet-400' },
-                      { id: 'cameriere', icon: <Sliders />, title: 'LeoPOS Mobile', subtitle: 'Terminale sala', bg: 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', isRoute: true },
-                      { id: 'personalizzazione', icon: <Settings2 />, title: 'Scansione & MKTG', subtitle: 'Strumenti QR', bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
+                      { id: 'fidelizzazione', icon: <Users />, title: 'CRM', subtitle: 'Carta Fedeltà', bg: 'bg-teal-50 dark:bg-teal-900/10 border-[#008081]/20', text: 'text-[#008081]' },
+                      { id: 'tavoli', icon: <LayoutDashboard />, title: 'Tavoli', subtitle: 'Planimetria sala', bg: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/20', text: 'text-violet-600 dark:text-violet-400' },
+                      { id: 'cameriere', icon: <Sliders />, title: 'LeoPOS', subtitle: 'Terminale sala', bg: 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', isRoute: true },
+                      { id: 'personalizzazione', icon: <Settings2 />, title: 'QR', subtitle: 'Strumenti QR', bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
                       { id: 'settings', icon: <Settings2 />, title: 'Impostazioni', subtitle: 'Fiscale & WiFi', bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400' }
                     ].map((mod) => (
                       <button 

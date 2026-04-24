@@ -162,8 +162,8 @@ export default function RestaurantHome() {
             </div>
 
             {/* Social icons */}
-            {(images.phone_number || images.instagram_url || images.facebook_url || images.tiktok_url || images.google_maps_url) && (
-              <div className="flex flex-row items-center justify-center gap-2 mb-5">
+            {(images.phone_number || images.instagram_url || images.facebook_url || images.tiktok_url || images.google_maps_url || images.tripadvisor_url) && (
+              <div className="flex flex-row items-center justify-center gap-2 mb-5 flex-wrap">
                 {images.phone_number && (
                   <a href={`tel:${images.phone_number.replace(/\s+/g, '')}`} className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
                     <Phone className="w-4 h-4" />
@@ -187,6 +187,11 @@ export default function RestaurantHome() {
                 {images.google_maps_url && (
                   <a href={images.google_maps_url} target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
                     <MapPin className="w-4 h-4" />
+                  </a>
+                )}
+                {images.tripadvisor_url && (
+                  <a href={images.tripadvisor_url} target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4c5.302 0 9.6 4.298 9.6 9.6s-4.298 9.6-9.6 9.6S2.4 17.302 2.4 12 6.698 2.4 12 2.4zm-4.2 6.6a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8zm8.4 0a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8zm-4.2-1.8c-2.04 0-3.9.648-5.412 1.74A5.388 5.388 0 014.8 9.6h-.6c.468-.612 1.02-1.152 1.644-1.608C7.5 6.78 9.648 6 12 6s4.5.78 6.156 1.992c.624.456 1.176.996 1.644 1.608h-.6a5.388 5.388 0 01-1.788-.66C15.9 7.848 14.04 7.2 12 7.2zm0 9.6c-1.632 0-3.108-.648-4.188-1.692l1.14-1.14A4.166 4.166 0 0012 14.4c1.128 0 2.148.444 2.904 1.164l1.284 1.284A5.953 5.953 0 0112 18z"/></svg>
                   </a>
                 )}
               </div>

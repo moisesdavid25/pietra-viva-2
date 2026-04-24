@@ -485,7 +485,7 @@ export default function Personalizzazione({ restaurantId, restaurantSlug = '' }:
     <div className="space-y-6 pb-16">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Personalizzazione</h2>
+        <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">QR</h2>
         <p className="text-sm font-bold text-gray-500 mt-0.5">QR code, tavoli e suggerimenti per i clienti.</p>
       </div>
 
