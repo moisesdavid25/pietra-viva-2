@@ -14,6 +14,7 @@ import CronologiaPage from './pages/Cronologia';
 import Auth from './pages/Auth';
 import Cameriere from './pages/Cameriere';
 import RegisterFlow from './pages/RegisterFlow';
+import RegisterComplete from './pages/RegisterComplete';
 import Onboarding from './pages/Onboarding';
 import ResetPassword from './pages/ResetPassword';
 import UpdatePassword from './pages/UpdatePassword';
@@ -149,6 +150,7 @@ export default function App() {
         {/* Auth & Platform Routes */}
         <Route path="/login" element={<GuestRoute><Auth type="login" /></GuestRoute>} />
         <Route path="/register" element={<RegisterFlow />} />
+        <Route path="/register/complete" element={<RegisterComplete />} />
         <Route path="/passport" element={<CartaFedelta />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />

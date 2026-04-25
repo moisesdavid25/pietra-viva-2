@@ -97,21 +97,6 @@ export default function RegisterFlow() {
     const makeSlug = (name: string) =>
         `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')}-${Math.random().toString(36).substring(2, 8)}`;
 
-    // ── Stripe redirect helper ────────────────────────────────────────────────
-    const goToStripe = async (restaurantId: string, userEmail: string) => {
-        const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
-        try {
-            const res = await fetch('/api/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ priceId: plan.priceId, restaurantId, userEmail }),
-            });
-            const { url } = await res.json();
-            if (url) { window.location.href = url; return; }
-        } catch { /* fallback below */ }
-        navigate('/gestione?wizard=true');
-    };
-
     // ── OAuth owner: business info submit → then go to plan step ─────────────
     const handleOAuthOwnerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -126,9 +111,8 @@ export default function RegisterFlow() {
             if (resError?.code === '23505') throw new Error('Questo nome esiste già.');
             if (resError) throw resError;
             await db.rpc('upgrade_to_owner');
-            // Store restaurant id temporarily for the stripe redirect
-            sessionStorage.setItem('pending_restaurant_id', restaurant.id);
-            sessionStorage.setItem('pending_user_email', user.email ?? '');
+            sessionStorage.setItem('oauth_restaurant_id', restaurant.id);
+            sessionStorage.setItem('oauth_user_email', user.email ?? '');
             setStep(3);
         } catch (err: any) {
             setError(err.message || 'Errore.');
@@ -137,58 +121,89 @@ export default function RegisterFlow() {
         }
     };
 
-    // ── OAuth owner: after plan selection → Stripe ────────────────────────────
+    // ── OAuth owner: after plan selection → Stripe (account already exists) ──
     const handleOAuthStripeRedirect = async () => {
         setLoading(true);
         try {
-            const restaurantId = sessionStorage.getItem('pending_restaurant_id');
-            const userEmail    = sessionStorage.getItem('pending_user_email') ?? '';
+            const restaurantId = sessionStorage.getItem('oauth_restaurant_id');
+            const userEmail    = sessionStorage.getItem('oauth_user_email') ?? '';
             if (!restaurantId) {
                 const { data: { user } } = await db.auth.getUser();
                 const { data: res } = await db.from('restaurants').select('id').eq('user_id', user!.id).neq('slug', 'demo').single();
-                await goToStripe(res!.id, user!.email ?? '');
+                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
+                const r = await fetch('/api/create-checkout-session', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ priceId: plan.priceId, restaurantId: res!.id, userEmail: user!.email }),
+                });
+                const { url } = await r.json();
+                if (url) window.location.href = url;
+                else navigate('/gestione?wizard=true');
             } else {
-                await goToStripe(restaurantId, userEmail);
+                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
+                const r = await fetch('/api/create-checkout-session', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ priceId: plan.priceId, restaurantId, userEmail }),
+                });
+                const { url } = await r.json();
+                if (url) window.location.href = url;
+                else navigate('/gestione?wizard=true');
             }
         } catch { navigate('/gestione?wizard=true'); }
         finally { setLoading(false); }
     };
 
-    // ── Final submit: create account → restaurant → Stripe ───────────────────
+    // ── Final submit (owner): save to sessionStorage → Stripe (NO Supabase yet)
+    // ── Final submit (customer): create account directly
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
         try {
-            localStorage.setItem('registerRole', role);
-
-            const { error: signUpError } = await db.auth.signUp({
-                email, password,
-                options: { data: { first_name: firstName, last_name: lastName, phone } },
-            });
-            if (signUpError) throw signUpError;
-
-            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
-            if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
-
-            const { data: { user } } = await db.auth.getUser();
-            if (!user) throw new Error('Utente non autenticato');
-
-            await db.from('profiles').upsert({ id: user.id, role, first_name: firstName, last_name: lastName, phone });
-
             if (role === 'owner') {
-                const { data: restaurant, error: resError } = await db.from('restaurants')
-                    .insert({ user_id: user.id, name: businessName, slug: makeSlug(businessName), type: businessType })
-                    .select('id').single();
-                if (resError?.code === '23505') throw new Error('Questo nome esiste già.');
-                if (resError) throw resError;
-                await db.rpc('upgrade_to_owner');
-                await goToStripe(restaurant.id, user.email ?? email);
+                // ── Store all data; account is created AFTER Stripe payment ──
+                sessionStorage.setItem('pending_registration', JSON.stringify({
+                    email, password, firstName, lastName, phone,
+                    businessName, businessType, selectedPlan,
+                }));
+
+                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
+                const res = await fetch('/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        priceId: plan.priceId,
+                        userEmail: email,
+                        // NO restaurantId → registration flow in the API
+                    }),
+                });
+
+                if (!res.ok) throw new Error('Errore nella connessione con Stripe.');
+                const { url, error: apiErr } = await res.json();
+                if (apiErr) throw new Error(apiErr);
+                if (url) { window.location.href = url; return; }
+                throw new Error('Nessun URL ricevuto da Stripe.');
+
             } else {
+                // ── Customer: create account directly (no Stripe) ────────────
+                localStorage.setItem('registerRole', role);
+                const { error: signUpError } = await db.auth.signUp({
+                    email, password,
+                    options: { data: { first_name: firstName, last_name: lastName, phone } },
+                });
+                if (signUpError) throw signUpError;
+
+                const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+                if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
+
+                const { data: { user } } = await db.auth.getUser();
+                if (!user) throw new Error('Utente non autenticato');
+
+                await db.from('profiles').upsert({ id: user.id, role, first_name: firstName, last_name: lastName, phone });
                 navigate('/passport?wizard=true');
             }
         } catch (err: any) {
-            await db.auth.signOut();
+            if (role !== 'owner') await db.auth.signOut();
+            sessionStorage.removeItem('pending_registration');
             setError(err.message === 'User already registered' ? 'Utente già registrato. Accedi.' : (err.message || 'Errore durante la registrazione.'));
         } finally {
             setLoading(false);

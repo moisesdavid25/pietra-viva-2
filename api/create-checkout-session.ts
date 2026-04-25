@@ -20,11 +20,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { priceId, restaurantId, userEmail } = req.body as {
     priceId: string;
-    restaurantId: string;
+    restaurantId?: string;   // optional — absent on new registration
     userEmail: string;
   };
 
-  if (!priceId || !restaurantId || !userEmail) {
+  if (!priceId || !userEmail) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -32,43 +32,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid price ID' });
   }
 
+  const appUrl = process.env.APP_URL || 'https://leomenu.it';
+  const isRegistration = !restaurantId;
+
   try {
-    // Reuse existing Stripe customer if present
-    const { data: restaurant } = await supabase
-      .from('restaurants')
-      .select('stripe_customer_id')
-      .eq('id', restaurantId)
-      .single();
+    let customerId: string;
 
-    let customerId = restaurant?.stripe_customer_id as string | undefined;
-
-    if (!customerId) {
+    if (isRegistration) {
+      // ── New registration: create Stripe customer, DO NOT touch Supabase ──
+      // Account will be created in /register/complete after payment succeeds
       const customer = await stripe.customers.create({
         email: userEmail,
-        metadata: { restaurantId },
+        metadata: { registration_pending: 'true' },
       });
       customerId = customer.id;
-
-      await supabase
+    } else {
+      // ── Existing restaurant upgrade: reuse customer if present ────────────
+      const { data: restaurant } = await supabase
         .from('restaurants')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', restaurantId);
-    }
+        .select('stripe_customer_id')
+        .eq('id', restaurantId)
+        .single();
 
-    const appUrl = process.env.APP_URL || 'https://leomenu.it';
+      const existing = restaurant?.stripe_customer_id as string | undefined;
+      if (existing) {
+        customerId = existing;
+      } else {
+        const customer = await stripe.customers.create({
+          email: userEmail,
+          metadata: { restaurantId },
+        });
+        customerId = customer.id;
+        await supabase
+          .from('restaurants')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', restaurantId!);
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { restaurantId },
+      metadata: isRegistration
+        ? { registration_pending: 'true' }
+        : { restaurantId: restaurantId! },
       subscription_data: {
         trial_period_days: 14,
-        metadata: { restaurantId },
+        metadata: isRegistration
+          ? { registration_pending: 'true' }
+          : { restaurantId: restaurantId! },
       },
-      success_url: `${appUrl}/gestione?upgrade=success`,
-      cancel_url: `${appUrl}/prezzi`,
+      // Registration → go to completion page; upgrade → go to gestione
+      success_url: isRegistration
+        ? `${appUrl}/register/complete?session_id={CHECKOUT_SESSION_ID}`
+        : `${appUrl}/gestione?upgrade=success`,
+      cancel_url: isRegistration
+        ? `${appUrl}/register`
+        : `${appUrl}/prezzi`,
     });
 
     res.json({ url: session.url });
