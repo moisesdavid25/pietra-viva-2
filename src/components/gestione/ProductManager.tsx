@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, ChevronRight, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Trash2, Save, X, Check, GripVertical, Search, ImageOff } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Trash2, Save, X, Check, GripVertical, Search, ImageOff, AlertTriangle } from 'lucide-react';
+import { createBackupSnapshot } from '../../lib/backup';
 import {
     DndContext,
     closestCenter,
@@ -273,6 +274,12 @@ export default function ProductManager({ restaurantId, categories: initialCatego
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
     const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string;
+        message: string;
+        detail?: string;
+        onConfirm: () => void;
+    } | null>(null);
     const [showAddSubCat, setShowAddSubCat] = useState(false);
     const [newSubCatName, setNewSubCatName] = useState('');
     const [savingSubCat, setSavingSubCat] = useState(false);
@@ -365,15 +372,22 @@ export default function ProductManager({ restaurantId, categories: initialCatego
 
     // ── Delete with Undo ──────────────────────────────────────────────────────
     const handleDeleteProduct = (id: string) => {
-        setPendingDeleteId(id);
-        setLocalProducts(prev => prev.filter(p => p.id !== id));
-        showToast('Prodotto eliminato — tocca ANNULLA per ripristinare', 'info');
-        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-        undoTimerRef.current = setTimeout(async () => {
-            await db.from('products').delete().eq('id', id);
-            setPendingDeleteId(null);
-            fetchLocal();
-        }, 4000);
+        const product = localProducts.find(p => p.id === id);
+        setConfirmDialog({
+            title: 'Eliminare questo prodotto?',
+            message: `"${product?.name ?? 'Prodotto'}" verrà rimosso dal menu.`,
+            onConfirm: () => {
+                setPendingDeleteId(id);
+                setLocalProducts(prev => prev.filter(p => p.id !== id));
+                showToast('Prodotto eliminato — tocca ANNULLA per ripristinare', 'info');
+                if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+                undoTimerRef.current = setTimeout(async () => {
+                    await db.from('products').delete().eq('id', id);
+                    setPendingDeleteId(null);
+                    fetchLocal();
+                }, 4000);
+            },
+        });
     };
 
     const handleUndoDelete = useCallback(() => {
@@ -462,25 +476,44 @@ export default function ProductManager({ restaurantId, categories: initialCatego
     };
 
     // ── Delete macro section ──────────────────────────────────────────────────
-    const handleDeleteMacroCategory = async (macroName: string) => {
+    const handleDeleteMacroCategory = (macroName: string) => {
         const ids = localCategories.filter(c => c.section === macroName).map(c => c.id);
         if (ids.length === 0) return;
-        await db.from('categories').delete().in('id', ids);
-        setSelectedMacroCategory(null);
-        showToast(`Reparto "${macroName}" eliminato`);
-        fetchLocal();
+        const prodCount = localProducts.filter(p => ids.includes(p.category_id)).length;
+        const subCount = ids.length;
+        setConfirmDialog({
+            title: `Eliminare il reparto "${macroName}"?`,
+            message: `Questa azione è irreversibile e rimuoverà tutto il contenuto del reparto.`,
+            detail: `Verranno eliminati: ${subCount} ${subCount === 1 ? 'sezione' : 'sezioni'} e ${prodCount} ${prodCount === 1 ? 'prodotto' : 'prodotti'}.`,
+            onConfirm: async () => {
+                await createBackupSnapshot(restaurantId, `delete_section:${macroName}`);
+                await db.from('categories').delete().in('id', ids);
+                setSelectedMacroCategory(null);
+                showToast(`Reparto "${macroName}" eliminato`);
+                fetchLocal();
+            },
+        });
     };
 
     // ── Delete single sub-category ────────────────────────────────────────────
-    const handleDeleteSubCategory = async (cat: Category) => {
+    const handleDeleteSubCategory = (cat: Category) => {
         const macroSubCount = localCategories.filter(c => c.section === cat.section).length;
         if (macroSubCount <= 1) {
             showToast('Devi avere almeno una sezione nel reparto. Elimina il reparto intero.', 'error');
             return;
         }
-        await db.from('categories').delete().eq('id', cat.id);
-        showToast(`Sezione "${cat.name}" eliminata`);
-        fetchLocal();
+        const prodCount = localProducts.filter(p => p.category_id === cat.id).length;
+        setConfirmDialog({
+            title: `Eliminare la sezione "${cat.name}"?`,
+            message: `Questa azione è irreversibile.`,
+            detail: prodCount > 0 ? `Verranno eliminati anche ${prodCount} ${prodCount === 1 ? 'prodotto' : 'prodotti'} in questa sezione.` : undefined,
+            onConfirm: async () => {
+                await createBackupSnapshot(restaurantId, `delete_subcategory:${cat.section}>${cat.name}`);
+                await db.from('categories').delete().eq('id', cat.id);
+                showToast(`Sezione "${cat.name}" eliminata`);
+                fetchLocal();
+            },
+        });
     };
 
     // ── Add sub-category ─────────────────────────────────────────────────────
@@ -871,6 +904,54 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                     </div>
                 </div>
             ) : null}
+
+            {/* ── Confirm Delete Modal ─────────────────────────────────────── */}
+            {confirmDialog && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                    onClick={() => setConfirmDialog(null)}
+                >
+                    <div
+                        className="bg-white dark:bg-[#1A1A1A] w-full max-w-sm rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-black text-gray-900 dark:text-white text-base leading-tight">
+                                        {confirmDialog.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        {confirmDialog.message}
+                                    </p>
+                                    {confirmDialog.detail && (
+                                        <p className="text-xs text-red-500 font-bold mt-2 bg-red-50 dark:bg-red-900/10 rounded-lg px-3 py-2">
+                                            {confirmDialog.detail}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-6 pb-6 flex gap-3">
+                            <button
+                                onClick={() => setConfirmDialog(null)}
+                                className="flex-1 py-2.5 rounded-xl font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+                                className="flex-1 py-2.5 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors text-sm flex items-center justify-center gap-1.5"
+                            >
+                                <Trash2 className="w-4 h-4" /> Elimina
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <ToastContainer />
         </div>
