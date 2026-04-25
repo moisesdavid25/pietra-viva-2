@@ -80,7 +80,7 @@ function DraggableTile({ t, zoneId, order, isEditMode, onDrop, onEdit, onDelete 
       style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: isEditMode ? 'none' : 'auto' }}
       className={`absolute -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl flex flex-col items-center justify-center transition-all shadow-md select-none z-50
         ${isEditMode ? 'cursor-move ring-2 ring-[#008081] scale-[1.08]' : 'cursor-default'}
-        ${isReady ? 'animate-pulse ring-4 ring-[#22C55E]/40' : ''}
+        ${isReady ? 'ring-4 ring-[#22C55E]/40' : ''}
         ${isUrgent ? 'ring-4 ring-red-400/60' : ''}
         ${style.bg} ${style.text}
       `}
@@ -236,7 +236,7 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
             {occupiedCount} Occupati
           </span>
           {readyCount > 0 && (
-            <span className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#22C55E] text-white animate-pulse">
+            <span className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#22C55E] text-white">
               {readyCount} Pronti ✓
             </span>
           )}
