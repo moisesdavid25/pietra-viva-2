@@ -3,7 +3,7 @@ import {
   ArrowLeft, Trash2, Edit2, ChevronLeft,
   ClipboardList, BookOpen, BarChart3, Users,
   Sliders, Settings2, Plus, Save, Command, Search, Zap, CheckCircle2, AlertCircle,
-  LayoutDashboard, QrCode, LogOut, ExternalLink,
+  LayoutDashboard, QrCode, LogOut, ExternalLink, Receipt,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropperModal from '../components/ImageCropperModal';
@@ -19,6 +19,7 @@ import OnboardingWizard from '../components/gestione/OnboardingWizard';
 import OrdiniManager from '../components/gestione/OrdiniManager';
 import SettingsManager from '../components/gestione/SettingsManager';
 import TavoliManager from '../components/gestione/TavoliManager';
+import ContoManager from '../components/gestione/ContoManager';
 import { useRestaurantAuth } from '../hooks/useRestaurantAuth';
 import { useGestioneData } from '../hooks/useGestioneData';
 import { useMenuCombo } from '../hooks/useMenuCombo';
@@ -51,7 +52,7 @@ export default function Gestione() {
   const [activeTab, setActiveTab] = useState<
     | 'dashboard' | 'ordini' | 'products' | 'menus'
     | 'settings' | 'business_intelligence' | 'fidelizzazione' | 'personalizzazione'
-    | 'tavoli'
+    | 'tavoli' | 'conto'
   >('dashboard');
   const [productView, setProductView] = useState<'hub' | 'listino'>('hub');
   const [showWizard, setShowWizard] = useState(false);
@@ -98,6 +99,7 @@ export default function Gestione() {
     { id: 'fidelizzazione',        icon: <Users className="w-4 h-4" />,            label: 'CRM' },
     { id: 'personalizzazione',     icon: <QrCode className="w-4 h-4" />,           label: 'QR' },
     { id: 'tavoli',                 icon: <LayoutDashboard className="w-4 h-4" />,  label: 'Tavoli' },
+    { id: 'conto',                 icon: <Receipt className="w-4 h-4" />,           label: 'Conto' },
     { id: 'settings',              icon: <Settings2 className="w-4 h-4" />,        label: 'Impostazioni' },
     { id: 'cameriere',             icon: <Sliders className="w-4 h-4" />,          label: 'LeoPOS', isRoute: true },
   ];
@@ -230,6 +232,7 @@ export default function Gestione() {
                 fidelizzazione: 'CRM',
                 personalizzazione: 'QR',
                 tavoli: 'Tavoli',
+                conto: 'Conto',
                 settings: 'Impostazioni',
                 menus: 'Menu del Giorno',
               } as Record<string, string>)[activeTab] || activeTab}
@@ -462,6 +465,11 @@ export default function Gestione() {
           {/* Tavoli */}
           {activeTab === 'tavoli' && restaurantId && (
             <TavoliManager restaurantId={restaurantId} />
+          )}
+
+          {/* Conto */}
+          {activeTab === 'conto' && restaurantId && (
+            <ContoManager restaurantId={restaurantId} />
           )}
 
           {/* Impostazioni */}

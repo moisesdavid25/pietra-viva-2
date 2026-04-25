@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, X, Edit2, Users, Check,
   Wine, Utensils, Pizza, CakeSlice, Beef, ArrowLeft,
-  Link, Receipt, ShoppingBag, Moon, Sun, History,
+  Link, Receipt, ShoppingBag, Moon, Sun,
   Printer, Clock,
 } from 'lucide-react';
 import db from '../db';
@@ -18,7 +18,6 @@ type Product = { id: string; name: string; description: string; price: number; p
 type Category = { id: string; name: string; section: string };
 type Table = { id: string; name: string; pax: number; x: number; y: number };
 type Zone = { id: string; name: string; tables: Table[] };
-type HistoryOrder = { id: string; table_number: string; status: string; total_price: number; created_at: string; order_type: string; order_items: { id: string; quantity: number; notes: string; price_at_time: number; product: { name: string } | null }[] };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (p: number) => `€${p.toFixed(2)}`;
@@ -147,7 +146,8 @@ function TableTile({ t, order, onSelect, onOccupiedTap, selected, inGroup }: {
 }
 
 // ── Print receipt ─────────────────────────────────────────────────────────────
-function printReceipt(order: HistoryOrder, restaurantName: string) {
+type PrintableOrder = { id: string; table_number: string; status: string; total_price: number; created_at: string; order_type: string; order_items: { id: string; quantity: number; notes: string; price_at_time: number; product: { name: string } | null }[] };
+function printReceipt(order: PrintableOrder, restaurantName: string) {
   const time = new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
   const date = new Date(order.created_at).toLocaleDateString('it-IT');
   const items = order.order_items.map(i =>
@@ -395,7 +395,6 @@ export default function Cameriere() {
 
   // Modals
   const [showNewOrder, setShowNewOrder] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [selProduct, setSelProduct] = useState<Product | null>(null);
   const [modAdded, setModAdded] = useState<{ name: string; price: number }[]>([]);
   const [modRemoved, setModRemoved] = useState<string[]>([]);
@@ -403,9 +402,6 @@ export default function Cameriere() {
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [tmpOrder, setTmpOrder] = useState<{ type: OrderType; name: string; product: Product | null; fromFloor?: boolean }>({ type: 'tavolo', name: '', product: null });
 
-  // Storico
-  const [historyOrders, setHistoryOrders] = useState<HistoryOrder[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Conto modal — desglose de la cuenta de una mesa
   type ContoData = { orderId: string; tableName: string; covers: number | null; items: { id: string; quantity: number; notes: string; price_at_time: number; product: { name: string } | null }[]; total: number };
@@ -552,21 +548,6 @@ export default function Cameriere() {
     })();
     return () => { mounted = false; db.removeAllChannels(); };
   }, []);
-
-  // ── Storico loader ────────────────────────────────────────────────────────
-  const loadHistory = async () => {
-    if (!restaurantId) return;
-    setHistoryLoading(true);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const { data } = await db.from('orders')
-      .select('id, table_number, status, total_price, created_at, order_type, order_items(id, quantity, notes, price_at_time, product:products(name))')
-      .eq('restaurant_id', restaurantId)
-      .eq('status', 'consegnato')
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false });
-    if (data) setHistoryOrders(data as any);
-    setHistoryLoading(false);
-  };
 
   // ── Soldout toggle ────────────────────────────────────────────────────────
   const toggleSoldout = async (productId: string) => {
@@ -830,13 +811,6 @@ export default function Cameriere() {
             {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Storico */}
-          <button
-            onClick={() => { setShowHistory(true); loadHistory(); }}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-[#1E1E1E] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors"
-          >
-            <History className="w-4 h-4" />
-          </button>
         </header>
 
         {/* ── Tab content ─────────────────────────────────────────────────── */}
@@ -1328,87 +1302,6 @@ export default function Cameriere() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ── Storico Modal ───────────────────────────────────────────────── */}
-        {showHistory && (
-          <div className="fixed inset-0 z-[120] flex flex-col bg-[#FBFBFB] dark:bg-[#0F0F0F]">
-            <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center gap-3 shrink-0">
-              <button onClick={() => setShowHistory(false)} className="p-2 bg-gray-100 dark:bg-[#1E1E1E] rounded-xl">
-                <ArrowLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              </button>
-              <div>
-                <h2 className="font-black text-[16px] uppercase dark:text-white">Storico Ordini</h2>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Consegnati oggi</p>
-              </div>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-[10px] font-black bg-gray-100 dark:bg-[#1E1E1E] text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-lg uppercase">
-                  {historyOrders.length} ordini
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historyLoading ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="w-8 h-8 border-3 border-[#008081] border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : historyOrders.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
-                  <ShoppingBag className="w-16 h-16 text-gray-200 dark:text-gray-800" />
-                  <p className="font-black text-gray-400 dark:text-gray-600 text-sm uppercase tracking-widest">Nessun ordine consegnato oggi</p>
-                </div>
-              ) : (
-                historyOrders.map(order => {
-                  const time = new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-                  return (
-                    <div key={order.id} className="bg-white dark:bg-[#1A1A1A] border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-gray-800">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${order.order_type === 'asporto' ? 'bg-amber-50 text-amber-600' : 'bg-teal-50 text-[#008081]'}`}>
-                            {order.order_type === 'asporto' ? <ShoppingBag className="w-4 h-4" /> : <Users className="w-4 h-4" />}
-                          </div>
-                          <div>
-                            <p className="font-black text-sm dark:text-white uppercase">{order.table_number}</p>
-                            <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {time}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-black text-[#008081] text-lg">{fmt(order.total_price)}</span>
-                          <button
-                            onClick={() => printReceipt(order, restaurantName)}
-                            className="w-8 h-8 bg-gray-50 dark:bg-[#2A2A2A] text-gray-500 dark:text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="px-4 py-2 space-y-1">
-                        {order.order_items.map(item => (
-                          <div key={item.id} className="flex items-start gap-2 py-1">
-                            <span className="text-[10px] font-black text-[#008081] w-5 shrink-0">{item.quantity}×</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate">{item.product?.name || '—'}</p>
-                              {item.notes && <p className="text-[9px] font-bold text-gray-400 dark:text-gray-600 italic truncate">{item.notes}</p>}
-                            </div>
-                            <span className="text-[10px] font-black text-gray-500 dark:text-gray-500 shrink-0">{fmt(item.price_at_time * item.quantity)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Totale giornata */}
-            {historyOrders.length > 0 && (
-              <div className="bg-white dark:bg-[#111111] border-t border-gray-100 dark:border-gray-800 px-4 py-3 flex justify-between items-center shrink-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Totale giornata</span>
-                <span className="font-black text-xl text-[#008081]">{fmt(historyOrders.reduce((s, o) => s + o.total_price, 0))}</span>
-              </div>
-            )}
           </div>
         )}
 

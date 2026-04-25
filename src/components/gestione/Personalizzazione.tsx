@@ -196,7 +196,7 @@ function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; res
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                   {zone.tables.map(table => {
-                    const tableUrl = `${baseUrl}?tavolo=${encodeURIComponent(table.name)}`;
+                    const tableUrl = `${baseUrl}?tavolo=${encodeURIComponent(`${zone.name} · T${table.name}`)}`;
                     const qrId = `qr-tavolo-${table.id}`;
                     const isCopied = copiedUrl === tableUrl;
                     return (
