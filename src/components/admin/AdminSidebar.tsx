@@ -97,12 +97,19 @@ export function AdminSidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-800 p-3 space-y-1">
-        <button
-          className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-all"
+        <NavLink
+          to="/leomenu-admin/settings"
+          className={({ isActive }) =>
+            `w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
+              isActive
+                ? 'text-white bg-[#008081]/20 border-l-2 border-[#008081] pl-[10px]'
+                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+            }`
+          }
         >
           <Settings size={14} />
           Impostazioni
-        </button>
+        </NavLink>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-all"

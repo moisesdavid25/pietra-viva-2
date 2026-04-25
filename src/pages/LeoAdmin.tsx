@@ -6,6 +6,7 @@ import { AdminRestaurantList } from '../components/admin/AdminRestaurantList';
 import { AdminRestaurantDetail } from '../components/admin/AdminRestaurantDetail';
 import { AdminRevenue } from '../components/admin/AdminRevenue';
 import { AdminHealth } from '../components/admin/AdminHealth';
+import { AdminSettings } from '../components/admin/AdminSettings';
 
 export default function LeoAdmin() {
   return (
@@ -17,6 +18,7 @@ export default function LeoAdmin() {
           <Route path="restaurants/:id" element={<AdminRestaurantDetail />} />
           <Route path="revenue" element={<AdminRevenue />} />
           <Route path="health" element={<AdminHealth />} />
+          <Route path="settings" element={<AdminSettings />} />
           <Route path="*" element={<Navigate to="/leomenu-admin" replace />} />
         </Route>
       </Routes>
