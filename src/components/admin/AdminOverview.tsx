@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, Store, Users, AlertTriangle, ChefHat, ArrowUpRight } from 'lucide-react';
 import db from '../../db';
 
@@ -79,21 +79,21 @@ export function AdminOverview() {
         const weekIso = oneWeekAgo.toISOString();
 
         const [allRes, newRes, allCust, newCust] = await Promise.all([
-          db.from('restaurants').select('id, subscription_tier').neq('slug', 'demo'),
+          db.from('restaurants').select('id, subscription_tier, subscription_status').neq('slug', 'demo'),
           db.from('restaurants').select('id').neq('slug', 'demo').gte('created_at', weekIso),
           db.from('customers').select('id', { count: 'exact', head: true }),
           db.from('customers').select('id', { count: 'exact', head: true }).gte('created_at', weekIso),
         ]);
 
         const restaurants = allRes.data ?? [];
-        const paid = ['base', 'pro', 'enterprise'];
+        const paidTiers = ['mensile', 'semestrale', 'annuale', 'base', 'pro', 'enterprise'];
         setStats({
-          totalRestaurants: restaurants.length,
-          activeRestaurants: restaurants.filter(r => paid.includes(r.subscription_tier ?? '')).length,
-          trialingRestaurants: restaurants.filter(r => !r.subscription_tier || r.subscription_tier === 'trial').length,
-          pastDueRestaurants: 0, // richiede colonna subscription_status (Stripe)
+          totalRestaurants:     restaurants.length,
+          activeRestaurants:    restaurants.filter(r => paidTiers.includes(r.subscription_tier ?? '') && r.subscription_status !== 'past_due' && r.subscription_status !== 'canceled').length,
+          trialingRestaurants:  restaurants.filter(r => !r.subscription_tier || r.subscription_tier === 'trial').length,
+          pastDueRestaurants:   restaurants.filter(r => r.subscription_status === 'past_due').length,
           newRestaurantsThisWeek: newRes.data?.length ?? 0,
-          totalEndCustomers: allCust.count ?? 0,
+          totalEndCustomers:    allCust.count ?? 0,
           newEndCustomersThisWeek: newCust.count ?? 0,
         });
       } catch (e) {

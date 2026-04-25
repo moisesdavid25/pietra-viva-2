@@ -44,6 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (event.type) {
+
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== 'subscription') break;
@@ -52,18 +53,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const subscriptionId = session.subscription as string;
 
         if (restaurantId && subscriptionId) {
-          // Fetch the subscription to get the price and period end
           const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
           const priceId = subscription.items.data[0]?.price.id;
-          const tier = PRICE_TO_TIER[priceId] ?? 'mensile';
-          const endsAt = new Date(subscription.current_period_end * 1000).toISOString();
+          const tier    = PRICE_TO_TIER[priceId] ?? 'mensile';
+          const endsAt  = new Date(subscription.current_period_end * 1000).toISOString();
+          const status  = subscription.status as string; // 'active' | 'trialing' | ...
 
           await supabase
             .from('restaurants')
             .update({
-              subscription_tier: tier,
-              stripe_subscription_id: subscriptionId,
-              subscription_ends_at: endsAt,
+              subscription_tier:          tier,
+              subscription_status:        status,
+              stripe_subscription_id:     subscriptionId,
+              stripe_customer_id:         session.customer as string,
+              subscription_ends_at:       endsAt,
             })
             .eq('id', restaurantId);
         }
@@ -75,20 +78,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const restaurantId = subscription.metadata?.restaurantId;
         if (!restaurantId) break;
 
-        const priceId = subscription.items.data[0]?.price.id;
-        const tier = PRICE_TO_TIER[priceId] ?? 'mensile';
-        const endsAt = new Date(subscription.current_period_end * 1000).toISOString();
-        const status = subscription.status;
+        const priceId    = subscription.items.data[0]?.price.id;
+        const tier       = PRICE_TO_TIER[priceId] ?? 'mensile';
+        const endsAt     = new Date(subscription.current_period_end * 1000).toISOString();
+        const status     = subscription.status as string;
 
-        // If cancelled or unpaid, downgrade to trial/free
+        // Downgrade tier if payment failed or cancelled
         const activeTier = ['active', 'trialing'].includes(status) ? tier : 'trial';
 
         await supabase
           .from('restaurants')
           .update({
-            subscription_tier: activeTier,
+            subscription_tier:      activeTier,
+            subscription_status:    status,
             stripe_subscription_id: subscription.id,
-            subscription_ends_at: endsAt,
+            subscription_ends_at:   endsAt,
           })
           .eq('id', restaurantId);
         break;
@@ -102,11 +106,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await supabase
           .from('restaurants')
           .update({
-            subscription_tier: 'trial',
+            subscription_tier:      'trial',
+            subscription_status:    'canceled',
             stripe_subscription_id: null,
-            subscription_ends_at: null,
+            subscription_ends_at:   null,
           })
           .eq('id', restaurantId);
+        break;
+      }
+
+      // Payment failed — mark as past_due without downgrading tier immediately
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as any;
+        const customerId = invoice.customer as string;
+        if (!customerId) break;
+
+        await supabase
+          .from('restaurants')
+          .update({ subscription_status: 'past_due' })
+          .eq('stripe_customer_id', customerId);
+        break;
+      }
+
+      // Payment succeeded after past_due — restore active
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as any;
+        if (invoice.billing_reason === 'subscription_create') break; // handled by checkout.session.completed
+        const customerId = invoice.customer as string;
+        if (!customerId) break;
+
+        await supabase
+          .from('restaurants')
+          .update({ subscription_status: 'active' })
+          .eq('stripe_customer_id', customerId)
+          .eq('subscription_status', 'past_due'); // only restore if it was past_due
         break;
       }
     }
