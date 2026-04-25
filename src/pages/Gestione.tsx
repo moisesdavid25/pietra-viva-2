@@ -327,6 +327,7 @@ export default function Gestione() {
                       { id: 'fidelizzazione', icon: <Users />, title: 'CRM', subtitle: 'Carta Fedeltà', bg: 'bg-teal-50 dark:bg-teal-900/10 border-[#008081]/20', text: 'text-[#008081]' },
                       { id: 'tavoli', icon: <LayoutDashboard />, title: 'Tavoli', subtitle: 'Planimetria sala', bg: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/20', text: 'text-violet-600 dark:text-violet-400' },
                       { id: 'cameriere', icon: <Sliders />, title: 'LeoPOS', subtitle: 'Terminale sala', bg: 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', isRoute: true },
+                      { id: 'conto', icon: <Receipt />, title: 'Conto', subtitle: 'Gestione conto', bg: 'bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/20', text: 'text-rose-600 dark:text-rose-400' },
                       { id: 'personalizzazione', icon: <Settings2 />, title: 'QR', subtitle: 'Strumenti QR', bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
                       { id: 'settings', icon: <Settings2 />, title: 'Impostazioni', subtitle: 'Fiscale & WiFi', bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400' }
                     ].map((mod) => (

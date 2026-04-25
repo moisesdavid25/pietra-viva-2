@@ -830,14 +830,14 @@ export default function ProductManager({ restaurantId, categories: initialCatego
                                     <div className="flex items-center gap-1.5">
                                         <button
                                             onClick={e => { e.stopPropagation(); setEditingProduct({ image_url: '', category_id: cat.id }); }}
-                                            className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-[#008081] hover:bg-teal-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                            className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-[#008081] hover:bg-teal-100 flex items-center justify-center transition-colors"
                                             title="Aggiungi prodotto in questa sezione"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
                                         </button>
                                         <button
                                             onClick={e => { e.stopPropagation(); handleDeleteSubCategory(cat); }}
-                                            className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                            className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 flex items-center justify-center transition-colors"
                                             title="Elimina sezione"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
