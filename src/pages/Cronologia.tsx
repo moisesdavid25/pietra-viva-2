@@ -1,4 +1,4 @@
-import { ArrowLeft, RotateCcw, Package, ClipboardList, Trash2 } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Package, ClipboardList, Trash2, LogOut } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { useCart } from '../hooks/useCart';
@@ -47,6 +47,7 @@ export default function CronologiaPage() {
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const fetchOrders = useCallback(async (ids: string[]) => {
     if (!ids.length) { setLoading(false); return; }
@@ -90,7 +91,7 @@ export default function CronologiaPage() {
   };
 
   const handleClearSession = () => {
-    if (!confirm('Vuoi terminare la sessione? Lo storico ordini verrà cancellato.')) return;
+    sessionStorage.removeItem(`leomenu_tavolo_${slug}`);
     localStorage.removeItem(sessionKey);
     navigate(`/${slug}`);
   };
@@ -247,7 +248,7 @@ export default function CronologiaPage() {
             </div>
 
             {/* End session */}
-            <button onClick={handleClearSession}
+            <button onClick={() => setShowExitModal(true)}
               className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold text-red-400 hover:text-red-500 transition-colors">
               <Trash2 className="w-4 h-4" /> Fine sessione al tavolo
             </button>
@@ -256,6 +257,39 @@ export default function CronologiaPage() {
       </main>
 
       <BottomNav />
+
+      {/* Exit confirmation modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1E1E1E] rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+            <div className="flex flex-col items-center gap-3 mb-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-gray-900 dark:text-white">Fine sessione?</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                  La sessione del <span className="font-bold text-gray-700 dark:text-gray-300">Tavolo {session.tableNumber}</span> verrà chiusa e il tuo storico ordini cancellato.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="flex-1 py-3 rounded-2xl font-black text-sm border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleClearSession}
+                className="flex-1 py-3 rounded-2xl font-black text-sm bg-red-500 hover:bg-red-600 text-white transition-colors active:scale-95"
+              >
+                Sì, esci
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

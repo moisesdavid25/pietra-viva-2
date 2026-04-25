@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronRight, Sparkles, ArrowLeft, MapPin, Instagram, Phone, Facebook } from 'lucide-react';
 import FidelityCard from '../components/menu/FidelityCard';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import db from '../db';
 import BottomNav from '../components/BottomNav';
 import NotFound from '../components/NotFound';
@@ -33,6 +33,21 @@ const FadeImage = ({ src, alt }: { src: string; alt: string }) => {
 export default function RestaurantHome() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // When a table QR is scanned, store the table in sessionStorage immediately
+  // so it's available across all pages without relying on URL params
+  useEffect(() => {
+    const tavolo = searchParams.get('tavolo');
+    if (!tavolo || !slug) return;
+    const storageKey = `leomenu_tavolo_${slug}`;
+    const existing = sessionStorage.getItem(storageKey);
+    if (existing !== tavolo) {
+      // Different table — reset the order history session
+      localStorage.removeItem(`leomenu_session_${slug}`);
+      sessionStorage.setItem(storageKey, tavolo);
+    }
+  }, [searchParams, slug]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [restaurant, setRestaurant] = useState<{ id: string; name: string } | null>(null);

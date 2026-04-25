@@ -76,19 +76,14 @@ export default function OrdinePage() {
         });
     }, [slug]);
 
-    // ── Detect ?tavolo= from QR URL ──────────────────────────────────────
+    // ── Detect table from QR URL or sessionStorage ───────────────────────
     useEffect(() => {
-        const tavolo = searchParams.get('tavolo');
-        if (!tavolo || !slug) return;
+        if (!slug) return;
+        const tavolo = searchParams.get('tavolo') || sessionStorage.getItem(`leomenu_tavolo_${slug}`);
+        if (!tavolo) return;
         setTableNumber(tavolo);
         setOrderType('tavolo');
         setTableFromQR(true);
-        // If existing session is for a different table, reset it
-        const sessionKey = `leomenu_session_${slug}`;
-        const existing = JSON.parse(localStorage.getItem(sessionKey) || 'null');
-        if (existing && existing.tableNumber !== tavolo) {
-            localStorage.removeItem(sessionKey);
-        }
     }, [searchParams, slug]);
 
     if (notFound) return <NotFound />;
@@ -459,13 +454,20 @@ export default function OrdinePage() {
                                             <span className="text-[10px] font-black uppercase tracking-widest text-[#008081] bg-[#008081]/10 px-2 py-0.5 rounded-full">QR Tavolo</span>
                                         </div>
                                     ) : (
-                                        <input
-                                            type="text"
-                                            placeholder="Es. 5"
-                                            value={tableNumber}
-                                            onChange={e => setTableNumber(e.target.value)}
-                                            className="w-full p-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white text-center text-2xl font-black transition-all"
-                                        />
+                                        <>
+                                            <input
+                                                type="text"
+                                                placeholder="Es. 5"
+                                                value={tableNumber}
+                                                onChange={e => setTableNumber(e.target.value)}
+                                                className={`w-full p-4 bg-gray-50 dark:bg-[#111] border rounded-2xl outline-none focus:ring-2 dark:text-white text-center text-2xl font-black transition-all ${
+                                                    !tableNumber.trim() ? 'border-red-300 dark:border-red-800 focus:ring-red-400/30' : 'border-gray-100 dark:border-gray-800 focus:ring-[#008081]'
+                                                }`}
+                                            />
+                                            {!tableNumber.trim() && (
+                                                <p className="text-xs font-bold text-red-500 mt-1.5">⚠ Obbligatorio — inserisci il numero del tuo tavolo</p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             ) : (
@@ -476,8 +478,13 @@ export default function OrdinePage() {
                                         placeholder="Es. Mario Rossi"
                                         value={customerName}
                                         onChange={e => setCustomerName(e.target.value)}
-                                        className="w-full p-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white font-bold transition-all"
+                                        className={`w-full p-4 bg-gray-50 dark:bg-[#111] border rounded-2xl outline-none focus:ring-2 dark:text-white font-bold transition-all ${
+                                            !customerName.trim() ? 'border-red-300 dark:border-red-800 focus:ring-red-400/30' : 'border-gray-100 dark:border-gray-800 focus:ring-[#008081]'
+                                        }`}
                                     />
+                                    {!customerName.trim() && (
+                                        <p className="text-xs font-bold text-red-500 mt-1.5">⚠ Obbligatorio — inserisci il tuo nome per il ritiro</p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -492,8 +499,8 @@ export default function OrdinePage() {
 
                         <button
                             onClick={handleConfirmOrder}
-                            disabled={isConfirming}
-                            className="w-full bg-[#008081] hover:bg-[#006666] text-white font-black py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-between px-6 disabled:opacity-70"
+                            disabled={isConfirming || (orderType === 'tavolo' ? !tableNumber.trim() : !customerName.trim())}
+                            className="w-full bg-[#008081] hover:bg-[#006666] text-white font-black py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-between px-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                             {isConfirming ? (
                                 <span className="mx-auto flex items-center gap-2">
