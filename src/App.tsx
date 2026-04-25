@@ -10,6 +10,7 @@ import MenuDelGiorno from './pages/MenuDelGiorno';
 import Gestione from './pages/Gestione';
 import ProductDetail from './pages/ProductDetail';
 import OrdinePage from './pages/Ordine';
+import CronologiaPage from './pages/Cronologia';
 import Auth from './pages/Auth';
 import Cameriere from './pages/Cameriere';
 import RegisterFlow from './pages/RegisterFlow';
@@ -170,6 +171,7 @@ export default function App() {
         <Route path="/:slug/menu-del-giorno" element={<MenuDelGiorno />} />
         <Route path="/:slug/product/:id" element={<ProductDetail />} />
         <Route path="/:slug/ordini" element={<OrdinePage />} />
+        <Route path="/:slug/cronologia" element={<CronologiaPage />} />
         <Route path="/:slug/cameriere" element={<Cameriere />} />
       </Routes>
       </GlobalThemeProvider>

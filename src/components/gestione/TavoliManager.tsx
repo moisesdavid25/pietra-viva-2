@@ -7,7 +7,6 @@ type Zone = { id: string; name: string; tables: Table[] };
 type ActiveOrder = { id: string; table_number: string; status: string; total_price: number; created_at: string; covers?: number | null };
 
 // ── Status color system ───────────────────────────────────────────────────────
-// 5 colori semantici — el personal los aprende en 1 turno
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string; dot: string }> = {
   libera:          { bg: 'bg-[#E8E5FF] dark:bg-[#2A2A3D]', text: 'text-[#5C5C77] dark:text-[#A0A0C0]', label: 'Libero',          dot: 'bg-[#C4BFFF]' },
   in_attesa:       { bg: 'bg-[#F97316]',                   text: 'text-white',                           label: 'In Attesa',      dot: 'bg-[#F97316]' },
@@ -19,10 +18,9 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string; do
 function getTableStatus(order: ActiveOrder | undefined): string {
   if (!order) return 'libera';
   if (order.status === 'conto') return 'conto';
-  return order.status; // in_attesa | in_preparazione | pronto
+  return order.status;
 }
 
-// Minutes elapsed since order was created
 function minutesSince(isoDate: string): number {
   return Math.floor((Date.now() - new Date(isoDate).getTime()) / 60000);
 }
@@ -89,7 +87,6 @@ function DraggableTile({ t, zoneId, order, isEditMode, onDrop, onEdit, onDelete 
     >
       <span className="font-black text-xl md:text-2xl leading-none pointer-events-none">{t.name}</span>
 
-      {/* Status sub-label */}
       {statusKey === 'libera' ? (
         <span className="text-[9px] font-bold uppercase tracking-wider opacity-60 mt-0.5 pointer-events-none">{t.pax}p</span>
       ) : statusKey === 'pronto' ? (
@@ -150,13 +147,12 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
       if (!mounted) return;
       if (s?.value) {
         try {
-          let parsed = typeof s.value === 'string' ? JSON.parse(s.value) : s.value;
+          const parsed = typeof s.value === 'string' ? JSON.parse(s.value) : s.value;
           if (Array.isArray(parsed)) setZones(parsed);
         } catch (_) {}
       }
     })();
 
-    // Realtime: ogni cambio di stato aggiorna il plano in tempo reale
     const ch = db.channel(`tavoli-manager-${restaurantId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'orders',
@@ -164,9 +160,7 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
       }, () => fetchOrders())
       .subscribe();
 
-    // Refresh timer per aggiornare il contatore minuti (ogni 60s)
     const timer = setInterval(fetchOrders, 60000);
-
     return () => { mounted = false; db.removeChannel(ch); clearInterval(timer); };
   }, [restaurantId]);
 
@@ -181,8 +175,7 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
     const updated = zones.map(z => z.id === zId
       ? { ...z, tables: z.tables.map(t => t.id === tId ? { ...t, x, y } : t) }
       : z);
-    setZones(updated);
-    save(updated);
+    setZones(updated); save(updated);
   };
 
   const handleSaveTable = () => {
@@ -198,39 +191,30 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
     const updated = zones.map(z => z.id === zoneId
       ? { ...z, tables: isNew ? [...z.tables, newTable] : z.tables.map(t => t.id === newTable.id ? newTable : t) }
       : z);
-    setZones(updated);
-    save(updated);
-    setEditingTable(null);
+    setZones(updated); save(updated); setEditingTable(null);
   };
 
   const handleDeleteTable = (zoneId: string, tableId: string) => {
     const updated = zones.map(z => z.id === zoneId ? { ...z, tables: z.tables.filter(t => t.id !== tableId) } : z);
-    setZones(updated);
-    save(updated);
+    setZones(updated); save(updated);
   };
 
   const handleAddZone = () => {
     if (!newZoneName.trim()) return;
     const updated = [...zones, { id: `z${Date.now()}`, name: newZoneName.trim(), tables: [] }];
-    setZones(updated);
-    save(updated);
-    setNewZoneName('');
-    setAddingZone(false);
+    setZones(updated); save(updated); setNewZoneName(''); setAddingZone(false);
   };
 
   const handleDeleteZone = (zId: string) => {
     const updated = zones.filter(z => z.id !== zId);
-    setZones(updated);
-    save(updated);
+    setZones(updated); save(updated);
   };
 
-  // ── Zone-qualified order matching ─────────────────────────────────────────
   const findOrder = (zone: Zone, t: Table): ActiveOrder | undefined => {
     const zoneKey = `${zone.name} · T${t.name}`;
     return activeOrders.find(o => o.table_number === zoneKey || o.table_number === `Tavolo ${t.name}`);
   };
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
   const allPairs = zones.flatMap(z => z.tables.map(t => ({ z, t })));
   const occupiedCount = allPairs.filter(({ z, t }) => !!findOrder(z, t)).length;
   const readyCount    = activeOrders.filter(o => o.status === 'pronto').length;
@@ -245,7 +229,6 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
           <p className="text-sm text-gray-500 font-bold mt-0.5">Configura la planimetria della tua sala</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* Stats pills */}
           <span className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#E8E5FF] dark:bg-[#2A2A3D] text-[#5C5C77] dark:text-[#A0A0C0]">
             {libreCount} Liberi
           </span>
@@ -282,7 +265,6 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
       ) : (
         zones.map(zone => (
           <div key={zone.id} className="bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
-            {/* Zone header */}
             <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="w-4 h-4 text-gray-400" />
@@ -307,7 +289,6 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
               )}
             </div>
 
-            {/* Floor plan */}
             <div className={`relative w-full h-[340px] md:h-[420px] bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#2a2a2a_1.5px,transparent_1.5px)] [background-size:22px_22px] transition-colors ${
               isEditMode ? 'bg-teal-50/30 dark:bg-teal-900/10' : 'bg-gray-50/50 dark:bg-[#141414]'
             }`}>
@@ -330,7 +311,6 @@ export default function TavoliManager({ restaurantId }: { restaurantId: string }
               })}
             </div>
 
-            {/* Legend */}
             <div className="px-5 py-2.5 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3 flex-wrap">
               {Object.entries(STATUS_STYLE).map(([key, s]) => (
                 <span key={key} className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest">

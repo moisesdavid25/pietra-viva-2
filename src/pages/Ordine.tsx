@@ -1,6 +1,7 @@
 import { ArrowLeft, ShoppingBag, Trash2, FileText, X, ChevronRight, Clock, CheckCircle2 } from 'lucide-react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import db from '../db';
 import BottomNav from '../components/BottomNav';
@@ -9,6 +10,7 @@ import NotFound from '../components/NotFound';
 export default function OrdinePage() {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [notFound, setNotFound] = useState(false);
     const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
@@ -17,6 +19,7 @@ export default function OrdinePage() {
     const [isConfirming, setIsConfirming] = useState(false);
     const [orderType, setOrderType] = useState<'tavolo' | 'asporto'>('tavolo');
     const [tableNumber, setTableNumber] = useState('');
+    const [tableFromQR, setTableFromQR] = useState(false);
     const [customerName, setCustomerName] = useState('');
     const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; shortId: string; dailyNumber: number; queue: number; status: string } | null>(null);
     const [publicOrders, setPublicOrders] = useState<any[]>([]);
@@ -72,6 +75,21 @@ export default function OrdinePage() {
             else setRestaurantId(data.id);
         });
     }, [slug]);
+
+    // ── Detect ?tavolo= from QR URL ──────────────────────────────────────
+    useEffect(() => {
+        const tavolo = searchParams.get('tavolo');
+        if (!tavolo || !slug) return;
+        setTableNumber(tavolo);
+        setOrderType('tavolo');
+        setTableFromQR(true);
+        // If existing session is for a different table, reset it
+        const sessionKey = `leomenu_session_${slug}`;
+        const existing = JSON.parse(localStorage.getItem(sessionKey) || 'null');
+        if (existing && existing.tableNumber !== tavolo) {
+            localStorage.removeItem(sessionKey);
+        }
+    }, [searchParams, slug]);
 
     if (notFound) return <NotFound />;
 
@@ -138,6 +156,20 @@ export default function OrdinePage() {
 
             clearCart();
             setOrderConfirmed({ id: orderData.id, shortId: orderData.id.split('-')[0].toUpperCase(), dailyNumber: nextOrderNumber, queue: queueCount || 0, status: 'in_attesa' });
+
+            // Save session to localStorage for Cronologia
+            if (slug && orderType === 'tavolo' && tableNumber) {
+                const sessionKey = `leomenu_session_${slug}`;
+                const existingRaw = localStorage.getItem(sessionKey);
+                const existing = existingRaw ? JSON.parse(existingRaw) : null;
+                // Reset session if table number changed — orders from different tables must not mix
+                const base = (existing && existing.tableNumber === tableNumber) ? existing : { orderIds: [] };
+                localStorage.setItem(sessionKey, JSON.stringify({
+                    tableNumber,
+                    orderIds: [...(base.orderIds || []), orderData.id],
+                    startedAt: base.startedAt || new Date().toISOString(),
+                }));
+            }
         } catch (e: any) {
             alert("Errore durante la conferma dell'ordine: " + e.message);
         } finally {
@@ -420,13 +452,21 @@ export default function OrdinePage() {
                             {orderType === 'tavolo' ? (
                                 <div>
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Numero tavolo</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Es. 5"
-                                        value={tableNumber}
-                                        onChange={e => setTableNumber(e.target.value)}
-                                        className="w-full p-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white text-center text-2xl font-black transition-all"
-                                    />
+                                    {tableFromQR ? (
+                                        <div className="w-full p-4 bg-[#008081]/5 border border-[#008081]/30 rounded-2xl flex items-center justify-center gap-3">
+                                            <Lock className="w-4 h-4 text-[#008081]" />
+                                            <span className="text-2xl font-black text-[#008081]">{tableNumber}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[#008081] bg-[#008081]/10 px-2 py-0.5 rounded-full">QR Tavolo</span>
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            placeholder="Es. 5"
+                                            value={tableNumber}
+                                            onChange={e => setTableNumber(e.target.value)}
+                                            className="w-full p-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-[#008081] dark:text-white text-center text-2xl font-black transition-all"
+                                        />
+                                    )}
                                 </div>
                             ) : (
                                 <div>

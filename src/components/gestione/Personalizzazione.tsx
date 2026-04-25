@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Trash2, Edit2, Sliders, ChevronDown, ChevronRight,
-  QrCode, Download, Copy, Table2, ExternalLink,
+  QrCode, Download, Copy, ExternalLink, Info, LayoutGrid,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import db from '../../db';
@@ -17,13 +17,8 @@ interface ProductExtra {
   available: boolean;
 }
 
-interface TableRow {
-  id: string;
-  name: string;
-  table_number: string;
-  position: number;
-  active: boolean;
-}
+interface ZoneTable { id: string; name: string; pax: number; x: number; y: number; }
+interface Zone { id: string; name: string; tables: ZoneTable[]; }
 
 interface Props {
   restaurantId: string;
@@ -31,6 +26,16 @@ interface Props {
 }
 
 type Tab = 'qr';
+
+// ── Zone color palette ────────────────────────────────────────────────────────
+const ZONE_COLORS = [
+  { card: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30',   badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',   num: 'text-blue-600 dark:text-blue-400'   },
+  { card: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30', badge: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300', num: 'text-amber-600 dark:text-amber-400' },
+  { card: 'bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30',   badge: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300',     num: 'text-rose-600 dark:text-rose-400'   },
+  { card: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/30', badge: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300', num: 'text-violet-600 dark:text-violet-400' },
+  { card: 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30', badge: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300', num: 'text-green-600 dark:text-green-400' },
+  { card: 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30', badge: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300', num: 'text-orange-600 dark:text-orange-400' },
+];
 
 // ── QR Download util ──────────────────────────────────────────────────────────
 
@@ -67,66 +72,34 @@ function downloadQRCode(svgId: string, filename: string) {
 
 function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; restaurantSlug: string }) {
   const { showToast, ToastContainer } = useToast();
-  const [tables, setTables] = useState<TableRow[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingTable, setAddingTable] = useState(false);
-  const [newTableName, setNewTableName] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const baseUrl = `https://leomenu.it/${restaurantSlug}`;
 
-  useEffect(() => { fetchTables(); }, [restaurantId]);
-
-  const fetchTables = async () => {
-    setLoading(true);
-    const { data } = await db.from('tables').select('id,name,table_number,position,active')
-      .eq('restaurant_id', restaurantId).order('position').order('created_at');
-    setTables(data || []);
-    setLoading(false);
-  };
-
-  const handleAddTable = async () => {
-    const name = newTableName.trim();
-    if (!name) return;
-    const tableNumber = String(tables.length + 1);
-    await db.from('tables').insert({
-      restaurant_id: restaurantId,
-      name,
-      table_number: tableNumber,
-      position: tables.length,
-      active: true,
-    });
-    setNewTableName('');
-    setAddingTable(false);
-    fetchTables();
-    showToast(`✓ ${name} aggiunto`, 'success');
-  };
-
-  const handleToggleActive = async (t: TableRow) => {
-    await db.from('tables').update({ active: !t.active }).eq('id', t.id);
-    setTables(prev => prev.map(x => x.id === t.id ? { ...x, active: !t.active } : x));
-  };
-
-  const handleDelete = async (t: TableRow) => {
-    await db.from('tables').delete().eq('id', t.id);
-    setTables(prev => prev.filter(x => x.id !== t.id));
-    showToast(`"${t.name}" eliminato`, 'success');
-  };
-
-  const handleRename = async (t: TableRow) => {
-    const name = editingName.trim();
-    if (!name || name === t.name) { setEditingId(null); return; }
-    await db.from('tables').update({ name }).eq('id', t.id);
-    setTables(prev => prev.map(x => x.id === t.id ? { ...x, name } : x));
-    setEditingId(null);
-    showToast('✓ Nome aggiornato', 'success');
-  };
+  useEffect(() => {
+    db.from('settings').select('value').eq('restaurant_id', restaurantId).eq('key', 'sale').maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          try {
+            const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            if (Array.isArray(parsed)) setZones(parsed);
+          } catch (_) {}
+        }
+        setLoading(false);
+      });
+  }, [restaurantId]);
 
   const copyLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    showToast('✓ Link copiato!', 'success');
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedUrl(url);
+      showToast('✓ Link copiato!', 'success');
+      setTimeout(() => setCopiedUrl(null), 2000);
+    });
   };
+
+  const allTables = zones.flatMap((z, zi) => z.tables.map(t => ({ zone: z, table: t, colorIdx: zi % ZONE_COLORS.length })));
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
@@ -138,7 +111,7 @@ function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; res
     <div className="space-y-6">
       <ToastContainer />
 
-      {/* Main restaurant QR */}
+      {/* ── QR Menu Principale ── */}
       <div className="bg-white dark:bg-[#1C1C1C] rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -165,24 +138,16 @@ function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; res
             <QRCodeSVG id={`qr-main-${restaurantSlug}`} value={baseUrl} size={96} level="H" fgColor="#000000" />
           </div>
           <div className="flex flex-col gap-2">
-            {/* Special QR types */}
             {(['asporto', 'delivery'] as const).map(type => {
               const url = `${baseUrl}?type=${type}`;
               const qrId = `qr-${type}-${restaurantSlug}`;
               return (
                 <div key={type} className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-[#252525] rounded-xl">
-                  <div className="hidden">
-                    <QRCodeSVG id={qrId} value={url} size={80} level="H" fgColor="#000000" />
-                  </div>
+                  <div className="hidden"><QRCodeSVG id={qrId} value={url} size={80} level="H" fgColor="#000000" /></div>
                   <span className="text-xs font-black text-gray-600 dark:text-gray-300 uppercase tracking-widest w-20">{type}</span>
                   <span className="text-[10px] text-gray-400 flex-1 truncate">{url}</span>
-                  <button onClick={() => copyLink(url)} className="text-gray-400 hover:text-[#008081] transition-colors flex-shrink-0">
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => downloadQRCode(qrId, type.charAt(0).toUpperCase() + type.slice(1))}
-                    className="text-gray-400 hover:text-[#008081] transition-colors flex-shrink-0">
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
+                  <button onClick={() => copyLink(url)} className="text-gray-400 hover:text-[#008081] transition-colors flex-shrink-0"><Copy className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => downloadQRCode(qrId, type.charAt(0).toUpperCase() + type.slice(1))} className="text-gray-400 hover:text-[#008081] transition-colors flex-shrink-0"><Download className="w-3.5 h-3.5" /></button>
                 </div>
               );
             })}
@@ -190,92 +155,74 @@ function QRManager({ restaurantId, restaurantSlug }: { restaurantId: string; res
         </div>
       </div>
 
-      {/* Per-table QR section */}
+      {/* ── QR per Tavolo ── */}
       <div className="flex items-center justify-between">
         <div>
           <h4 className="font-black text-gray-900 dark:text-white">QR per Tavolo</h4>
-          <p className="text-xs text-gray-400 mt-0.5">{tables.length} {tables.length === 1 ? 'tavolo' : 'tavoli'} configurati</p>
+          <p className="text-xs text-gray-400 mt-0.5">{allTables.length} {allTables.length === 1 ? 'tavolo' : 'tavoli'} configurati</p>
         </div>
-        <button onClick={() => setAddingTable(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#008081] text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition-colors shadow-sm">
-          <Plus className="w-3.5 h-3.5" /> Aggiungi Tavolo
-        </button>
       </div>
 
-      {/* Add table form */}
-      {addingTable && (
-        <div className="flex gap-2 p-4 bg-teal-50 dark:bg-teal-900/10 rounded-xl border border-[#008081]/20">
-          <input autoFocus value={newTableName} onChange={e => setNewTableName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleAddTable(); if (e.key === 'Escape') setAddingTable(false); }}
-            placeholder="Es. Tavolo 1, Bancone, Terrazza..." maxLength={40}
-            className="flex-1 px-3 py-2 text-sm font-medium bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008081]/40 focus:border-[#008081]" />
-          <button onClick={handleAddTable} className="px-4 py-2 bg-[#008081] text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition-colors">
-            Aggiungi
-          </button>
-          <button onClick={() => { setAddingTable(false); setNewTableName(''); }}
-            className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">
-            Annulla
-          </button>
-        </div>
-      )}
+      {/* Info banner */}
+      <div className="flex items-start gap-3 bg-[#008081]/8 dark:bg-[#008081]/10 border border-[#008081]/20 rounded-2xl px-4 py-3.5">
+        <Info className="w-4 h-4 text-[#008081] flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+          Stampa il QR di ogni tavolo e posizionalo sul tavolo fisico. I clienti lo scansionano e vengono assegnati automaticamente a quel tavolo.
+          I tavoli si configurano nella sezione <span className="font-black text-[#008081]">Tavoli → Modifica Layout</span>.
+        </p>
+      </div>
 
-      {tables.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-          <Table2 className="w-10 h-10 text-gray-200 dark:text-gray-700 mb-3" />
-          <p className="text-sm font-black text-gray-400">Nessun tavolo ancora</p>
-          <p className="text-xs text-gray-400 mt-1">Aggiungi un tavolo per generare il suo QR code</p>
+      {/* No zones configured */}
+      {allTables.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 gap-3">
+          <LayoutGrid className="w-10 h-10 text-gray-200 dark:text-gray-700" />
+          <p className="text-sm font-black text-gray-400">Nessun tavolo configurato</p>
+          <p className="text-xs text-gray-400">Vai in <span className="font-black text-[#008081]">Tavoli → Modifica Layout</span> per aggiungere zone e tavoli</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
-          {tables.map(table => {
-            const tableUrl = `${baseUrl}?table=${table.table_number}`;
-            const qrId = `qr-table-${table.id}`;
-            const isEditingThis = editingId === table.id;
+        /* Grid grouped by zone */
+        <div className="space-y-6">
+          {zones.map((zone, zi) => {
+            const color = ZONE_COLORS[zi % ZONE_COLORS.length];
             return (
-              <div key={table.id}
-                className={`bg-white dark:bg-[#1C1C1C] rounded-xl border shadow-sm transition-all flex flex-col ${table.active ? 'border-gray-100 dark:border-gray-800' : 'border-gray-100 dark:border-gray-800 opacity-40'}`}>
-                {/* QR Code — compact */}
-                <div className="flex items-center justify-center pt-3 px-3 pb-1.5">
-                  <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-100">
-                    <QRCodeSVG id={qrId} value={tableUrl} size={56} level="H" fgColor="#000000" />
-                  </div>
+              <div key={zone.id}>
+                {/* Zone label */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${color.badge}`}>
+                    {zone.name}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-bold">{zone.tables.length} tavoli</span>
                 </div>
 
-                {/* Table name */}
-                <div className="px-2 pb-1 text-center flex-1">
-                  {isEditingThis ? (
-                    <input autoFocus value={editingName}
-                      onChange={e => setEditingName(e.target.value)}
-                      onBlur={() => handleRename(table)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleRename(table); if (e.key === 'Escape') setEditingId(null); }}
-                      className="w-full text-center text-xs font-black px-1.5 py-0.5 border border-[#008081] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#008081]/40 bg-white dark:bg-[#1A1A1A] dark:text-white" />
-                  ) : (
-                    <p onClick={() => { setEditingId(table.id); setEditingName(table.name); }}
-                      className="text-xs font-black text-gray-800 dark:text-white cursor-text hover:text-[#008081] transition-colors leading-tight" title="Clicca per rinominare">
-                      {table.name}
-                    </p>
-                  )}
-                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {zone.tables.map(table => {
+                    const tableUrl = `${baseUrl}?tavolo=${encodeURIComponent(table.name)}`;
+                    const qrId = `qr-tavolo-${table.id}`;
+                    const isCopied = copiedUrl === tableUrl;
+                    return (
+                      <div key={table.id} className={`rounded-2xl border p-3 flex flex-col items-center gap-2.5 shadow-sm hover:shadow-md transition-shadow ${color.card}`}>
+                        {/* Table number */}
+                        <span className={`font-black text-2xl leading-none ${color.num}`}>{table.name}</span>
 
-                {/* Actions — 4 icon buttons in a row */}
-                <div className="flex items-center border-t border-gray-50 dark:border-gray-800 divide-x divide-gray-50 dark:divide-gray-800 mt-1">
-                  <button onClick={() => copyLink(tableUrl)}
-                    className="flex-1 py-2 flex items-center justify-center text-gray-300 hover:text-[#008081] transition-colors">
-                    <Copy className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => downloadQRCode(qrId, table.name)}
-                    className="flex-1 py-2 flex items-center justify-center text-gray-300 hover:text-[#008081] transition-colors">
-                    <Download className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => handleToggleActive(table)}
-                    className="flex-1 py-2 flex items-center justify-center transition-colors"
-                    title={table.active ? 'Disattiva' : 'Attiva'}>
-                    <div className={`w-2 h-2 rounded-full ${table.active ? 'bg-emerald-400' : 'bg-gray-300'}`} />
-                  </button>
-                  <button onClick={() => handleDelete(table)}
-                    className="flex-1 py-2 flex items-center justify-center text-gray-200 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                        {/* QR code */}
+                        <div className="bg-white p-2 rounded-xl border border-white/60 shadow-sm">
+                          <QRCodeSVG id={qrId} value={tableUrl} size={80} level="H" includeMargin={false} fgColor="#1A1A1A" />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 w-full">
+                          <button onClick={() => copyLink(tableUrl)}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/70 hover:bg-white dark:bg-black/10 dark:hover:bg-black/20 text-gray-500 transition-all text-[10px] font-bold">
+                            {isCopied ? <span className="text-green-600">✓</span> : <Copy className="w-3 h-3" />}
+                          </button>
+                          <button onClick={() => downloadQRCode(qrId, `Tavolo ${table.name}`)}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-[#008081] hover:bg-[#006666] text-white transition-all text-[10px] font-bold">
+                            <Download className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
