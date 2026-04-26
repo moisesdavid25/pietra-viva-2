@@ -15,6 +15,7 @@ import Auth from './pages/Auth';
 import Cameriere from './pages/Cameriere';
 import RegisterFlow from './pages/RegisterFlow';
 import RegisterComplete from './pages/RegisterComplete';
+import Lancio from './pages/Marketing/Lancio';
 import Onboarding from './pages/Onboarding';
 import ResetPassword from './pages/ResetPassword';
 import UpdatePassword from './pages/UpdatePassword';
@@ -92,7 +93,7 @@ function GlobalThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemeParams = async () => {
       const pathParts = location.pathname.split('/').filter(Boolean);
       const firstPart = pathParts[0];
-      const staticRoutes = ['login', 'register', 'passport', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', ''];
+      const staticRoutes = ['login', 'register', 'passport', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', 'lancio', 'fondatori', ''];
 
       if (firstPart && !staticRoutes.includes(firstPart)) {
         // Customer viewing a specific restaurant
@@ -151,6 +152,8 @@ export default function App() {
         <Route path="/login" element={<GuestRoute><Auth type="login" /></GuestRoute>} />
         <Route path="/register" element={<RegisterFlow />} />
         <Route path="/register/complete" element={<RegisterComplete />} />
+        <Route path="/lancio" element={<Lancio />} />
+        <Route path="/fondatori" element={<Lancio />} />
         <Route path="/passport" element={<CartaFedelta />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
