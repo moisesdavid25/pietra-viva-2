@@ -7,6 +7,13 @@
 Options -MultiViews
 RewriteEngine On
 
+# No cachear index.html
+<FilesMatch "index\.html$">
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+  Header set Pragma "no-cache"
+  Header set Expires 0
+</FilesMatch>
+
 # Forza HTTPS
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
@@ -26,12 +33,13 @@ RewriteRule ^onboarding/?$       https://app.leomenu.it/onboarding       [R=301,
 RewriteRule ^reset-password/?$   https://app.leomenu.it/reset-password   [R=301,L]
 RewriteRule ^update-password/?$  https://app.leomenu.it/update-password  [R=301,L]
 RewriteRule ^trova/?$            https://app.leomenu.it/trova            [R=301,L]
+RewriteRule ^gestione/?$         https://app.leomenu.it/gestione         [R=301,L]
 RewriteRule ^leomenu-admin(.*)$  https://app.leomenu.it/leomenu-admin$1  [R=301,L]
 
 # ── Cualquier slug de restaurante → app ────────────────────
 # Rutas tipo /pietra-viva, /el-encuentro, /[slug]/menu, etc.
 # (slugs que no son páginas de marketing)
-RewriteCond %{REQUEST_URI} !^/(funzionalita|prezzi|sicurezza|come-funziona|privacy-policy|termini-condizioni|contatti|assets|index\.html)
+RewriteCond %{REQUEST_URI} !^/(funzionalita|prezzi|sicurezza|come-funziona|privacy-policy|termini-condizioni|contatti|lancio|fondatori|assets|index\.html)
 RewriteCond %{REQUEST_URI} ^/[a-z0-9-]+(/.*)?$
 RewriteCond %{REQUEST_URI} !^/$
 RewriteRule ^(.+)$ https://app.leomenu.it/$1 [R=301,L]
@@ -40,4 +48,5 @@ RewriteRule ^(.+)$ https://app.leomenu.it/$1 [R=301,L]
 # Permite que React Router maneje /, /funzionalita, /prezzi, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/(login|register|passport|onboarding|reset-password|update-password|trova|gestione|leomenu-admin)
 RewriteRule ^ /index.html [L]

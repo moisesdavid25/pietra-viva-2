@@ -251,7 +251,7 @@ export default function Gestione() {
                   <h2 className="text-[2rem] font-black font-sans text-[#1A1A1A] dark:text-[#FDFCF0] tracking-tight mb-1 leading-none">
                     Bentornato, {restaurantName}
                   </h2>
-                  <p className="text-gray-500 font-bold text-sm">Actionable Insights & Panoramica B2B.</p>
+                  <p className="text-gray-500 font-bold text-sm">Il tuo pannello di controllo.</p>
                 </div>
                 <button
                   onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'k', 'ctrlKey': true}))}

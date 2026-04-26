@@ -12,6 +12,7 @@ import Contatti from './pages/Contatti';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Termini from './pages/Termini';
 import CookiePolicy from './pages/CookiePolicy';
+import Lancio from './pages/Marketing/Lancio';
 
 // Inline MarketingLayout to avoid Outlet context issues across packages
 function SSRMarketingLayout() {
@@ -43,6 +44,8 @@ export function render(url: string): string {
         <Route path="/termini-condizioni" element={<Termini />} />
         <Route path="/terms" element={<Termini />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/lancio" element={<Lancio />} />
+        <Route path="/fondatori" element={<Lancio />} />
       </Routes>
     </StaticRouter>
   );

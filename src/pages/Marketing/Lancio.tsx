@@ -10,9 +10,9 @@ import {
 
 // ── Aggiorna questi valori manualmente ───────────────────────────────────────
 const SPOTS_REMAINING = 23;          // posti rimasti su 30
-const OFFER_DEADLINE  = '31 maggio 2026'; // scadenza offerta
-const WHATSAPP_LINK   = 'https://wa.me/39XXXXXXXXXX'; // sostituisci col tuo numero
-const REGISTER_URL    = 'https://app.leomenu.it/register';
+const OFFER_DEADLINE = '31 maggio 2026'; // scadenza offerta
+const WHATSAPP_LINK = 'https://wa.me/393661100408'; // sostituisci col tuo numero
+const REGISTER_URL = 'https://app.leomenu.it/register';
 // ─────────────────────────────────────────────────────────────────────────────
 
 function CTAButton({ className = '', children = 'Inizia gratis 14 giorni →' }: { className?: string; children?: React.ReactNode }) {
@@ -103,13 +103,13 @@ const COMPARISON = [
 ];
 
 const MODULES = [
-  { icon: ShoppingBag,  label: 'Ordini'    },
-  { icon: Utensils,     label: 'Menù'      },
-  { icon: TrendingUp,   label: 'Analitiche' },
-  { icon: Users,        label: 'CRM'       },
-  { icon: Star,         label: 'Carta Fedeltà' },
-  { icon: Smartphone,   label: 'LeoPOS'    },
-  { icon: QrCode,       label: 'QR'        },
+  { icon: ShoppingBag, label: 'Ordini' },
+  { icon: Utensils, label: 'Menù' },
+  { icon: TrendingUp, label: 'Analitiche' },
+  { icon: Users, label: 'CRM' },
+  { icon: Star, label: 'Carta Fedeltà' },
+  { icon: Smartphone, label: 'LeoPOS' },
+  { icon: QrCode, label: 'QR' },
 ];
 
 const BONUSES = [
@@ -362,51 +362,16 @@ export default function Lancio() {
             </h2>
           </div>
 
-          {/* Screenshot placeholder — sostituisci src con lo screenshot reale */}
-          <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 bg-gray-50 mb-10">
-            {/* ─────────────────────────────────────────────────────────────
-                ISTRUZIONE: sostituisci questo div con:
-                <img src="/assets/dashboard-screenshot.png" alt="LeoMenu Dashboard" className="w-full" />
-                ───────────────────────────────────────────────────────── */}
-            <div className="bg-[#0F172A] p-4 rounded-t-3xl">
-              <div className="flex items-center gap-1.5 mb-3">
-                <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-gray-500 text-xs">app.leomenu.it/gestione</span>
-              </div>
-            </div>
-            <div className="bg-[#F8FAFC] aspect-[16/9] flex items-center justify-center">
-              {/* Mockup visuale della dashboard */}
-              <div className="w-full h-full p-6 grid grid-cols-4 gap-4">
-                {/* KPI cards mockup */}
-                <div className="col-span-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Live Orders', val: '0', color: 'bg-orange-100 text-orange-600' },
-                    { label: 'Prodotti attivi', val: '117', color: 'bg-teal-100 text-teal-700' },
-                    { label: 'Clienti CRM', val: '—', color: 'bg-violet-100 text-violet-700' },
-                    { label: 'Ticket medio', val: '€—', color: 'bg-blue-100 text-blue-700' },
-                  ].map((k, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                      <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">{k.label}</p>
-                      <p className={`text-2xl font-black ${k.color.split(' ')[1]}`}>{k.val}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Module grid mockup */}
-                <div className="col-span-4">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Ecosistema Leomenu</p>
-                  <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                    {MODULES.map((m, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 flex flex-col items-center gap-1.5 border border-gray-100 shadow-sm">
-                        <m.icon className="w-5 h-5 text-[#008081]" />
-                        <span className="text-[9px] font-bold text-gray-500 text-center">{m.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Dashboard interattiva — iframe isolato, nessun CSS leak */}
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 mb-10">
+            <iframe
+              src="/assets/dashboard-mockup.html"
+              title="LeoMenu Dashboard"
+              className="w-full border-0 block"
+              style={{ height: '520px', pointerEvents: 'none' }}
+              scrolling="no"
+              loading="lazy"
+            />
           </div>
 
           {/* Module chips */}
