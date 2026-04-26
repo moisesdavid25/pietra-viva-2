@@ -93,7 +93,7 @@ function GlobalThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemeParams = async () => {
       const pathParts = location.pathname.split('/').filter(Boolean);
       const firstPart = pathParts[0];
-      const staticRoutes = ['login', 'register', 'passport', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', 'lancio', 'fondatori', ''];
+      const staticRoutes = ['login', 'register', 'passport', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', 'lancio', ''];
 
       if (firstPart && !staticRoutes.includes(firstPart)) {
         // Customer viewing a specific restaurant
@@ -153,7 +153,6 @@ export default function App() {
         <Route path="/register" element={<RegisterFlow />} />
         <Route path="/register/complete" element={<RegisterComplete />} />
         <Route path="/lancio" element={<Lancio />} />
-        <Route path="/fondatori" element={<Lancio />} />
         <Route path="/passport" element={<CartaFedelta />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />

@@ -45,7 +45,6 @@ export function render(url: string): string {
         <Route path="/terms" element={<Termini />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
         <Route path="/lancio" element={<Lancio />} />
-        <Route path="/fondatori" element={<Lancio />} />
       </Routes>
     </StaticRouter>
   );

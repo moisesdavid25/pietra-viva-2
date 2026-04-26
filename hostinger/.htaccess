@@ -39,7 +39,7 @@ RewriteRule ^leomenu-admin(.*)$  https://app.leomenu.it/leomenu-admin$1  [R=301,
 # ── Cualquier slug de restaurante → app ────────────────────
 # Rutas tipo /pietra-viva, /el-encuentro, /[slug]/menu, etc.
 # (slugs que no son páginas de marketing)
-RewriteCond %{REQUEST_URI} !^/(funzionalita|prezzi|sicurezza|come-funziona|privacy-policy|termini-condizioni|contatti|lancio|fondatori|assets|index\.html)
+RewriteCond %{REQUEST_URI} !^/(funzionalita|prezzi|sicurezza|come-funziona|privacy-policy|termini-condizioni|contatti|lancio|assets|index\.html)
 RewriteCond %{REQUEST_URI} ^/[a-z0-9-]+(/.*)?$
 RewriteCond %{REQUEST_URI} !^/$
 RewriteRule ^(.+)$ https://app.leomenu.it/$1 [R=301,L]

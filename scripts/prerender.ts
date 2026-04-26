@@ -73,12 +73,6 @@ const ROUTES: { routePath: string; file: string; title: string; description: str
     title: 'Offerta Fondatori — Il tuo menù online in 48 ore | Leomenu',
     description: 'Piano annuale €204/anno. Carichiamo noi il tuo menù in 48h. 14 giorni gratis, garanzia soddisfatti o rimborsati. Solo 30 posti disponibili.',
   },
-  {
-    routePath: '/fondatori',
-    file: 'fondatori/index.html',
-    title: 'Offerta Fondatori — Il tuo menù online in 48 ore | Leomenu',
-    description: 'Piano annuale €204/anno. Carichiamo noi il tuo menù in 48h. 14 giorni gratis, garanzia soddisfatti o rimborsati. Solo 30 posti disponibili.',
-  },
 ];
 
 function injectSSR(template: string, appHtml: string, title: string, description: string): string {
