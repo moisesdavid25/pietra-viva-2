@@ -142,6 +142,15 @@ export default function Lancio() {
   const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    // Canonical URL for SEO — Google indexes app.leomenu.it/lancio as the official URL
+    const link = document.createElement('link');
+    link.rel = 'canonical';
+    link.href = 'https://app.leomenu.it/lancio';
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setHeaderVisible(!entry.isIntersecting),
       { threshold: 0.1 }
