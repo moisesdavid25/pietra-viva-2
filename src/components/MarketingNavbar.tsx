@@ -59,12 +59,12 @@ export function MarketingNavbar() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-sm font-extrabold text-[#1A1A1A] hover:text-[#008081] transition-colors py-2 px-3">
+            <a href="https://app.leomenu.it/login" className="text-sm font-extrabold text-[#1A1A1A] hover:text-[#008081] transition-colors py-2 px-3">
               Accedi
-            </Link>
-            <Link to="/register" className="text-sm font-extrabold bg-[#008081] text-white px-5 py-3 rounded-xl hover:bg-teal-600 hover:-translate-y-0.5 transition-all shadow-sm shadow-[#008081]/20 active:scale-95">
+            </a>
+            <a href="https://app.leomenu.it/register" className="text-sm font-extrabold bg-[#008081] text-white px-5 py-3 rounded-xl hover:bg-teal-600 hover:-translate-y-0.5 transition-all shadow-sm shadow-[#008081]/20 active:scale-95">
               Inizia Gratis
-            </Link>
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -95,12 +95,12 @@ export function MarketingNavbar() {
             ))}
           </div>
           <div className="flex flex-col gap-3 pt-6 border-t border-gray-100">
-            <Link to="/login" className="text-center text-[15px] font-extrabold text-[#1A1A1A] py-4 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-colors">
+            <a href="https://app.leomenu.it/login" className="text-center text-[15px] font-extrabold text-[#1A1A1A] py-4 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-colors">
               Accedi al tuo account
-            </Link>
-            <Link to="/register" className="text-center text-[15px] font-extrabold bg-[#008081] text-white py-4 rounded-2xl shadow-lg shadow-[#008081]/30 active:scale-95 transition-transform">
+            </a>
+            <a href="https://app.leomenu.it/register" className="text-center text-[15px] font-extrabold bg-[#008081] text-white py-4 rounded-2xl shadow-lg shadow-[#008081]/30 active:scale-95 transition-transform">
               Inizia Ora
-            </Link>
+            </a>
           </div>
         </div>
       )}

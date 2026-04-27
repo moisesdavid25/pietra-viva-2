@@ -362,16 +362,30 @@ export default function Lancio() {
             </h2>
           </div>
 
-          {/* Dashboard interattiva — iframe isolato, nessun CSS leak */}
-          <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 mb-10">
+          {/* Dashboard — desktop sidebar layout */}
+          <div className="hidden md:block rounded-3xl overflow-hidden shadow-2xl border border-gray-100 mb-10">
             <iframe
               src="/assets/dashboard-mockup.html"
-              title="LeoMenu Dashboard"
+              title="LeoMenu Dashboard Desktop"
               className="w-full border-0 block"
               style={{ height: '520px', pointerEvents: 'none' }}
               scrolling="no"
               loading="lazy"
             />
+          </div>
+
+          {/* Dashboard — mobile app layout */}
+          <div className="md:hidden flex justify-center mb-10">
+            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 w-full max-w-sm">
+              <iframe
+                src="/assets/dashboard-mobile-mockup.html"
+                title="LeoMenu Dashboard Mobile"
+                className="w-full border-0 block"
+                style={{ height: '640px', pointerEvents: 'none' }}
+                scrolling="no"
+                loading="lazy"
+              />
+            </div>
           </div>
 
           {/* Module chips */}
