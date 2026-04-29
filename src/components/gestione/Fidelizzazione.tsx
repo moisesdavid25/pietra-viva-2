@@ -1,11 +1,10 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Gift, Users, TrendingUp, ScanLine, ArrowLeft, X, Smartphone, Mail, CreditCard, Settings2 } from 'lucide-react';
+import { ScanLine } from 'lucide-react';
 import db from '../../db';
 import WaiterScanner from './WaiterScanner';
 import FidelityConfigurator from './FidelityConfigurator';
+import type { FidelityConfig } from './FidelityConfigurator';
 
-const RewardManager = lazy(() => import('./RewardManager'));
-const ClientClassification = lazy(() => import('./ClientClassification'));
 const FidelityStrategy = lazy(() => import('./FidelityStrategy'));
 
 interface Props { restaurantId: string; onViewChange?: (v: string | null) => void; }
@@ -14,74 +13,576 @@ interface Customer {
   id: string; name: string; whatsapp: string; auth_user_id: string;
   total_points: number; created_at: string;
 }
-
 interface Reward {
-  id: string; name: string; points_required: number; description: string; image_url: string;
+  id: string; name: string; points_required: number;
+  description: string; image_url: string; cost_value?: number;
 }
-
-type Tab = 'home' | 'premi' | 'cohorts' | 'strategia';
+interface Txn {
+  id: string; points_earned: number; created_at: string;
+  customers: { name: string }[] | { name: string } | null;
+}
 
 const Spinner = () => (
   <div className="flex items-center justify-center py-16">
-    <span className="w-7 h-7 border-2 border-[#008081] border-t-transparent rounded-full animate-spin" />
+    <span className="w-7 h-7 border-2 border-[#0d9488] border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
-export default function CRMAndAudience({ restaurantId, onViewChange }: Props) {
+// ── Tab: I miei Clienti ───────────────────────────────────────────────────────
+
+function TabClienti({ customers, totalRev, green, gold, reserve, onConfigura }: {
+  customers: Customer[]; totalRev: number;
+  green: Customer[]; gold: Customer[]; reserve: Customer[];
+  onConfigura: () => void;
+}) {
+  const sorted = [...customers].sort((a, b) => b.total_points - a.total_points).slice(0, 10);
+
+  return (
+    <div className="px-4 pt-4 pb-28 space-y-3">
+      {/* Configura banner */}
+      <button type="button" onClick={onConfigura}
+        className="w-full flex items-center gap-3 rounded-[16px] px-4 py-4 text-left relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)' }}>
+        <div className="absolute -right-5 -top-5 w-24 h-24 rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
+        <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-[20px] flex-shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}>🎯</div>
+        <div className="flex-1 min-w-0 relative z-10">
+          <h4 className="text-[15px] font-black text-white mb-0.5">Configura Programma Fedeltà</h4>
+          <p className="text-[12px] text-white/75">Premi, ratio punti, livelli e ROI live</p>
+        </div>
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="relative z-10 flex-shrink-0">
+          <path d="M9 18l6-6-6-6" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[14px] p-3.5">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 mb-1">Membri Attivi</p>
+          <p className="text-[44px] font-black text-[#111827] dark:text-white leading-none">{customers.length}</p>
+          <p className="text-[12px] text-gray-400 mt-1">clienti iscritti</p>
+        </div>
+        <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[14px] p-3.5">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 mb-1">Valore Punti</p>
+          <p className="text-[36px] font-black text-[#111827] dark:text-white leading-none">€{totalRev.toFixed(0)}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="bg-blue-100 text-blue-700 text-[9px] font-black px-1.5 py-0.5 rounded-[5px]">LTV</span>
+            <span className="text-[11px] text-gray-400">generato</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Distribuzione Clienti */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400">Distribuzione Clienti</p>
+          <span className="bg-[#f4f6f8] text-[#374151] dark:bg-gray-800 dark:text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded-[8px] tracking-[0.5px]">LIVELLI</span>
+        </div>
+        <div className="px-4 py-2">
+          {[
+            { dot: '#10b981', label: 'Green', sub: '0 – 499 pt', count: green.length, bg: '#f0fdf4', color: '#15803d' },
+            { dot: '#f59e0b', label: 'Gold', sub: '500 – 2499 pt', count: gold.length, bg: '#fef3c7', color: '#b45309' },
+            { dot: '#8b5cf6', label: 'Reserve', sub: '2500+ pt', count: reserve.length, bg: '#f5f3ff', color: '#6d28d9' },
+          ].map((l, i, arr) => (
+            <div key={l.label} className={`flex items-center gap-2.5 py-2.5 ${i < arr.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+              <div className="w-[10px] h-[10px] rounded-full flex-shrink-0" style={{ background: l.dot }} />
+              <div className="flex-1">
+                <p className="text-[13.5px] font-semibold text-[#374151] dark:text-gray-200">{l.label}</p>
+                <p className="text-[11px] text-gray-400">{l.sub}</p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-[10px]" style={{ background: l.bg, color: l.color }}>
+                {l.count} utenti
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Classifica */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400">🏆 Classifica Clienti</p>
+          <span className="text-[12px] text-gray-400">{customers.length} clienti</span>
+        </div>
+        {sorted.length === 0 ? (
+          <div className="text-center py-8 px-5">
+            <div className="text-[32px] mb-2">🎯</div>
+            <h4 className="text-[15px] font-bold text-[#374151] dark:text-gray-200 mb-1.5">Nessun cliente ancora</h4>
+            <p className="text-[12.5px] text-gray-400 leading-relaxed">I clienti appariranno qui<br />dopo il primo ordine con punti.</p>
+          </div>
+        ) : sorted.map((c, i) => (
+          <div key={c.id} className={`flex items-center gap-3 px-4 py-2.5 ${i < sorted.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+            <div className="w-7 h-7 rounded-full bg-[#f0fdf4] dark:bg-[#0d9488]/10 flex items-center justify-center text-[11px] font-black text-[#0d9488] flex-shrink-0">
+              {i + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-semibold text-[#111827] dark:text-white truncate">{c.name || 'Cliente'}</p>
+              <p className="text-[11px] text-gray-400">{c.whatsapp || '—'}</p>
+            </div>
+            <span className="text-[13px] font-black text-[#0d9488]">{c.total_points} ⭐</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Scanner Punti ────────────────────────────────────────────────────────
+
+function TabScanner({ restaurantId, onOpenScanner, recentTxns }: {
+  restaurantId: string; onOpenScanner: () => void; recentTxns: Txn[];
+}) {
+  const [manuale, setManuale] = useState('');
+
+  return (
+    <div className="px-4 pt-4 pb-28 space-y-3">
+      {/* Scanner hero */}
+      <div className="bg-gradient-to-b from-[#0d9488] to-[#0f766e] rounded-[20px] px-5 py-7 text-center relative overflow-hidden">
+        <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+        <div className="relative z-10">
+          {/* QR frame */}
+          <div className="w-[120px] h-[120px] mx-auto mb-4 relative flex items-center justify-center rounded-[16px]"
+            style={{ border: '3px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.08)' }}>
+            {/* corners */}
+            {[['top-[-2px] left-[-2px] border-t-[3px] border-l-[3px] rounded-tl-[4px]', ''],
+              ['top-[-2px] right-[-2px] border-t-[3px] border-r-[3px] rounded-tr-[4px]', ''],
+              ['bottom-[-2px] left-[-2px] border-b-[3px] border-l-[3px] rounded-bl-[4px]', ''],
+              ['bottom-[-2px] right-[-2px] border-b-[3px] border-r-[3px] rounded-br-[4px]', '']].map(([cls], i) => (
+              <div key={i} className={`absolute w-5 h-5 border-white ${cls}`} />
+            ))}
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+              <rect x="13" y="3" width="8" height="8" rx="1.5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+              <rect x="3" y="13" width="8" height="8" rx="1.5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+              <rect x="15" y="15" width="2" height="2" fill="rgba(255,255,255,0.5)" />
+              <rect x="19" y="15" width="2" height="2" fill="rgba(255,255,255,0.5)" />
+              <rect x="15" y="19" width="2" height="2" fill="rgba(255,255,255,0.5)" />
+              <rect x="19" y="19" width="2" height="2" fill="rgba(255,255,255,0.5)" />
+            </svg>
+          </div>
+          <p className="text-[16px] font-black text-white mb-1">Inquadra il QR del cliente</p>
+          <p className="text-[12px] text-white/70 mb-5">Il sistema assegna i punti automaticamente</p>
+          <button type="button" onClick={onOpenScanner}
+            className="inline-flex items-center gap-2 bg-white text-[#0d9488] font-black text-[14px] px-7 py-3 rounded-[12px]">
+            <ScanLine className="w-4 h-4" /> Apri Scanner QR
+          </button>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-[#e5e7eb] dark:bg-gray-700" />
+        <span className="text-[11px] text-gray-400 font-semibold">oppure inserisci manualmente</span>
+        <div className="flex-1 h-px bg-[#e5e7eb] dark:bg-gray-700" />
+      </div>
+
+      {/* Manual input */}
+      <div className="flex gap-2.5">
+        <input
+          type="tel"
+          placeholder="Numero di telefono cliente"
+          value={manuale}
+          onChange={e => setManuale(e.target.value)}
+          className="flex-1 px-3.5 py-3 border border-[#e5e7eb] dark:border-gray-700 rounded-[12px] text-[14px] font-medium text-[#111827] dark:text-white bg-white dark:bg-[#1C1C1C] outline-none focus:border-[#0d9488] transition-colors"
+        />
+        <button type="button"
+          className="bg-[#0d9488] text-white font-bold text-[13px] px-4 py-3 rounded-[12px] flex-shrink-0">
+          Cerca
+        </button>
+      </div>
+
+      {/* Attività recente */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400">Attività Recente</p>
+        </div>
+        {recentTxns.length === 0 ? (
+          <div className="text-center py-6 text-[12px] text-gray-400">
+            Nessuna transazione ancora.
+          </div>
+        ) : recentTxns.slice(0, 6).map(t => {
+          const custObj = Array.isArray(t.customers) ? t.customers[0] : t.customers;
+          const name = custObj?.name || 'Cliente';
+          const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+          const when = new Date(t.created_at);
+          const timeStr = when.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+          return (
+            <div key={t.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#f3f4f6] dark:border-white/[0.04] last:border-0">
+              <div className="w-9 h-9 rounded-[10px] bg-[#f0fdf4] dark:bg-[#0d9488]/10 flex items-center justify-center text-[13px] font-black text-[#0d9488] flex-shrink-0">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13.5px] font-bold text-[#111827] dark:text-white truncate">{name}</p>
+                <p className="text-[11px] text-gray-400">{timeStr}</p>
+              </div>
+              <span className="text-[13px] font-black text-[#0d9488]">+{t.points_earned} ⭐</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Info */}
+      <div className="flex gap-3 bg-[#eff6ff] dark:bg-blue-900/10 border border-[#bfdbfe] dark:border-blue-900/30 rounded-[14px] px-4 py-3">
+        <span className="text-lg flex-shrink-0">💡</span>
+        <p className="text-[12px] text-[#1d4ed8] dark:text-blue-300 leading-relaxed">
+          <strong>Come funziona?</strong> Ogni €1 speso = stelle. Il cliente mostra il suo QR e il sistema assegna automaticamente i punti al suo profilo.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: I miei Premi ─────────────────────────────────────────────────────────
+
+function TabPremi({ restaurantId, rewards, onRefresh }: {
+  restaurantId: string; rewards: Reward[]; onRefresh: () => void;
+}) {
+  const [localActive, setLocalActive] = useState<Record<string, boolean>>({});
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({ nome: '', stelle: '', costo: '' });
+  const [saving, setSaving] = useState(false);
+
+  const isActive = (id: string) => localActive[id] !== false;
+  const activeCount = rewards.filter(r => isActive(r.id)).length;
+
+  const quickFill = (nome: string, stelle: string, costo: string) =>
+    setForm({ nome, stelle, costo });
+
+  const saveReward = async () => {
+    if (!form.nome || !form.stelle) return;
+    setSaving(true);
+    await db.from('rewards').insert({
+      restaurant_id: restaurantId,
+      name: form.nome,
+      points_required: parseInt(form.stelle),
+      description: `${form.stelle} stelle richieste`,
+      cost_value: parseFloat(form.costo) || 0,
+      image_url: '',
+    });
+    setSaving(false);
+    setModal(false);
+    setForm({ nome: '', stelle: '', costo: '' });
+    onRefresh();
+  };
+
+  const deleteReward = async (id: string) => {
+    await db.from('rewards').delete().eq('id', id);
+    onRefresh();
+  };
+
+  const roiPreview = form.stelle && form.costo
+    ? (() => {
+        const spesa = parseFloat(form.stelle);
+        const costo = parseFloat(form.costo);
+        const margine = ((spesa - costo) / spesa) * 100;
+        return { ok: margine > 0, margine, spesa };
+      })()
+    : null;
+
+  return (
+    <div className="px-4 pt-4 pb-28 space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[16px] font-black text-[#111827] dark:text-white">Premi Attivi</p>
+          <p className="text-[12px] text-gray-400 mt-0.5">{activeCount} di {rewards.length} attivi</p>
+        </div>
+        <button type="button" onClick={() => setModal(true)}
+          className="flex items-center gap-1.5 bg-[#111827] dark:bg-white text-white dark:text-[#111827] font-bold text-[13px] px-3.5 py-2 rounded-[10px]">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          Nuovo
+        </button>
+      </div>
+
+      {/* Rewards list */}
+      {rewards.length > 0 && (
+        <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+          {rewards.map((r, i) => {
+            const active = isActive(r.id);
+            return (
+              <div key={r.id} className={`flex items-center gap-3 px-4 py-3.5 ${i < rewards.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+                <div className={`w-[42px] h-[42px] rounded-[11px] flex items-center justify-center text-[20px] flex-shrink-0 ${active ? 'bg-[#f0fdf4]' : 'bg-[#f4f6f8] dark:bg-gray-800'}`}>🎁</div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[14px] font-bold truncate ${active ? 'text-[#111827] dark:text-white' : 'text-gray-400'}`}>{r.name}</p>
+                  <p className="text-[11.5px] text-gray-400">Costo reale: €{(r.cost_value || 0).toFixed(2)}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <span className="bg-[#fef3c7] text-[#b45309] text-[11px] font-black px-2 py-0.5 rounded-[8px]">⭐ {r.points_required}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setLocalActive(p => ({ ...p, [r.id]: !active }))}
+                      className={`relative inline-flex w-[38px] h-[22px] rounded-full transition-colors ${active ? 'bg-[#0d9488]' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                      <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${active ? 'right-[2px]' : 'left-[2px]'}`} />
+                    </button>
+                    <button type="button" onClick={() => deleteReward(r.id)}
+                      className="w-6 h-6 rounded-[6px] bg-[#fff1f2] flex items-center justify-center">
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24">
+                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add button */}
+      <button type="button" onClick={() => setModal(true)}
+        className="w-full py-3.5 border-[1.5px] border-dashed border-[#d1d5db] dark:border-gray-700 rounded-[14px] text-[13px] font-bold text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488] flex items-center justify-center gap-2 transition-colors">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
+        Aggiungi Premio Personalizzato
+      </button>
+
+      {/* ROI tip */}
+      {rewards.length > 0 && rewards[0] && (
+        <div className="flex gap-3 bg-[#fff7ed] border border-[#fed7aa] rounded-[14px] px-4 py-3">
+          <span className="text-lg flex-shrink-0">💡</span>
+          <p className="text-[12px] text-[#c2410c] leading-relaxed">
+            <strong>Garanzia ROI:</strong> Premio da {rewards[0].points_required} ⭐ → il cliente ha già speso €{rewards[0].points_required.toFixed(0)}. Se il costo reale è €{(rewards[0].cost_value || 0).toFixed(2)}, il margine lordo è alto.
+          </p>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modal && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[190]" onClick={() => setModal(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[200] bg-white dark:bg-[#1C1C1C] rounded-t-[20px] shadow-[0_-8px_40px_rgba(0,0,0,0.15)] px-5 pb-10 pt-5 max-w-[430px] mx-auto">
+            <div className="w-9 h-1 bg-[#e5e7eb] rounded-full mx-auto mb-4" />
+            <h3 className="text-[17px] font-black text-[#111827] dark:text-white mb-4">🎁 Nuovo Premio</h3>
+
+            {/* Quick chips */}
+            <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-gray-400 mb-2">Aggiungi rapidamente</p>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {[
+                { n: '☕ Caffè', s: '30', c: '1.50' },
+                { n: '🍕 Pizza', s: '150', c: '4.00' },
+                { n: '🍮 Dessert', s: '80', c: '2.50' },
+                { n: '🍽️ Cena ×2', s: '500', c: '20' },
+              ].map(q => (
+                <button key={q.n} type="button"
+                  onClick={() => quickFill(`${q.n.replace(/^.+ /, '')} Omaggio`, q.s, q.c)}
+                  className="bg-[#f0fdf4] text-[#0d9488] border border-[#a7f3d0] rounded-[20px] px-2.5 py-1 text-[11px] font-bold">
+                  {q.n} ({q.s} ⭐)
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-[10px] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1.5">Nome Premio *</label>
+              <input type="text" value={form.nome} placeholder="es. Pizza Margherita Omaggio"
+                onChange={e => setForm(p => ({ ...p, nome: e.target.value }))}
+                className="w-full px-3.5 py-3 border border-[#e5e7eb] dark:border-gray-700 rounded-[10px] text-[14px] font-medium text-[#111827] dark:text-white bg-white dark:bg-[#262626] outline-none focus:border-[#0d9488]" />
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 mb-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1.5">Stelle Richieste *</label>
+                <input type="number" value={form.stelle} placeholder="150"
+                  onChange={e => setForm(p => ({ ...p, stelle: e.target.value }))}
+                  className="w-full px-3.5 py-3 border border-[#e5e7eb] dark:border-gray-700 rounded-[10px] text-[14px] font-medium text-[#111827] dark:text-white bg-white dark:bg-[#262626] outline-none focus:border-[#0d9488]" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1.5">Costo Reale (€)</label>
+                <input type="number" value={form.costo} placeholder="4.00" step="0.50"
+                  onChange={e => setForm(p => ({ ...p, costo: e.target.value }))}
+                  className="w-full px-3.5 py-3 border border-[#e5e7eb] dark:border-gray-700 rounded-[10px] text-[14px] font-medium text-[#111827] dark:text-white bg-white dark:bg-[#262626] outline-none focus:border-[#0d9488]" />
+              </div>
+            </div>
+
+            {roiPreview && (
+              <div className={`px-3 py-2 rounded-[10px] text-[12px] font-medium mb-3 ${roiPreview.ok ? 'bg-[#f0fdf4] text-[#15803d]' : 'bg-[#fff7ed] text-[#c2410c]'}`}>
+                {roiPreview.ok ? '✅' : '⚠️'} Cliente spende €{roiPreview.spesa.toFixed(0)} · Costo: €{parseFloat(form.costo).toFixed(2)} · Margine: {roiPreview.margine.toFixed(0)}%
+              </div>
+            )}
+
+            <div className="flex gap-2.5">
+              <button type="button" onClick={() => setModal(false)}
+                className="flex-1 py-3.5 border border-[#e5e7eb] dark:border-gray-700 rounded-[12px] text-[14px] font-semibold text-[#374151] dark:text-gray-300 bg-white dark:bg-[#262626]">
+                Annulla
+              </button>
+              <button type="button" onClick={saveReward} disabled={saving}
+                className="flex-1 py-3.5 bg-[#0d9488] text-white rounded-[12px] text-[14px] font-bold disabled:opacity-50">
+                {saving ? '...' : '💾 Salva'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Tab: Crescita ─────────────────────────────────────────────────────────────
+
+function TabCrescita({ restaurantId, fidelityConfig }: {
+  restaurantId: string; fidelityConfig: FidelityConfig | null;
+}) {
+  const ratio = fidelityConfig?.ratio || 3;
+  const primoPremioDaStelle = fidelityConfig?.premi?.[0]?.stelle || 45;
+  const primoCosto = fidelityConfig?.premi?.[0]?.costo || 1.50;
+  const scontrino = fidelityConfig?.scontrinoMedio || 25;
+  const fatturatoPerRiscatto = primoPremioDaStelle / ratio;
+  const margine = fatturatoPerRiscatto > 0 ? ((fatturatoPerRiscatto - primoCosto) / fatturatoPerRiscatto) * 100 : 90;
+  const visite = scontrino > 0 ? Math.ceil(fatturatoPerRiscatto / scontrino) : 5;
+  const livelli = fidelityConfig?.livelli || [
+    { nome: 'Green', emoji: '🌿', soglia: 499, molt: 1.0, bg: '#f0fdf4', color: '#15803d', border: '#a7f3d0' },
+    { nome: 'Gold', emoji: '⭐', soglia: 2499, molt: 1.2, bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
+    { nome: 'Reserve', emoji: '💎', soglia: null, molt: 1.7, bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+  ];
+
+  return (
+    <div className="px-4 pt-4 pb-28 space-y-3">
+      {/* ROI headline */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] p-4">
+        <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 mb-2">Garanzia LeoMenu</p>
+        <div className="flex items-center gap-4 mb-3">
+          <p className="text-[52px] font-black text-[#0d9488] leading-none">{Math.round(margine)}%</p>
+          <div>
+            <p className="text-[15px] font-bold text-[#111827] dark:text-white">Margine lordo garantito</p>
+            <p className="text-[13px] text-gray-500 leading-relaxed mt-0.5">Il cliente spende €{fatturatoPerRiscatto.toFixed(0)} prima di riscattare un premio da €{primoCosto.toFixed(2)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 bg-[#f9fafb] dark:bg-[#262626] rounded-[12px] px-3.5 py-3">
+          {[
+            { lbl: 'Spesa cliente', val: '€1' },
+            null,
+            { lbl: 'Stelle', val: `${ratio} ⭐`, teal: true },
+            null,
+            { lbl: 'ROI', val: `${(fatturatoPerRiscatto / Math.max(primoCosto, 1)).toFixed(0)}×`, teal: true },
+          ].map((item, i) =>
+            item === null
+              ? <div key={i} className="text-[20px] font-bold text-gray-300">{'='}</div>
+              : (
+                <div key={i} className="flex-1 text-center">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.8px] text-gray-400 mb-0.5">{item.lbl}</span>
+                  <strong className={`text-[22px] font-black ${item.teal ? 'text-[#0d9488]' : 'text-[#111827] dark:text-white'}`}>{item.val}</strong>
+                </div>
+              )
+          )}
+        </div>
+      </div>
+
+      {/* Perché funziona */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+        <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">Perché funziona</p>
+        {[
+          { icon: '📈', bg: '#eff6ff', title: 'Clienti VIP spendono il 20% in più', desc: 'I clienti fidelizzati tornano più spesso e con scontrino più alto.' },
+          { icon: '🔁', bg: '#f0fdf4', title: 'Retention +35% in 90 giorni', desc: 'Il programma stelle riduce drasticamente il tasso di abbandono.' },
+          { icon: '🎯', bg: '#fff7ed', title: `Primo riscatto dopo ${visite} visite`, desc: `Con ratio ${ratio} stelle/€ e scontrino medio €${scontrino}, il cliente riscatta entro ${visite} visite.` },
+        ].map((ins, i, arr) => (
+          <div key={ins.title} className={`flex items-start gap-3 px-4 py-3 ${i < arr.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-[16px] flex-shrink-0" style={{ background: ins.bg }}>{ins.icon}</div>
+            <div>
+              <p className="text-[13px] font-bold text-[#111827] dark:text-white mb-0.5">{ins.title}</p>
+              <p className="text-[11.5px] text-gray-500 leading-relaxed">{ins.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Esempi ROI per settore */}
+      <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+        <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">Esempi ROI per settore</p>
+        {[
+          { icon: '🍔', label: 'Casual / Fast Food', stelle: '45 ⭐', costo: '€1,00', roi: '€15,00' },
+          { icon: '☕', label: 'Bar / Caffetteria', stelle: '250 ⭐', costo: '€6,00', roi: '€83,00' },
+          { icon: '🍷', label: 'Fine Dining', stelle: '1000 ⭐', costo: '€20,00', roi: '€333,00' },
+        ].map((s, i, arr) => (
+          <div key={s.label} className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+            <span className="text-[20px] flex-shrink-0">{s.icon}</span>
+            <div className="flex-1">
+              <p className="text-[13px] font-bold text-[#374151] dark:text-gray-200">{s.label}</p>
+              <p className="text-[11px] text-gray-400">Premio: {s.stelle} · Costo: {s.costo}</p>
+            </div>
+            <p className="text-[13px] font-black text-[#0d9488]">Ricavo: {s.roi}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Sistema Livelli */}
+      {fidelityConfig?.livelliAttivi && (
+        <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[16px] overflow-hidden">
+          <p className="text-[9.5px] font-bold uppercase tracking-[1.2px] text-gray-400 px-4 py-3 border-b border-[#f3f4f6] dark:border-white/[0.04]">Sistema Livelli</p>
+          <div className="px-4 pb-3">
+            {livelli.map((l, i) => (
+              <div key={l.nome} className={`flex items-center gap-3 py-2.5 ${i < livelli.length - 1 ? 'border-b border-[#f3f4f6] dark:border-white/[0.04]' : ''}`}>
+                <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-[17px] flex-shrink-0" style={{ background: l.bg }}>{l.emoji}</div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-bold" style={{ color: l.color }}>{l.nome}</p>
+                  <p className="text-[11px] text-gray-400">
+                    {i === 0 ? '0' : (livelli[i - 1].soglia || 0) + 1} – {l.soglia ? `${l.soglia} ⭐` : '∞'}
+                  </p>
+                </div>
+                <span className="text-[12px] font-black text-[#0d9488] bg-[#f0fdf4] px-2.5 py-1 rounded-[8px]">{l.molt}×</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FidelityStrategy (benefici per tier) */}
+      <Suspense fallback={<Spinner />}>
+        <FidelityStrategy restaurantId={restaurantId} />
+      </Suspense>
+    </div>
+  );
+}
+
+// ── Root ──────────────────────────────────────────────────────────────────────
+
+export default function Fidelizzazione({ restaurantId, onViewChange }: Props) {
+  const [tab, setTab] = useState<'clienti' | 'scanner' | 'premi' | 'crescita'>('clienti');
+  const [showConfigurator, setShowConfigurator] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [recentTxns, setRecentTxns] = useState<Txn[]>([]);
+  const [fidelityConfig, setFidelityConfig] = useState<FidelityConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [showScanner, setShowScanner] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('home');
-  const [showOwnerCarousel, setShowOwnerCarousel] = useState(() => !localStorage.getItem(`fidelity_owner_welcome_${restaurantId}`));
-  const [ownerSlide, setOwnerSlide] = useState(0);
-  const [showConfigurator, setShowConfigurator] = useState(false);
 
   const openConfigurator = () => { setShowConfigurator(true); onViewChange?.('configuratore'); };
   const closeConfigurator = () => { setShowConfigurator(false); onViewChange?.(null); fetchData(); };
 
-  const dismissOwnerCarousel = () => {
-    localStorage.setItem(`fidelity_owner_welcome_${restaurantId}`, '1');
-    setShowOwnerCarousel(false);
-  };
-
-  useEffect(() => { fetchData(); }, [restaurantId]);
-
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: custs }, { data: txns }, { data: rws }, { data: owners }] = await Promise.all([
-      db.from('customers').select('id,name,whatsapp,auth_user_id,total_points,created_at,last_visited_at').eq('restaurant_id', restaurantId).order('total_points', { ascending: false }),
-      db.from('loyalty_transactions').select('points_earned').eq('restaurant_id', restaurantId),
-      db.from('rewards').select('id,name,points_required,description,image_url').eq('restaurant_id', restaurantId).order('points_required', { ascending: true }),
+    const [{ data: custs }, { data: rws }, { data: txns }, { data: cfg }, { data: owners }] = await Promise.all([
+      db.from('customers').select('id,name,whatsapp,auth_user_id,total_points,created_at')
+        .eq('restaurant_id', restaurantId).order('total_points', { ascending: false }),
+      db.from('rewards').select('id,name,points_required,description,image_url,cost_value')
+        .eq('restaurant_id', restaurantId).order('points_required', { ascending: true }),
+      db.from('loyalty_transactions').select('id,points_earned,created_at,customers(name)')
+        .eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(20),
+      db.from('settings').select('value').eq('restaurant_id', restaurantId).eq('key', 'fidelity_config').maybeSingle(),
       db.from('user_roles').select('user_id').eq('role', 'owner'),
     ]);
     if (custs) {
-      const ownerIds = new Set((owners || []).map((o: any) => o.user_id));
-      setCustomers(custs.filter((c: any) => !c.auth_user_id || !ownerIds.has(c.auth_user_id)) as Customer[]);
+      const ownerIds = new Set((owners || []).map((o: { user_id: string }) => o.user_id));
+      setCustomers((custs as Customer[]).filter(c => !c.auth_user_id || !ownerIds.has(c.auth_user_id)));
     }
-    if (txns) setTotalPoints(txns.reduce((s: number, t: any) => s + (t.points_earned || 0), 0));
     if (rws) setRewards(rws as Reward[]);
+    if (txns) setRecentTxns(txns as Txn[]);
+    if (cfg?.value) { try { setFidelityConfig(JSON.parse(cfg.value)); } catch { /* ignore */ } }
     setLoading(false);
   };
 
-  // Sidebar tabs 
-  const SIDEBAR_TABS = [
-    { id: 'home' as Tab, label: 'Audience Overview', icon: TrendingUp },
-    { id: 'cohorts' as Tab, label: 'Client Cohorts', icon: Users },
-    { id: 'premi' as Tab, label: 'Reward Engine', icon: Gift },
-    { id: 'strategia' as Tab, label: 'Growth & ROI', icon: TrendingUp },
-  ];
+  useEffect(() => { if (restaurantId) fetchData(); }, [restaurantId]);
 
-  // Cohort Calculus
   const greenCohort = customers.filter(c => c.total_points < 500);
   const goldCohort = customers.filter(c => c.total_points >= 500 && c.total_points < 2500);
   const reserveCohort = customers.filter(c => c.total_points >= 2500);
+  const totalRev = customers.reduce((s, c) => s + c.total_points, 0) / 10;
 
-  const totalRev = (customers.reduce((s, c) => s + c.total_points, 0) / 10);
-  const greenRev = (greenCohort.reduce((s, c) => s + c.total_points, 0) / 10);
-  const goldRev = (goldCohort.reduce((s, c) => s + c.total_points, 0) / 10);
-  const reserveRev = (reserveCohort.reduce((s, c) => s + c.total_points, 0) / 10);
+  const TABS = [
+    { key: 'clienti' as const, label: 'I miei Clienti' },
+    { key: 'scanner' as const, label: 'Scanner Punti' },
+    { key: 'premi' as const, label: 'I miei Premi' },
+    { key: 'crescita' as const, label: 'Crescita' },
+  ];
 
   if (showConfigurator) {
     return (
@@ -94,306 +595,61 @@ export default function CRMAndAudience({ restaurantId, onViewChange }: Props) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 animate-fade-in relative">
-
-      {/* ── Owner Welcome Carousel ── */}
-      {showOwnerCarousel && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#FBFBFB]/90 dark:bg-[#1A1A1A]/90 backdrop-blur-md p-6">
-          <div className="bg-white dark:bg-[#262626] border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-md p-10 shadow-2xl">
-            {ownerSlide === 0 && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#008081]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                   <Users className="w-8 h-8 text-[#008081]" />
-                </div>
-                <h3 className="text-2xl font-black mb-3 text-[#1A1A1A] dark:text-white tracking-tight">Il Cervello del Tuo Ristorante</h3>
-                <p className="text-gray-500 text-sm leading-relaxed font-medium">Questa non è solo una lista di clienti. È un <strong>Motore di Crescita B2B</strong>. Usa i dati comportamentali per aumentare il ticket medio e la frequenza di ritorno.</p>
-              </div>
-            )}
-            {ownerSlide === 1 && (
-              <div className="text-center">
-                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                   <Smartphone className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h3 className="text-2xl font-black mb-3 text-[#1A1A1A] dark:text-white tracking-tight">Onboarding Invisibile</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-6 font-medium">Scansionando il menù QR e pagando, i tuoi clienti vengono registrati tramite Apple/Google ID. Nessun modulo noioso da compilare. <strong>Dati nel tuo CRM, istantaneamente.</strong></p>
-              </div>
-            )}
-            {ownerSlide === 2 && (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                   <CreditCard className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h3 className="text-2xl font-black mb-3 text-[#1A1A1A] dark:text-white tracking-tight">Passbook Nativo</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-6 font-medium">La tua Fidelity Card vive nel Wallet del cliente. Trasforma il tuo brand in un'abitudine sfruttando le notifiche push native sui loro iPhone.</p>
-              </div>
-            )}
-            <div className="flex justify-center gap-2 mt-8 mb-6">
-              {[0, 1, 2].map(i => <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${ownerSlide === i ? 'w-8 bg-[#008081]' : 'w-2 bg-gray-200 dark:bg-gray-700'}`} />)}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={dismissOwnerCarousel} className="flex font-bold items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest px-4">
-                Salta
-              </button>
-              <button
-                onClick={() => { if (ownerSlide < 2) setOwnerSlide(ownerSlide + 1); else dismissOwnerCarousel(); }}
-                className="flex-1 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all flex items-center justify-center"
-              >
-                {ownerSlide < 2 ? 'Prossimo Pssso' : 'Avvia CRM'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Desktop Sidebar ── */}
-      <div className="hidden lg:flex lg:w-64 flex-shrink-0">
-        <div className="flex flex-col gap-2 w-full lg:sticky lg:top-24">
-          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-4 mb-2">Moduli Audience</p>
-          {SIDEBAR_TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all text-sm group ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-[#262626] text-[#008081] shadow-sm border border-gray-100 dark:border-gray-800'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-[#1A1A1A] hover:text-gray-900 dark:hover:text-white border border-transparent'
-              }`}
-            >
-              <tab.icon className={`w-4 h-4 flex-shrink-0 transition-transform ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`} />
-              {tab.label}
-            </button>
-          ))}
-
-          <div className="mt-8 px-4">
-             <div className="bg-[#008081] text-white p-5 rounded-3xl shadow-lg relative overflow-hidden group">
-               <div className="absolute -right-4 -bottom-4 bg-white/10 w-24 h-24 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
-               <ScanLine className="w-6 h-6 mb-3" />
-               <h4 className="font-black text-sm mb-1">POS Scanner</h4>
-               <p className="text-[10px] font-medium text-white/80 mb-4 block">Assegna punti velocemente al terminale.</p>
-               <button onClick={() => setShowScanner(true)} className="w-full bg-white text-[#008081] font-black text-xs py-2 rounded-xl hover:bg-gray-50 transition-colors">Apri Scanner</button>
-             </div>
-          </div>
-        </div>
+    <div className="animate-fade-in">
+      {/* Tab bar */}
+      <div className="sticky top-0 z-20 bg-white dark:bg-[#141414] border-b border-[#f0f1f3] dark:border-gray-800 flex overflow-x-auto scrollbar-hide">
+        {TABS.map(t => (
+          <button key={t.key} type="button" onClick={() => setTab(t.key)}
+            className={`px-3.5 py-3 text-[13px] font-semibold whitespace-nowrap flex-shrink-0 border-b-2 transition-colors ${
+              tab === t.key
+                ? 'text-[#0d9488] border-[#0d9488]'
+                : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200'
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* ── Content Area ── */}
-      <div className="flex-1 space-y-4 min-w-0 pb-16">
-
-        {/* ── MOBILE: Horizontal tab bar ── */}
-        <div className="flex lg:hidden gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {SIDEBAR_TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold whitespace-nowrap text-xs transition-all ${
-                activeTab === tab.id
-                  ? 'bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] shadow-md'
-                  : 'bg-white dark:bg-[#262626] text-gray-500 border border-gray-200 dark:border-gray-800'
-              }`}
-            >
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── TAB: HOME / DASHBOARD (World Class Cohorts View) ── */}
-        {activeTab === 'home' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Header / Top KPIs */}
-            <div className="flex items-center justify-between mb-2">
-               <div>
-                  <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">CRM</h2>
-                  <p className="text-sm font-bold text-gray-500">Analisi comportamentale e Wallet retention.</p>
-               </div>
-            </div>
-
-            {/* ── Configura Programma CTA ── */}
-            <button
-              type="button"
-              onClick={openConfigurator}
-              className="w-full flex items-center gap-4 bg-gradient-to-r from-[#0d9488] to-[#0f766e] text-white rounded-2xl px-5 py-4 text-left hover:opacity-95 active:scale-[0.99] transition-all shadow-lg shadow-[#0d9488]/25"
-            >
-              <div className="w-[46px] h-[46px] rounded-[14px] bg-white/20 flex items-center justify-center flex-shrink-0 text-[22px]">🎯</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-[15px] leading-tight">Configura Programma Fedeltà</p>
-                <p className="text-[12px] text-white/75 mt-0.5">Premi, ratio punti, livelli e ROI live</p>
-              </div>
-              <Settings2 className="w-5 h-5 text-white/60 flex-shrink-0" />
-            </button>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-[#1C1C1C] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Membri Attivi</p>
-                <p className="text-4xl font-black leading-none text-[#1A1A1A] dark:text-white">{customers.length}</p>
-              </div>
-               <div className="bg-white dark:bg-[#1C1C1C] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Valore Punti Generato</p>
-                <div className="flex items-end gap-2">
-                   <p className="text-4xl font-black leading-none text-[#1A1A1A] dark:text-white">€{totalRev.toFixed(0)}</p>
-                   <p className="text-xs font-bold text-[#008081] mb-1 bg-[#008081]/10 px-2 py-0.5 rounded-md">LTV</p>
-                </div>
-              </div>
-              <div className="bg-[#1A1A1A] p-6 rounded-3xl shadow-sm relative overflow-hidden group">
-                 <div className="absolute right-0 top-0 w-32 h-32 bg-[#008081] rounded-full filter blur-[50px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 relative z-10">Push Campaigns</p>
-                 <p className="text-2xl font-black leading-tight text-white relative z-10">Genera una campagna CRM</p>
-                 <button onClick={() => setActiveTab('strategia')} className="mt-4 flex items-center gap-1 text-xs font-bold bg-white text-[#1A1A1A] px-3 py-1.5 rounded-lg relative z-10 hover:bg-gray-100">
-                    <Mail className="w-3.5 h-3.5" /> Crea Campaign
-                 </button>
-              </div>
-            </div>
-
-            {/* Apple Wallet Mockup & Cohorts - Layout Asimmetrico */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-               
-               {/* Left: Cohort Breakdown (8 cols) */}
-               <div className="lg:col-span-8 bg-white dark:bg-[#1C1C1C] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
-                  <div className="flex items-center justify-between mb-6">
-                     <h3 className="font-black text-lg">Distribuzione Cohorti</h3>
-                     <span className="text-[10px] uppercase font-black tracking-widest text-[#008081] bg-[#008081]/10 px-2 py-1 rounded-md">Tiers</span>
-                  </div>
-
-                  <div className="space-y-5">
-                     {/* Tier 1 */}
-                     <div>
-                        <div className="flex justify-between items-end mb-2">
-                           <div>
-                              <p className="text-sm font-black text-[#1A1A1A] dark:text-white flex items-center gap-1.5">
-                                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Green <span className="text-gray-400 font-medium ml-1">(&lt; 500 pt)</span>
-                              </p>
-                           </div>
-                           <div className="text-right">
-                              <p className="font-black text-emerald-600 block leading-none">{greenCohort.length} <span className="text-xs text-gray-400 font-bold ml-1">utenti</span></p>
-                           </div>
-                        </div>
-                        <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                           <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${customers.length ? Math.max((greenCohort.length / customers.length) * 100, 2) : 0}%` }}></div>
-                        </div>
-                     </div>
-
-                     {/* Tier 2 */}
-                     <div>
-                        <div className="flex justify-between items-end mb-2">
-                           <div>
-                              <p className="text-sm font-black text-[#1A1A1A] dark:text-white flex items-center gap-1.5">
-                                 <div className="w-2 h-2 rounded-full bg-amber-400"></div> Gold <span className="text-gray-400 font-medium ml-1">(&lt; 2500 pt)</span>
-                              </p>
-                           </div>
-                           <div className="text-right">
-                              <p className="font-black text-amber-500 block leading-none">{goldCohort.length} <span className="text-xs text-gray-400 font-bold ml-1">utenti</span></p>
-                           </div>
-                        </div>
-                        <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                           <div className="h-full bg-amber-400 rounded-full" style={{ width: `${customers.length ? Math.max((goldCohort.length / customers.length) * 100, 2) : 0}%` }}></div>
-                        </div>
-                     </div>
-
-                     {/* Tier 3 */}
-                     <div>
-                        <div className="flex justify-between items-end mb-2">
-                           <div>
-                              <p className="text-sm font-black text-[#1A1A1A] dark:text-white flex items-center gap-1.5">
-                                 <div className="w-2 h-2 rounded-full bg-purple-500"></div> Reserve <span className="text-gray-400 font-medium ml-1">(2500+ pt)</span>
-                              </p>
-                           </div>
-                           <div className="text-right">
-                              <p className="font-black text-purple-600 block leading-none">{reserveCohort.length} <span className="text-xs text-gray-400 font-bold ml-1">utenti</span></p>
-                           </div>
-                        </div>
-                        <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                           <div className="h-full bg-purple-500 rounded-full" style={{ width: `${customers.length ? Math.max((reserveCohort.length / customers.length) * 100, 2) : 0}%` }}></div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Right: Apple Wallet Integration Mockup (4 cols) */}
-               <div className="lg:col-span-4 bg-gradient-to-br from-gray-900 to-[#121212] p-6 rounded-3xl shadow-xl shadow-black/10 relative overflow-hidden flex flex-col justify-between group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full filter blur-[40px]"></div>
-                  
-                  <div className="relative z-10 mb-8">
-                     <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Ecosistema Apple</p>
-                     <h3 className="font-black text-xl text-white">Native Wallet</h3>
-                     <p className="text-gray-400 text-xs font-medium mt-2 leading-relaxed">Trasforma il tuo ristorante in un'app installata permanentemente sui device dei clienti, inviando Push Notifications geo-localizzate.</p>
-                  </div>
-
-                  <div className="relative z-10 flex justify-center">
-                     {/* Estetica Apple Wallet Pass */}
-                     <div className="w-48 bg-white rounded-2xl shadow-xl overflow-hidden transform group-hover:-translate-y-2 transition-transform duration-500 border border-white/20">
-                        {/* Pass Header */}
-                        <div className="bg-[#008081] h-20 p-4 pb-0 flex flex-col justify-end relative">
-                           <div className="w-10 h-10 bg-white rounded-full absolute -top-5 right-4 shadow-sm"></div>
-                           <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">Leomenu VIP</p>
-                           <p className="text-white font-black text-lg leading-tight uppercase truncate">Pietra Viva</p>
-                        </div>
-                        {/* Pass Body */}
-                        <div className="p-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white to-gray-50 h-32">
-                           <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-                              <div>
-                                 <p className="text-[8px] uppercase text-gray-400 font-bold">Saldo Punti</p>
-                                 <p className="font-black text-[#1A1A1A]">1,240</p>
-                              </div>
-                              <div className="text-right">
-                                 <p className="text-[8px] uppercase text-gray-400 font-bold">Livello</p>
-                                 <p className="font-black text-amber-500 text-xs uppercase px-2 py-0.5 bg-amber-50 rounded-md">Gold</p>
-                              </div>
-                           </div>
-                           <div className="flex items-center justify-center h-12 w-full mt-3">
-                              <div className="flex gap-0.5 opacity-40">
-                                 {[...Array(24)].map((_,i) => <div key={i} className={`h-8 w-0.5 ${i%3 === 0 ? 'bg-black' : 'bg-gray-400'}`}></div>)}
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-
-                  <button className="mt-8 relative z-10 w-full bg-white/10 hover:bg-white/20 text-white border border-white/10 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 backdrop-blur-sm">
-                     <Smartphone className="w-4 h-4" /> Configura Apple Wallet
-                  </button>
-               </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ── TAB: PREMI ── */}
-        {activeTab === 'premi' && (
-          <Suspense fallback={<Spinner />}>
-            <RewardManager
+      {loading ? <Spinner /> : (
+        <>
+          {tab === 'clienti' && (
+            <TabClienti
+              customers={customers}
+              totalRev={totalRev}
+              green={greenCohort}
+              gold={goldCohort}
+              reserve={reserveCohort}
+              onConfigura={openConfigurator}
+            />
+          )}
+          {tab === 'scanner' && (
+            <TabScanner
+              restaurantId={restaurantId}
+              onOpenScanner={() => setShowScanner(true)}
+              recentTxns={recentTxns}
+            />
+          )}
+          {tab === 'premi' && (
+            <TabPremi
               restaurantId={restaurantId}
               rewards={rewards}
-              onRewardsChange={setRewards}
+              onRefresh={fetchData}
             />
-          </Suspense>
-        )}
-
-        {/* ── TAB: COHORTS ── */}
-        {activeTab === 'cohorts' && (
-          <Suspense fallback={<Spinner />}>
-            <ClientClassification
-              customers={customers}
-              rewards={rewards}
-              loading={loading}
-              onScannerOpen={() => setShowScanner(true)}
+          )}
+          {tab === 'crescita' && (
+            <TabCrescita
+              restaurantId={restaurantId}
+              fidelityConfig={fidelityConfig}
             />
-          </Suspense>
-        )}
+          )}
+        </>
+      )}
 
-        {/* ── TAB: STRATEGIA ── */}
-        {activeTab === 'strategia' && (
-          <Suspense fallback={<Spinner />}>
-            <FidelityStrategy restaurantId={restaurantId} />
-          </Suspense>
-        )}
-      </div>
-
-      {/* WaiterScanner modal down at root */}
       {showScanner && (
         <WaiterScanner
           restaurantId={restaurantId}
           onClose={() => setShowScanner(false)}
-          onSuccess={fetchData}
+          onSuccess={() => { setShowScanner(false); fetchData(); }}
         />
       )}
     </div>

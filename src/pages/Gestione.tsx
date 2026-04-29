@@ -100,7 +100,7 @@ export default function Gestione() {
     { id: 'ordini',                icon: <ClipboardList className="w-4 h-4" />,   label: 'Ordini' },
     { id: 'products',              icon: <BookOpen className="w-4 h-4" />,         label: 'Menù' },
     { id: 'business_intelligence', icon: <BarChart3 className="w-4 h-4" />,       label: 'Analitiche' },
-    { id: 'fidelizzazione',        icon: <Users className="w-4 h-4" />,            label: 'CRM' },
+    { id: 'fidelizzazione',        icon: <Users className="w-4 h-4" />,            label: 'Fidelity' },
     { id: 'personalizzazione',     icon: <QrCode className="w-4 h-4" />,           label: 'QR' },
     { id: 'tavoli',                 icon: <LayoutDashboard className="w-4 h-4" />,  label: 'Tavoli' },
     { id: 'conto',                 icon: <Receipt className="w-4 h-4" />,           label: 'Conto' },
@@ -245,7 +245,7 @@ export default function Gestione() {
               <h2 className="flex-1 font-bold text-[17px] text-[#111827] dark:text-white truncate">
                 {({
                   ordini: 'Ordini', products: productView === 'listino' ? 'Listino Prodotti' : 'Menù',
-                  business_intelligence: 'Analitiche', fidelizzazione: 'CRM',
+                  business_intelligence: 'Analitiche', fidelizzazione: 'Fidelity',
                   personalizzazione: 'QR', tavoli: 'Tavoli', conto: 'Conto',
                   settings: 'Impostazioni', menus: 'Menu del Giorno',
                 } as Record<string, string>)[activeTab] || activeTab}
@@ -352,7 +352,7 @@ export default function Gestione() {
                     { id: 'ordini',                title: 'Ordini',       subtitle: 'Ricevitore',        icon: <ClipboardList />, iconBg: '#fff7ed', iconColor: '#f97316' },
                     { id: 'products',              title: 'Menù',         subtitle: 'Catalogo & Prezzi', icon: <BookOpen />,       iconBg: '#eff6ff', iconColor: '#3b82f6' },
                     { id: 'business_intelligence', title: 'Analitiche',   subtitle: 'Dashboard Vendite', icon: <BarChart3 />,      iconBg: '#f0fdf4', iconColor: '#10b981' },
-                    { id: 'fidelizzazione',        title: 'CRM',          subtitle: 'Carta Fedeltà',     icon: <Users />,          iconBg: '#eff6ff', iconColor: '#3b82f6' },
+                    { id: 'fidelizzazione',        title: 'Fidelity',     subtitle: 'Carta Fedeltà',     icon: <Users />,          iconBg: '#eff6ff', iconColor: '#3b82f6' },
                     { id: 'tavoli',                title: 'Tavoli',       subtitle: 'Planimetria Sala',  icon: <LayoutDashboard />,iconBg: '#faf5ff', iconColor: '#9333ea' },
                     { id: 'cameriere',             title: 'LeoPOS',       subtitle: 'Terminale Sala',    icon: <Sliders />,        iconBg: '#f0fdfa', iconColor: '#0d9488', isRoute: true },
                     { id: 'conto',                 title: 'Conto',        subtitle: 'Gestione Conto',    icon: <Receipt />,        iconBg: '#fff1f2', iconColor: '#f43f5e' },

@@ -163,7 +163,7 @@ function ROIPanel({ config }: { config: FidelityConfig }) {
   const roiStr = global ? `${global.roi.toFixed(1)}x` : '–';
 
   return (
-    <div className="fixed bottom-[68px] left-0 right-0 z-50 md:hidden bg-white dark:bg-[#1A1A1A] border-t-2 border-[#0d9488] shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+    <div className="fixed bottom-[82px] left-0 right-0 z-[70] md:hidden bg-white dark:bg-[#1A1A1A] border-t-2 border-[#0d9488] shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
       <div className="flex items-center gap-2.5 px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <span>📊</span>
         <span className="flex-1 text-[12px] font-bold text-[#374151] dark:text-gray-200">Anteprima ROI · aggiornata live</span>
@@ -353,6 +353,23 @@ function Configuratore({ config, setConfig, nextId, saving, onSave }: {
                 className="text-[28px] font-black text-[#0d9488] w-[70px] text-center border-none border-b-2 border-[#0d9488] bg-transparent outline-none" />
             </div>
           </div>
+          <div className="h-px bg-[#f3f4f6] dark:bg-white/[0.04] mb-3" />
+          <label className={LBL}>Scontrino medio</label>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0d9488] font-bold text-[14px]">€</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={config.scontrinoMedio}
+                onChange={e => upd('scontrinoMedio', parseFloat(e.target.value) || 1)}
+                className="w-full pl-7 pr-3 py-2.5 border border-[#e5e7eb] dark:border-gray-700 rounded-[10px] text-[14px] font-bold text-[#0d9488] bg-white dark:bg-[#262626] outline-none focus:border-[#0d9488] transition-colors"
+              />
+            </div>
+            <p className="text-[12px] text-gray-400 flex-1">Importo medio speso dai tuoi clienti per visita. Serve per calcolare il ROI.</p>
+          </div>
+
           <div className="h-px bg-[#f3f4f6] dark:bg-white/[0.04] mb-3" />
           <label className={LBL}>Bonus speciali</label>
           {BONUS_ROWS.map(({ key, label, sub }, i) => (
