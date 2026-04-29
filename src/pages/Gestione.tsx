@@ -55,6 +55,9 @@ export default function Gestione() {
     | 'tavoli' | 'conto'
   >('dashboard');
   const [productView, setProductView] = useState<'hub' | 'listino'>('hub');
+  const [settingsView, setSettingsView] = useState<string>('list');
+  const [menuManagerView, setMenuManagerView] = useState<string>('hub');
+  const [productMacroView, setProductMacroView] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const location = useLocation();
@@ -106,7 +109,11 @@ export default function Gestione() {
 
   const handleNavClick = (item: { id: string; isRoute?: boolean }) => {
     if (item.isRoute) navigate(`/${restaurantSlug}/cameriere`);
-    else setActiveTab(item.id as any);
+    else {
+      if (item.id !== 'settings') setSettingsView('list');
+      if (item.id !== 'products') { setMenuManagerView('hub'); setProductMacroView(null); }
+      setActiveTab(item.id as any);
+    }
   };
 
   const handleBack = () => {
@@ -140,24 +147,26 @@ export default function Gestione() {
 
       {/* ── Desktop Sidebar ─────────────────────────────────────────────── */}
       <div className="hidden md:flex h-screen fixed left-0 top-0 w-56 bg-white dark:bg-[#141414] border-r border-gray-100 dark:border-gray-800 flex-col z-40">
-        {/* Logo + restaurant info */}
-        <div className="p-5 border-b border-gray-100 dark:border-gray-800">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Leomenu</p>
-          <p className="font-black text-gray-900 dark:text-white text-sm truncate mt-0.5">{restaurantName}</p>
-          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-[#008081] mt-1 inline-block">
-            {subscriptionTier === 'trial' ? 'Trial' : subscriptionTier}
-          </span>
+        {/* Brand header */}
+        <div className="px-[18px] pt-5 pb-[14px] border-b border-gray-100 dark:border-gray-800">
+          <p className="text-[9px] font-black text-[#10b981] uppercase tracking-[1.5px] mb-0.5">Leomenu</p>
+          <p className="font-bold text-[#111827] dark:text-white text-[13px] truncate leading-snug">{restaurantName}</p>
+          {subscriptionTier === 'trial' && (
+            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 mt-1 inline-block">
+              Trial
+            </span>
+          )}
         </div>
         {/* Nav items */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 py-2.5 overflow-y-auto">
           {NAV_ITEMS.map(item => (
             <button
               key={item.id}
               onClick={() => handleNavClick(item)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              className={`w-full flex items-center gap-2.5 text-[13px] font-medium transition-all ${
                 activeTab === item.id
-                  ? 'bg-[#008081] text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-[#0d9488] text-white font-semibold rounded-lg mx-2.5 px-2.5 py-[9px] w-[calc(100%-20px)]'
+                  : 'text-[#4b5563] dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 px-[18px] py-[9px]'
               }`}
             >
               {item.icon}
@@ -166,79 +175,89 @@ export default function Gestione() {
           ))}
         </nav>
         {/* Bottom: vedi menù + logout */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
+        <div className="px-[18px] py-3.5 border-t border-gray-100 dark:border-gray-800 space-y-1">
           {restaurantSlug && (
             <button
               onClick={() => navigate(`/${restaurantSlug}`)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all"
+              className="w-full flex items-center gap-2.5 text-[12.5px] font-semibold text-[#10b981] hover:opacity-80 transition-opacity py-1.5"
             >
-              <ExternalLink className="w-4 h-4" /> Vedi Menù
+              <ExternalLink className="w-3.5 h-3.5" /> Vedi Menù
             </button>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+            className="w-full flex items-center gap-2.5 text-[12.5px] font-medium text-red-500 hover:opacity-80 transition-opacity py-1.5"
           >
-            <LogOut className="w-4 h-4" /> Esci
+            <LogOut className="w-3.5 h-3.5" /> Esci
           </button>
         </div>
       </div>
 
       <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-[#FDFCF0] font-sans min-h-screen flex flex-col antialiased md:ml-56">
 
-        {/* ── Header (mobile only) ────────────────────────────────────────── */}
-        <header className="md:hidden sticky top-0 z-50 bg-[#FBFBFB]/95 dark:bg-[#1A1A1A]/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 px-4 py-4 flex items-center justify-between shadow-sm">
-          <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <ArrowLeft className="w-6 h-6 text-[#008080]" />
-          </button>
-          <h1 className="font-serif text-xl font-bold tracking-widest uppercase text-center flex-grow">Gestione</h1>
-          <div className="flex items-center gap-1">
-            {restaurantSlug && (
-              <button
-                onClick={() => navigate(`/${restaurantSlug}`)}
-                className="p-2 rounded-full text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
-                title="Vedi Menù"
-              >
-                <ExternalLink className="w-5 h-5" />
-              </button>
-            )}
-            <button onClick={handleLogout} className="text-xs font-bold text-red-500 uppercase px-2 hover:bg-red-50 dark:hover:bg-red-900/20 py-1 rounded transition-colors">
-              Esci
-            </button>
-          </div>
-        </header>
+        {/* ── Single smart header (mobile only) ──────────────────────────── */}
+        <header className={`md:hidden sticky top-0 z-50 bg-white dark:bg-[#141414] border-b border-gray-100 dark:border-gray-800 items-center h-[56px] px-4 ${
+          (activeTab === 'settings' && settingsView !== 'list') ||
+          (activeTab === 'products' && productView === 'hub' && menuManagerView !== 'hub') ||
+          (activeTab === 'products' && productView === 'listino' && productMacroView !== null)
+            ? 'hidden' : 'flex'
+        }`}>
 
-        {/* ── Sub-header back bar (mobile only) ──────────────────────────── */}
-        {activeTab !== 'dashboard' && (
-          <div className="md:hidden flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1A1A] sticky top-0 z-10">
-            <button
-              onClick={() => {
-                if (activeTab === 'products' && productView === 'listino') {
-                  setProductView('hub');
-                } else {
-                  setActiveTab('dashboard');
-                }
-              }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">
-              {({
-                dashboard: 'Dashboard',
-                ordini: 'Ordini',
-                products: productView === 'listino' ? 'Listino Prodotti' : 'Menù',
-                business_intelligence: 'Analitiche',
-                fidelizzazione: 'CRM',
-                personalizzazione: 'QR',
-                tavoli: 'Tavoli',
-                conto: 'Conto',
-                settings: 'Impostazioni',
-                menus: 'Menu del Giorno',
-              } as Record<string, string>)[activeTab] || activeTab}
-            </h2>
-          </div>
-        )}
+          {activeTab === 'dashboard' ? (
+            /* Dashboard: brand + nome + icons */
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-[8px] font-black text-[#10b981] uppercase tracking-[1.5px] leading-none">Leomenu</p>
+                <p className="font-bold text-[#111827] dark:text-white text-[15px] leading-snug truncate">{restaurantName}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+                  className="w-9 h-9 rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700"
+                >
+                  <Search className="w-4 h-4 text-[#6b7280]" />
+                </button>
+                {restaurantSlug && (
+                  <button
+                    onClick={() => navigate(`/${restaurantSlug}`)}
+                    className="w-9 h-9 rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700"
+                  >
+                    <ExternalLink className="w-4 h-4 text-[#6b7280]" />
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Sub-section: back button + section title + vedi menù */
+            <>
+              <button
+                onClick={() => {
+                  if (activeTab === 'products' && productView === 'listino') setProductView('hub');
+                  else setActiveTab('dashboard');
+                }}
+                className="w-[34px] h-[34px] rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 flex-shrink-0 mr-3"
+              >
+                <ChevronLeft className="w-4 h-4 text-[#374151] dark:text-gray-300" />
+              </button>
+              <h2 className="flex-1 font-bold text-[17px] text-[#111827] dark:text-white truncate">
+                {({
+                  ordini: 'Ordini', products: productView === 'listino' ? 'Listino Prodotti' : 'Menù',
+                  business_intelligence: 'Analitiche', fidelizzazione: 'CRM',
+                  personalizzazione: 'QR', tavoli: 'Tavoli', conto: 'Conto',
+                  settings: 'Impostazioni', menus: 'Menu del Giorno',
+                } as Record<string, string>)[activeTab] || activeTab}
+              </h2>
+              {restaurantSlug && (
+                <button
+                  onClick={() => navigate(`/${restaurantSlug}`)}
+                  className="w-[34px] h-[34px] rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 flex-shrink-0 ml-2"
+                >
+                  <ExternalLink className="w-4 h-4 text-[#6b7280]" />
+                </button>
+              )}
+            </>
+          )}
+        </header>
 
         {/* ── Main content ────────────────────────────────────────────────── */}
         <div className="flex-grow px-4 pt-0 pb-24 overflow-y-auto flex flex-col items-stretch justify-start">
@@ -278,74 +297,86 @@ export default function Gestione() {
                 </div>
               )}
 
-              {/* Actionable Insights Board */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><ClipboardList className="w-16 h-16"/></div>
-                  <div className="flex items-center gap-2 mb-4">
-                     <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                     <h3 className="text-xs font-black uppercase tracking-wider text-gray-500">Live Orders in Cucina</h3>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-2">
+
+                {/* Live Orders */}
+                <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-xl p-5 relative overflow-hidden">
+                  <div className="absolute right-5 top-1/2 -translate-y-1/2 opacity-[0.07]"><ClipboardList className="w-16 h-16"/></div>
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <span className="w-[7px] h-[7px] rounded-full bg-orange-500 animate-pulse flex-shrink-0" />
+                    <p className="text-[9.5px] font-black uppercase tracking-[1.2px] text-gray-400">Live Orders in Cucina</p>
                   </div>
-                  <p className="text-4xl font-black text-[#1A1A1A] dark:text-white mb-2 leading-none">
+                  <p className="text-[48px] font-black text-[#111827] dark:text-white leading-none mb-1.5">
                     {orders.filter(o => o.status === 'in_attesa' || o.status === 'in_preparazione').length}
                   </p>
-                  <p className="text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 inline-flex px-2 py-0.5 rounded-md">Ticket in attesa</p>
-                </div>
-                
-                <div className="bg-white dark:bg-[#1C1C1C] border border-[#008081]/30 dark:border-[#008081]/20 rounded-2xl p-5 shadow-sm shadow-[#008081]/5 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><Zap className="w-16 h-16"/></div>
-                  <div className="flex items-center gap-2 mb-4">
-                     <h3 className="text-xs font-black uppercase tracking-wider text-[#008081]">Automazione & Crescita</h3>
-                  </div>
-                  <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 leading-snug">
-                    I tuoi clienti VIP spendono il <span className="text-[#008081]">20% in più</span>. Promuovi la tua Fidelity Card dal QR.
-                  </p>
-                  <button onClick={() => setActiveTab('fidelizzazione')} className="text-xs font-black bg-[#008081] text-white px-3 py-1.5 rounded-lg hover:bg-teal-600 transition-colors shadow-sm">Gestisci Passport</button>
+                  <p className="text-[12px] font-medium text-orange-500">Ticket in attesa</p>
                 </div>
 
-                <div className="bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
-                  <div className="flex items-center gap-2 mb-4">
-                     <h3 className="text-xs font-black uppercase tracking-wider text-gray-500">Stato Inventario (Menù)</h3>
-                  </div>
-                  <p className="text-4xl font-black text-[#1A1A1A] dark:text-white mb-2 leading-none">
+                {/* Automazione */}
+                <div className="bg-gradient-to-br from-white to-[#f0fdf4] dark:from-[#1C1C1C] dark:to-[#1C1C1C] border border-[#a7f3d0] dark:border-[#008081]/20 rounded-xl p-5 relative overflow-hidden">
+                  <div className="absolute right-5 top-1/2 -translate-y-1/2 opacity-[0.06]"><Zap className="w-16 h-16"/></div>
+                  <p className="text-[10px] font-black uppercase tracking-[1px] text-gray-500 mb-2">Automazione &amp; Crescita</p>
+                  <p className="text-[13px] font-medium text-[#374151] dark:text-gray-300 leading-relaxed mb-3">
+                    I tuoi clienti <strong className="text-[#111827] dark:text-white">VIP</strong> spendono il{' '}
+                    <strong className="text-[#111827] dark:text-white">20% in più</strong>. Promuovi la tua Fidelity Card dal QR.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('fidelizzazione')}
+                    className="text-[12px] font-semibold bg-[#0d9488] text-white px-3.5 py-[7px] rounded-[7px] hover:bg-teal-600 transition-colors"
+                  >
+                    Gestisci Carta Fedeltà
+                  </button>
+                </div>
+
+                {/* Inventario */}
+                <div className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-xl p-5 col-span-2 md:col-span-1">
+                  <p className="text-[9.5px] font-black uppercase tracking-[1.2px] text-gray-400 mb-2.5">Stato Inventario (Menù)</p>
+                  <p className="text-[48px] font-black text-[#111827] dark:text-white leading-none mb-1.5">
                     {products.filter(p => p.active).length}
                   </p>
-                  <p className="text-sm font-bold text-gray-500 inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" /> Prodotti in vendita attivi
+                  <p className="text-[12px] font-medium text-[#10b981] flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Prodotti in vendita attivi
                   </p>
                 </div>
               </div>
 
-              {/* B2B Grid Modules */}
-              <div className="mt-8">
-                 <h3 className="font-black text-xs text-gray-400 uppercase tracking-widest mb-4 px-2">Ecosistema Leomenu</h3>
-                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                      { id: 'ordini', icon: <ClipboardList />, title: 'Ordini', subtitle: 'Ricevitore', bg: 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/20', text: 'text-orange-600 dark:text-orange-400' },
-                      { id: 'products', icon: <BookOpen />, title: 'Menù', subtitle: 'Catalogo & Prezzi', bg: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
-                      { id: 'business_intelligence', icon: <BarChart3 />, title: 'Analitiche', subtitle: 'Dashboard Vendite', bg: 'bg-purple-50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
-                      { id: 'fidelizzazione', icon: <Users />, title: 'CRM', subtitle: 'Carta Fedeltà', bg: 'bg-teal-50 dark:bg-teal-900/10 border-[#008081]/20', text: 'text-[#008081]' },
-                      { id: 'tavoli', icon: <LayoutDashboard />, title: 'Tavoli', subtitle: 'Planimetria sala', bg: 'bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/20', text: 'text-violet-600 dark:text-violet-400' },
-                      { id: 'cameriere', icon: <Sliders />, title: 'LeoPOS', subtitle: 'Terminale sala', bg: 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', isRoute: true },
-                      { id: 'conto', icon: <Receipt />, title: 'Conto', subtitle: 'Gestione conto', bg: 'bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/20', text: 'text-rose-600 dark:text-rose-400' },
-                      { id: 'personalizzazione', icon: <Settings2 />, title: 'QR', subtitle: 'Strumenti QR', bg: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
-                      { id: 'settings', icon: <Settings2 />, title: 'Impostazioni', subtitle: 'Fiscale & WiFi', bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400' }
-                    ].map((mod) => (
-                      <button 
-                         key={mod.id}
-                         onClick={() => mod.isRoute ? navigate(`/${restaurantSlug}/cameriere`) : setActiveTab(mod.id as any)}
-                         className="flex flex-col items-start p-4 lg:p-5 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-[#008081] hover:shadow-lg hover:shadow-[#008081]/10 transition-all group text-left h-36 justify-between disabled:opacity-50"
+              {/* Ecosystem Grid */}
+              <div className="px-2">
+                <p className="text-[10px] font-black uppercase tracking-[1.5px] text-gray-400 mb-3">Ecosistema Leomenu</p>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                  {[
+                    { id: 'ordini',                title: 'Ordini',       subtitle: 'Ricevitore',        icon: <ClipboardList />, iconBg: '#fff7ed', iconColor: '#f97316' },
+                    { id: 'products',              title: 'Menù',         subtitle: 'Catalogo & Prezzi', icon: <BookOpen />,       iconBg: '#eff6ff', iconColor: '#3b82f6' },
+                    { id: 'business_intelligence', title: 'Analitiche',   subtitle: 'Dashboard Vendite', icon: <BarChart3 />,      iconBg: '#f0fdf4', iconColor: '#10b981' },
+                    { id: 'fidelizzazione',        title: 'CRM',          subtitle: 'Carta Fedeltà',     icon: <Users />,          iconBg: '#eff6ff', iconColor: '#3b82f6' },
+                    { id: 'tavoli',                title: 'Tavoli',       subtitle: 'Planimetria Sala',  icon: <LayoutDashboard />,iconBg: '#faf5ff', iconColor: '#9333ea' },
+                    { id: 'cameriere',             title: 'LeoPOS',       subtitle: 'Terminale Sala',    icon: <Sliders />,        iconBg: '#f0fdfa', iconColor: '#0d9488', isRoute: true },
+                    { id: 'conto',                 title: 'Conto',        subtitle: 'Gestione Conto',    icon: <Receipt />,        iconBg: '#fff1f2', iconColor: '#f43f5e' },
+                    { id: 'personalizzazione',     title: 'QR',           subtitle: 'Strumenti QR',      icon: <QrCode />,         iconBg: '#fefce8', iconColor: '#ca8a04' },
+                    { id: 'settings',              title: 'Impostazioni', subtitle: 'Fiscale & WiFi',    icon: <Settings2 />,      iconBg: '#f0fdf4', iconColor: '#16a34a' },
+                  ].map((mod) => (
+                    <button
+                      key={mod.id}
+                      onClick={() => mod.isRoute ? navigate(`/${restaurantSlug}/cameriere`) : setActiveTab(mod.id as any)}
+                      className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-xl p-4 md:p-[22px] flex flex-col items-start gap-2.5 hover:border-[#008081]/40 hover:shadow-md transition-all text-left active:scale-95"
+                    >
+                      <div
+                        className="w-9 h-9 md:w-[38px] md:h-[38px] rounded-[9px] flex items-center justify-center flex-shrink-0"
+                        style={{ background: mod.iconBg }}
                       >
-                         <div className={`w-10 h-10 rounded-xl ${mod.bg} ${mod.text} flex flex-col items-center justify-center border group-hover:scale-110 transition-transform`}>
-                            {React.cloneElement(mod.icon as React.ReactElement, { className: 'w-5 h-5' })}
-                         </div>
-                         <div>
-                            <span className="block font-black text-gray-800 dark:text-gray-200 tracking-tight leading-none mb-1">{mod.title}</span>
-                            <span className="block font-bold text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wider">{mod.subtitle}</span>
-                         </div>
-                      </button>
-                    ))}
-                 </div>
+                        {React.cloneElement(mod.icon as React.ReactElement, {
+                          className: 'w-4 h-4 md:w-5 md:h-5',
+                          style: { color: mod.iconColor },
+                        })}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[#111827] dark:text-white text-[13px] md:text-sm leading-tight">{mod.title}</p>
+                        <p className="text-[9px] md:text-[10px] font-semibold text-gray-400 uppercase tracking-[0.8px] mt-0.5 hidden md:block">{mod.subtitle}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -357,9 +388,10 @@ export default function Gestione() {
           {activeTab === 'products' && productView === 'hub' && (
             <MenuManager
               restaurantId={restaurantId}
-              onOpenListino={() => setProductView('listino')}
+              onOpenListino={() => { setProductMacroView(null); setProductView('listino'); }}
               onOpenSettings={() => setActiveTab('settings')}
               onOpenPersonalizzazione={() => setActiveTab('personalizzazione')}
+              onViewChange={(v) => setMenuManagerView(v)}
             />
           )}
 
@@ -370,7 +402,8 @@ export default function Gestione() {
               categories={categories}
               products={products}
               onRefresh={fetchData}
-              onBack={() => setProductView('hub')}
+              onBack={() => { setProductMacroView(null); setProductView('hub'); }}
+              onMacroSelect={(m) => setProductMacroView(m)}
             />
           )}
 
@@ -481,6 +514,7 @@ export default function Gestione() {
               initialRestaurantName={restaurantName}
               subscriptionTier={subscriptionTier}
               onLogout={handleLogout}
+              onViewChange={(v) => setSettingsView(v)}
             />
           )}
 

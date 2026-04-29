@@ -20,6 +20,7 @@ interface SettingsManagerProps {
   initialRestaurantName: string;
   subscriptionTier: string;
   onLogout: () => void;
+  onViewChange?: (v: string) => void;
 }
 
 interface DayHours { open: string; close: string; closed: boolean; }
@@ -71,36 +72,42 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 
 function SettingRow({
   icon: Icon, title, subtitle, right, onClick, danger = false, last = false,
+  iconBg, iconColor,
 }: {
   icon: React.ElementType; title: string; subtitle?: string;
   right?: React.ReactNode; onClick?: () => void;
   danger?: boolean; last?: boolean;
+  iconBg?: string; iconColor?: string;
 }) {
+  const defaultIconBg = danger ? '#fff1f2' : '#E6F4F4';
+  const defaultIconColor = danger ? '#ef4444' : '#008081';
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`w-full flex items-center gap-3.5 px-5 py-4 bg-white dark:bg-[#1A1A1A] transition-colors text-left
-        ${onClick ? 'hover:bg-gray-50 dark:hover:bg-[#252525] active:bg-gray-100 dark:active:bg-[#202020]' : 'cursor-default'}
+      className={`w-full flex items-center gap-3 px-4 py-[14px] bg-white dark:bg-[#1A1A1A] transition-colors text-left relative
+        ${onClick ? 'hover:bg-gray-50/60 dark:hover:bg-[#252525] active:bg-gray-100 dark:active:bg-[#202020]' : 'cursor-default'}
         ${!last ? 'border-b border-gray-100 dark:border-white/[0.04]' : ''}`}
     >
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
-        ${danger ? 'bg-red-50 dark:bg-red-900/20' : 'bg-[#E6F4F4] dark:bg-[#008081]/10'}`}>
-        <Icon className={`w-[18px] h-[18px] ${danger ? 'text-red-500' : 'text-[#008081]'}`} />
+      <div
+        className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
+        style={{ background: iconBg || defaultIconBg }}
+      >
+        <Icon className="w-[18px] h-[18px]" style={{ color: iconColor || defaultIconColor }} />
       </div>
       <div className="flex-grow min-w-0">
-        <p className={`text-[15px] font-semibold leading-tight truncate
-          ${danger ? 'text-red-600 dark:text-red-400' : 'text-[#1A1A1A] dark:text-white'}`}>
+        <p className={`text-[14px] font-semibold leading-tight truncate
+          ${danger ? 'text-red-600 dark:text-red-400' : 'text-[#111827] dark:text-white'}`}>
           {title}
         </p>
         {subtitle && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 font-medium">{subtitle}</p>
+          <p className="text-[11.5px] text-[#9ca3af] truncate mt-[1px] font-medium">{subtitle}</p>
         )}
       </div>
       {right !== undefined ? (
         <div className="flex-shrink-0">{right}</div>
       ) : onClick ? (
-        <ChevronRight className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-red-300' : 'text-gray-300 dark:text-gray-600'}`} />
+        <ChevronRight className="w-4 h-4 flex-shrink-0 text-[#d1d5db] dark:text-gray-600" />
       ) : null}
     </button>
   );
@@ -144,13 +151,14 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function SettingsManager({
-  restaurantId, restaurantSlug, initialRestaurantName, subscriptionTier, onLogout,
+  restaurantId, restaurantSlug, initialRestaurantName, subscriptionTier, onLogout, onViewChange,
 }: SettingsManagerProps) {
   const { showToast, ToastContainer } = useToast();
   const { startCheckout, loading: checkoutLoading, error: checkoutError } = useStripeCheckout();
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  const [view, setView] = useState<ViewKey>('list');
+  const [view, _setView] = useState<ViewKey>('list');
+  const setView = (v: ViewKey) => { _setView(v); onViewChange?.(v); };
 
   // ── Restaurant settings ──────────────────────────────────────────────────
   const [restaurantName, setRestaurantName] = useState(initialRestaurantName);
@@ -399,33 +407,90 @@ export default function SettingsManager({
   // ─────────────────────────────────────────────────────────────────────────
 
   if (view === 'list') {
+
+    const initials = (restaurantName || 'R').slice(0, 2).toUpperCase();
+
     return (
-      <div className="w-full max-w-2xl mx-auto pb-16">
-        <div className="px-5 pt-6 pb-2">
-          <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Impostazioni</h2>
-          <p className="text-sm font-bold text-gray-400 mt-0.5">Gestisci il tuo ristorante</p>
+      <div className="w-full max-w-2xl mx-auto pb-8">
+
+        {/* ── Profile card ─────────────────────────────────────────────────── */}
+        <div className="mx-4 mt-4 relative overflow-hidden rounded-[18px] p-5"
+          style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)' }}>
+          {/* decorative circles */}
+          <div className="absolute -right-5 -top-5 w-28 h-28 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          <div className="absolute right-5 -bottom-8 w-20 h-20 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center font-black text-xl text-white flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.25)' }}>
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[17px] font-black text-white truncate leading-tight">{restaurantName}</h3>
+              <p className="text-[12px] text-white/75 mt-0.5 truncate">{accountEmail || '—'}</p>
+              <div className="flex items-center gap-1.5 mt-1.5 bg-white/[0.18] rounded-full px-2.5 py-1 w-fit">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#86efac] animate-pulse flex-shrink-0" />
+                <span className="text-[11px] font-semibold text-white">{orariPreview || 'Aperto'}</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 flex-shrink-0" />
+          </div>
         </div>
+
+        {/* ── Upgrade banner (only on trial) ───────────────────────────────── */}
+        {subscriptionTier === 'trial' && (
+          <button
+            onClick={() => setView('fatture')}
+            className="mx-4 mt-3 w-[calc(100%-32px)] flex items-center gap-3 rounded-[14px] px-4 py-3.5 text-left"
+            style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '1px solid #fcd34d' }}
+          >
+            <div className="w-[38px] h-[38px] rounded-[10px] bg-amber-500 flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-amber-900">Piano Trial attivo</p>
+              <p className="text-[11px] text-amber-700 mt-0.5">Sblocca tutte le funzionalità</p>
+            </div>
+            <span className="flex-shrink-0 bg-amber-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg">Attiva ora</span>
+          </button>
+        )}
 
         {/* ── Il tuo locale ── */}
         <GroupLabel>Il tuo locale</GroupLabel>
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm mx-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5 mx-4">
           <SettingRow icon={Store} title="Pagina del Locale"
-            subtitle={restaurantName || 'Nome, logo e copertina'} onClick={() => setView('locale')} />
+            subtitle={restaurantName || 'Nome, logo e copertina'}
+            iconBg="#eff6ff" iconColor="#3b82f6"
+            right={<div className="flex items-center gap-2">
+              <span className="text-[9.5px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Live</span>
+              <ChevronRight className="w-4 h-4 text-[#d1d5db]" />
+            </div>}
+            onClick={() => setView('locale')} />
           <SettingRow icon={Link2} title="Link & Social"
-            subtitle={settings.phone_number || 'Telefono, Instagram, Maps…'} onClick={() => setView('social')} />
+            subtitle={settings.phone_number || 'Telefono, Instagram, Maps…'}
+            iconBg="#faf5ff" iconColor="#9333ea"
+            onClick={() => setView('social')} />
           <SettingRow icon={Clock} title="Orari di Apertura"
-            subtitle={orariPreview} onClick={() => setView('orari')} last />
+            subtitle={orariPreview}
+            iconBg="#fff7ed" iconColor="#f97316"
+            onClick={() => setView('orari')} last />
         </div>
 
         {/* ── Servizi ── */}
         <GroupLabel>Servizi</GroupLabel>
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm mx-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5 mx-4">
           <SettingRow icon={CreditCard} title="Coperto / Servizio"
-            subtitle={copertoPreview} onClick={() => setView('coperto')} />
+            subtitle={copertoPreview}
+            iconBg="#f0fdf4" iconColor="#16a34a"
+            onClick={() => setView('coperto')} />
           <SettingRow icon={Wifi} title="WiFi Ospiti"
-            subtitle={settings.wifi_ssid || 'Rete e password'} onClick={() => setView('wifi')} />
+            subtitle={settings.wifi_ssid || 'Rete e password'}
+            iconBg="#eff6ff" iconColor="#3b82f6"
+            onClick={() => setView('wifi')} />
           <SettingRow icon={BookOpen} title="Menù del Giorno"
             subtitle={menuGiornoEnabled ? 'Visibile ai clienti' : 'Non attivo'}
+            iconBg="#fefce8" iconColor="#ca8a04"
             right={
               <Toggle enabled={menuGiornoEnabled} onToggle={async () => {
                 const newVal = menuGiornoEnabled ? 'false' : 'true';
@@ -441,35 +506,59 @@ export default function SettingsManager({
 
         {/* ── Strumenti ── */}
         <GroupLabel>Strumenti</GroupLabel>
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm mx-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5 mx-4">
           <SettingRow icon={Globe} title="Condividi Menù"
-            subtitle={`leomenu.it/${restaurantSlug}`} onClick={() => setView('condividi')} last />
+            subtitle={`leomenu.it/${restaurantSlug}`}
+            iconBg="#f0fdfa" iconColor="#0d9488"
+            onClick={() => setView('condividi')} last />
         </div>
 
         {/* ── Il mio account ── */}
         <GroupLabel>Il mio account</GroupLabel>
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm mx-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5 mx-4">
           <SettingRow icon={User} title="Dati Account"
-            subtitle={accountEmail || 'Email e nome titolare'} onClick={() => setView('dati_account')} />
+            subtitle={accountEmail || 'Email e nome titolare'}
+            iconBg="#eff6ff" iconColor="#3b82f6"
+            onClick={() => setView('dati_account')} />
           <SettingRow icon={Shield} title="Sicurezza"
-            subtitle="Password e accessi" onClick={() => setView('sicurezza')} />
+            subtitle="Password e accessi"
+            iconBg="#f0fdf4" iconColor="#16a34a"
+            onClick={() => setView('sicurezza')} />
           <SettingRow icon={Bell} title="Notifiche"
-            subtitle={notifyOrders ? 'Notifiche attive' : 'Notifiche disattivate'} onClick={() => setView('notifiche')} />
+            subtitle={notifyOrders ? 'Notifiche attive' : 'Notifiche disattivate'}
+            iconBg="#fff7ed" iconColor="#f97316"
+            onClick={() => setView('notifiche')} />
           <SettingRow icon={Receipt} title="Fatture & Pagamenti"
-            subtitle={subscriptionTier === 'trial' ? 'Trial gratuito' : `Piano ${subscriptionTier}`}
+            subtitle={subscriptionTier === 'trial' ? 'Piano Trial' : `Piano ${subscriptionTier}`}
+            iconBg="#fff7ed" iconColor="#f97316"
+            right={<div className="flex items-center gap-2">
+              {subscriptionTier === 'trial' && <span className="text-[9.5px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">Upgrade</span>}
+              <ChevronRight className="w-4 h-4 text-[#d1d5db]" />
+            </div>}
             onClick={() => setView('fatture')} />
           <SettingRow icon={HelpCircle} title="Contatta l'Assistenza"
-            subtitle="Supporto LeoMenu" onClick={() => setView('assistenza')} last />
+            subtitle="Supporto LeoMenu"
+            iconBg="#f0fdfa" iconColor="#0d9488"
+            onClick={() => setView('assistenza')} last />
         </div>
 
-        {/* ── Dati Fiscali (separato perché è del locale, non dell'utente) ── */}
+        {/* ── Dati Fiscali ── */}
         <GroupLabel>Dati Fiscali</GroupLabel>
-        <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm mx-4">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5 mx-4">
           <SettingRow icon={FileText} title="Dati Fiscali"
-            subtitle={settings.ragione_sociale || 'P.IVA, SDI, PEC…'} onClick={() => setView('fiscale')} last />
+            subtitle={settings.ragione_sociale || 'P.IVA, SDI, PEC…'}
+            iconBg="#faf5ff" iconColor="#9333ea"
+            onClick={() => setView('fiscale')} last />
         </div>
 
-        <p className="text-center text-[11px] text-gray-300 dark:text-gray-600 mt-8 font-medium">LeoMenu · v2.0</p>
+        {/* ── Esci ── */}
+        <div className="mx-4 mt-5 bg-white dark:bg-[#1A1A1A] rounded-[16px] overflow-hidden border border-[#f0f1f3] dark:border-white/5">
+          <SettingRow icon={Lock} title="Esci dall'account"
+            iconBg="#fff1f2" iconColor="#ef4444"
+            danger onClick={onLogout} last />
+        </div>
+
+        <p className="text-center text-[10px] text-[#d1d5db] dark:text-gray-600 mt-6 pb-2">LeoMenu · v2.0</p>
         <ToastContainer />
       </div>
     );

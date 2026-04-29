@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 
 export function MarketingNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -59,12 +60,12 @@ export function MarketingNavbar() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-4">
-            <a href="https://app.leomenu.it/login" className="text-sm font-extrabold text-[#1A1A1A] hover:text-[#008081] transition-colors py-2 px-3">
+            <Link to="/login" className="text-sm font-extrabold text-[#1A1A1A] hover:text-[#008081] transition-colors py-2 px-3">
               Accedi
-            </a>
-            <a href="https://app.leomenu.it/register" className="text-sm font-extrabold bg-[#008081] text-white px-5 py-3 rounded-xl hover:bg-teal-600 hover:-translate-y-0.5 transition-all shadow-sm shadow-[#008081]/20 active:scale-95">
+            </Link>
+            <Link to="/register" className="text-sm font-extrabold bg-[#008081] text-white px-5 py-3 rounded-xl hover:bg-teal-600 hover:-translate-y-0.5 transition-all shadow-sm shadow-[#008081]/20 active:scale-95">
               Inizia Gratis
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -95,12 +96,12 @@ export function MarketingNavbar() {
             ))}
           </div>
           <div className="flex flex-col gap-3 pt-6 border-t border-gray-100">
-            <a href="https://app.leomenu.it/login" className="text-center text-[15px] font-extrabold text-[#1A1A1A] py-4 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-colors">
+            <Link to="/login" className="text-center text-[15px] font-extrabold text-[#1A1A1A] py-4 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-colors">
               Accedi al tuo account
-            </a>
-            <a href="https://app.leomenu.it/register" className="text-center text-[15px] font-extrabold bg-[#008081] text-white py-4 rounded-2xl shadow-lg shadow-[#008081]/30 active:scale-95 transition-transform">
+            </Link>
+            <Link to="/register" className="text-center text-[15px] font-extrabold bg-[#008081] text-white py-4 rounded-2xl shadow-lg shadow-[#008081]/30 active:scale-95 transition-transform">
               Inizia Ora
-            </a>
+            </Link>
           </div>
         </div>
       )}

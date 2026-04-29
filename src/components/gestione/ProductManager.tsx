@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, ChevronRight, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Trash2, Save, X, Check, GripVertical, Search, ImageOff, AlertTriangle } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, ChevronUp, ChevronLeft, Edit2, Eye, EyeOff, Trash2, Save, X, Check, GripVertical, Search, ImageOff, AlertTriangle } from 'lucide-react';
 import { createBackupSnapshot } from '../../lib/backup';
 import {
     DndContext,
@@ -49,6 +49,7 @@ interface Props {
     products: Product[];
     onRefresh: () => void;
     onBack: () => void;
+    onMacroSelect?: (m: string | null) => void;
 }
 
 // ── Inline editable cell ──────────────────────────────────────────────────────
@@ -262,12 +263,13 @@ function SortableRow({
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ProductManager({ restaurantId, categories: initialCategories, products: initialProducts, onRefresh, onBack }: Props) {
+export default function ProductManager({ restaurantId, categories: initialCategories, products: initialProducts, onRefresh, onBack, onMacroSelect }: Props) {
     const { showToast, ToastContainer } = useToast();
 
     const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [selectedMacroCategory, setSelectedMacroCategory] = useState<string | null>(null);
+    const [selectedMacroCategory, _setSelectedMacro] = useState<string | null>(null);
+    const setSelectedMacroCategory = (m: string | null) => { _setSelectedMacro(m); onMacroSelect?.(m); };
     const [expandedSubCats, setExpandedSubCats] = useState<Record<string, boolean>>({});
     const [localCategories, setLocalCategories] = useState<Category[]>(initialCategories);
     const [localProducts, setLocalProducts] = useState<Product[]>(initialProducts);
@@ -540,7 +542,7 @@ export default function ProductManager({ restaurantId, categories: initialCatego
     };
 
     // ── Computed data ─────────────────────────────────────────────────────────
-    const macroSections = Array.from(new Set(localCategories.map(c => c.section)));
+    const macroSections: string[] = Array.from(new Set(localCategories.map(c => c.section)));
     const categoryMap = new Map<string, Category>(localCategories.map(c => [c.id, c]));
 
     const macroProdsForSelected = selectedMacroCategory
@@ -559,6 +561,21 @@ export default function ProductManager({ restaurantId, categories: initialCatego
 
     return (
         <div className="space-y-4 animate-fade-in pb-24 relative w-full max-w-3xl mx-auto">
+
+            {/* ── Mobile topbar when inside a macro (Gestione header is hidden) ── */}
+            {selectedMacroCategory && (
+                <div className="md:hidden sticky top-0 z-20 bg-white dark:bg-[#141414] border-b border-gray-100 dark:border-gray-800 flex items-center h-[56px] px-4 gap-3 -mx-4 flex-shrink-0">
+                    <button
+                        onClick={() => setSelectedMacroCategory(null)}
+                        className="w-[34px] h-[34px] rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                    >
+                        <ChevronLeft className="w-4 h-4 text-[#374151] dark:text-gray-300" />
+                    </button>
+                    <h2 className="flex-1 font-bold text-[17px] text-[#111827] dark:text-white truncate">
+                        {selectedMacroCategory}
+                    </h2>
+                </div>
+            )}
 
             {/* ── Full Edit Drawer ─────────────────────────────────────────── */}
             {editingProduct && (
@@ -645,7 +662,7 @@ export default function ProductManager({ restaurantId, categories: initialCatego
 
             {/* ── Navigation Header ──────────────────────────────────────── */}
             <div className="sticky top-0 bg-[#FBFBFB] dark:bg-[#1A1A1A] z-20 pb-3 pt-1 space-y-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between gap-3">
+                <div className="hidden md:flex items-center justify-between gap-3">
                     <button
                         onClick={() => selectedMacroCategory ? setSelectedMacroCategory(null) : onBack()}
                         className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-[#008081] transition-colors font-bold text-sm bg-white dark:bg-[#262626] px-4 py-2 rounded-full shadow-sm border border-gray-200 dark:border-gray-800"

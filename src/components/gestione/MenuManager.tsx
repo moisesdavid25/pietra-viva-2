@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon, LayoutGrid, Calendar, Tag, X, Sliders, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, List, Save, Trash2, ArrowRight, Eye, EyeOff, Percent, Image as ImageIcon, LayoutGrid, Calendar, Tag, X, Sliders, ShieldAlert, Search, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import db from '../../db';
 import ImageCropperModal from '../ImageCropperModal';
@@ -12,6 +12,7 @@ interface Props {
     onOpenListino: () => void;
     onOpenSettings: () => void;
     onOpenPersonalizzazione: () => void;
+    onViewChange?: (v: string) => void;
 }
 
 interface Category {
@@ -47,8 +48,24 @@ const slideVariants = {
     exit: { x: -40, opacity: 0, transition: { duration: 0.16, ease: 'easeIn' } },
 };
 
-export default function MenuManager({ restaurantId, onOpenListino, onOpenSettings, onOpenPersonalizzazione }: Props) {
-    const [view, setView] = useState<ViewState>('hub');
+function SubHeader({ title, onBack, right }: { title: string; onBack: () => void; right?: React.ReactNode }) {
+    return (
+        <div className="sticky top-0 z-20 bg-white dark:bg-[#141414] border-b border-gray-100 dark:border-gray-800 flex items-center h-[56px] px-4 gap-3 flex-shrink-0 -mx-4">
+            <button
+                onClick={onBack}
+                className="w-[34px] h-[34px] rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 flex-shrink-0"
+            >
+                <ChevronLeft className="w-4 h-4 text-[#374151] dark:text-gray-300" />
+            </button>
+            <h2 className="flex-1 font-bold text-[17px] text-[#111827] dark:text-white truncate">{title}</h2>
+            {right && <div className="flex-shrink-0">{right}</div>}
+        </div>
+    );
+}
+
+export default function MenuManager({ restaurantId, onOpenListino, onOpenSettings, onOpenPersonalizzazione, onViewChange }: Props) {
+    const [view, _setView] = useState<ViewState>('hub');
+    const setView = (v: ViewState) => { _setView(v); onViewChange?.(v); };
     const [loading, setLoading] = useState(true);
     const { showToast, ToastContainer } = useToast();
 
@@ -59,6 +76,8 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
     const [editingBundle, setEditingBundle] = useState<MenuBundle | null>(null);
     const [productsWithoutPhoto, setProductsWithoutPhoto] = useState(0);
     const [totalProducts, setTotalProducts] = useState(0);
+    const [productsPerSection, setProductsPerSection] = useState<Map<string, number>>(new Map());
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Pending delete bundle (undo pattern)
     const [pendingDeleteBundle, setPendingDeleteBundle] = useState<number | null>(null);
@@ -79,7 +98,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             db.from('categories').select('id,name,section,position').eq('restaurant_id', restaurantId).order('position', { ascending: true }),
             db.from('settings').select('key, value').eq('restaurant_id', restaurantId),
             db.from('menus').select('id,type,price,entree,primo,secondo,contorno,desert,bevande').eq('restaurant_id', restaurantId).order('id'),
-            db.from('products').select('id,image_url').eq('restaurant_id', restaurantId),
+            db.from('products').select('id,image_url,category_id').eq('restaurant_id', restaurantId),
         ]);
 
         if (cats) setCategories(cats);
@@ -92,6 +111,15 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
         if (prods) {
             setTotalProducts(prods.length);
             setProductsWithoutPhoto(prods.filter((p: any) => !p.image_url || p.image_url === '').length);
+            if (cats) {
+                const catToSection = new Map((cats as Category[]).map((c: Category) => [c.id, c.section]));
+                const pps = new Map<string, number>();
+                (prods as any[]).forEach(p => {
+                    const section = catToSection.get(p.category_id);
+                    if (section) pps.set(section, (pps.get(section) || 0) + 1);
+                });
+                setProductsPerSection(pps);
+            }
         }
         setLoading(false);
     };
@@ -309,160 +337,176 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 HUB — Command Center
             ══════════════════════════════════════════════════════════ */}
             {view === 'hub' && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 max-w-2xl mx-auto">
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="pb-28 max-w-2xl mx-auto">
 
-                    {/* ── Header ── */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Menù Diretto</h2>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Catalogo & Prezzi</p>
+                    {/* ── Search ── */}
+                    <div className="pt-3 pb-0">
+                        <div className="flex items-center gap-2.5 bg-white dark:bg-[#1C1C1C] border border-[#e5e7eb] dark:border-gray-700 rounded-xl px-3.5 py-2.5">
+                            <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Cerca prodotto nel menù..."
+                                className="flex-1 text-[13.5px] bg-transparent text-gray-700 dark:text-gray-300 placeholder:text-gray-400 outline-none font-medium"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
+                    </div>
+
+                    {/* ── Stat chips ── */}
+                    <div className="flex gap-2.5 overflow-x-auto pt-3.5 pb-1 scrollbar-hide">
+                        {[
+                            { num: macroSections.length, label: 'Reparti', iconBg: '#eff6ff', icon: <LayoutGrid className="w-4 h-4" style={{ color: '#3b82f6' }} />, numColor: '#111827' },
+                            { num: hiddenSections, label: 'Nascosti', iconBg: '#fff7ed', icon: <EyeOff className="w-4 h-4" style={{ color: '#f97316' }} />, numColor: hiddenSections > 0 ? '#f97316' : '#111827' },
+                            { num: productsWithoutPhoto, label: 'Senza foto', iconBg: '#fff1f2', icon: <ImageIcon className="w-4 h-4" style={{ color: '#ef4444' }} />, numColor: productsWithoutPhoto > 0 ? '#ef4444' : '#111827', onClick: onOpenListino },
+                            { num: totalProducts, label: 'Prodotti', iconBg: '#f0fdf4', icon: <BarChart3 className="w-4 h-4" style={{ color: '#16a34a' }} />, numColor: '#16a34a' },
+                        ].map(chip => (
+                            <button
+                                key={chip.label}
+                                onClick={chip.onClick}
+                                disabled={!chip.onClick}
+                                className="flex items-center gap-2.5 bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-xl px-3.5 py-2.5 flex-shrink-0 transition-shadow hover:shadow-sm active:shadow-md disabled:cursor-default"
+                            >
+                                <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: chip.iconBg }}>
+                                    {chip.icon}
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-[20px] font-black leading-none" style={{ color: chip.numColor }}>{chip.num}</div>
+                                    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-[0.6px]">{chip.label}</div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── Reparti ── */}
+                    <div className="mt-5">
+                        <div className="flex items-center justify-between mb-2.5">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[1.2px]">Reparti</p>
+                        </div>
+
+                        <div className="space-y-2.5">
+                            {macroSections.length === 0 ? (
+                                <div className="text-center py-16 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                                    <p className="text-4xl mb-3">🍽️</p>
+                                    <p className="font-bold text-gray-400 text-sm">Nessun reparto configurato.</p>
+                                    <p className="text-xs text-gray-400 mt-1">Usa il pulsante + per creare il primo reparto.</p>
+                                </div>
+                            ) : macroSections
+                                .filter(s => !searchQuery.trim() || s.toLowerCase().includes(searchQuery.toLowerCase()))
+                                .map(section => {
+                                    const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
+                                    const visibilityKey = `visibility_${sectionSlug}`;
+                                    const sectionKey = `home_image_${sectionSlug}`;
+                                    const isVisible = sectionSettings[visibilityKey] !== 'false';
+                                    const thumbSrc = sectionSettings[sectionKey] || null;
+                                    const catCount = categories.filter(c => c.section === section).length;
+                                    const prodCount = productsPerSection.get(section) || 0;
+
+                                    return (
+                                        <div
+                                            key={section}
+                                            className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-2xl overflow-hidden flex items-center cursor-pointer active:shadow-lg transition-shadow"
+                                            onClick={onOpenListino}
+                                        >
+                                            {/* Thumbnail 80×80 */}
+                                            <div className="relative flex-shrink-0 w-20 h-20">
+                                                {thumbSrc ? (
+                                                    <img src={thumbSrc} alt={section} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-[#e5e7eb] to-[#d1d5db] dark:from-[#2a2a2a] dark:to-[#1C1C1C] flex items-center justify-center">
+                                                        <ImageIcon className="w-6 h-6 text-[#9ca3af]" />
+                                                    </div>
+                                                )}
+                                                {!thumbSrc && (
+                                                    <div className="absolute top-1.5 left-1.5 bg-[#fef3c7] text-[#d97706] text-[8px] font-bold px-1.5 py-0.5 rounded leading-none">
+                                                        SENZA FOTO
+                                                    </div>
+                                                )}
+                                                <input
+                                                    type="file" accept="image/*" className="hidden"
+                                                    ref={el => { categoryImageRefs.current[section] = el; }}
+                                                    onChange={e => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) { e.target.value = ''; handleSectionImageUpload(file, section); }
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); categoryImageRefs.current[section]?.click(); }}
+                                                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                                >
+                                                    <ImageIcon className="w-2.5 h-2.5" />
+                                                </button>
+                                            </div>
+
+                                            {/* Info */}
+                                            <div className="flex-1 px-3 py-3.5 min-w-0">
+                                                <p className="font-bold text-[15px] text-[#111827] dark:text-white truncate">{section}</p>
+                                                <p className="text-[12px] text-[#9ca3af] font-medium mt-0.5">
+                                                    {catCount} {catCount === 1 ? 'sezione' : 'sezioni'} · {prodCount} prodotti
+                                                </p>
+                                            </div>
+
+                                            {/* Toggle + chevron */}
+                                            <div className="flex flex-col items-center gap-2.5 pr-4 flex-shrink-0">
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); handleVisibilityToggle(section); }}
+                                                    className={`w-[42px] h-[24px] rounded-full relative transition-colors duration-200 flex-shrink-0 ${isVisible ? 'bg-[#0d9488]' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                                >
+                                                    <span className={`absolute top-[2px] w-[20px] h-[20px] rounded-full bg-white shadow-sm transition-transform duration-200 ${isVisible ? 'right-[2px]' : 'left-[2px]'}`} />
+                                                </button>
+                                                <ChevronRight className="w-4 h-4 text-[#d1d5db]" />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    </div>
+
+                    {/* ── Strumenti Menù ── */}
+                    <div className="mt-6">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[1.2px] mb-3">Strumenti Menù</p>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {[
+                                { label: 'Listino', sub: `${totalProducts} prodotti`, bg: '#eff6ff', icon: <List className="w-[18px] h-[18px]" style={{ color: '#3b82f6' }} />, onClick: onOpenListino },
+                                { label: 'Menù del Giorno', sub: `${bundles.length} bundle`, bg: '#fefce8', icon: <Calendar className="w-[18px] h-[18px]" style={{ color: '#ca8a04' }} />, onClick: () => setView('bundle-editor') },
+                                { label: 'Extra & Upsell', sub: 'Suggerimenti rapidi', bg: '#faf5ff', icon: <Sliders className="w-[18px] h-[18px]" style={{ color: '#9333ea' }} />, onClick: () => setView('extras') },
+                                { label: 'Allergeni', sub: 'Reg. UE 1169/2011', bg: '#fff7ed', icon: <ShieldAlert className="w-[18px] h-[18px]" style={{ color: '#f97316' }} />, onClick: () => setView('allergens') },
+                            ].map(tool => (
+                                <button
+                                    key={tool.label}
+                                    onClick={tool.onClick}
+                                    className="bg-white dark:bg-[#1C1C1C] border border-[#e8eaed] dark:border-white/5 rounded-[14px] p-3.5 flex items-center gap-2.5 text-left transition-shadow hover:shadow-sm active:scale-[0.98]"
+                                >
+                                    <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: tool.bg }}>
+                                        {tool.icon}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-[13px] text-[#111827] dark:text-white leading-tight">{tool.label}</p>
+                                        <p className="text-[10.5px] text-[#9ca3af] mt-0.5">{tool.sub}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── FAB mobile / Button desktop ── */}
+                    <button
+                        onClick={() => { resetWizard(); setView('wizard-1'); }}
+                        className="md:hidden fixed bottom-[100px] right-4 bg-[#0d9488] text-white rounded-[50px] px-5 py-3.5 flex items-center gap-2 font-bold text-[14px] shadow-lg shadow-[#0d9488]/40 z-50 active:scale-95 transition-transform"
+                    >
+                        <Plus className="w-4 h-4" /> Nuovo Reparto
+                    </button>
+                    <div className="hidden md:flex justify-start mt-5">
                         <button
                             onClick={() => { resetWizard(); setView('wizard-1'); }}
                             className="flex items-center gap-2 bg-[#008081] text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-md shadow-[#008081]/20 hover:bg-teal-600 hover:-translate-y-0.5 active:scale-95 transition-all"
                         >
                             <Plus className="w-4 h-4" /> Nuovo Reparto
-                        </button>
-                    </div>
-
-                    {/* ── KPI Strip ── */}
-                    <div className="grid grid-cols-3 gap-3">
-                        {[
-                            { value: macroSections.length, label: 'Reparti', color: 'text-[#008081]', bg: 'bg-teal-50 dark:bg-teal-900/10' },
-                            { value: hiddenSections, label: 'Nascosti', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/10' },
-                            { value: productsWithoutPhoto, label: 'Senza Foto', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/10' },
-                        ].map(({ value, label, color, bg }) => (
-                            <div key={label} className={`${bg} rounded-2xl p-4 text-center border border-white dark:border-white/5`}>
-                                <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* ── Section Rows ── */}
-                    <div className="space-y-2">
-                        {macroSections.length === 0 ? (
-                            <div className="text-center py-16 bg-white dark:bg-[#1C1C1C] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                                <p className="text-4xl mb-3">🍽️</p>
-                                <p className="font-bold text-gray-400 text-sm">Nessun reparto configurato.</p>
-                                <p className="text-xs text-gray-400 mt-1">Crea il primo reparto del tuo menù.</p>
-                            </div>
-                        ) : macroSections.map(section => {
-                            const sectionSlug = section.toLowerCase().replace(/[^a-z0-9]+/g, '');
-                            const visibilityKey = `visibility_${sectionSlug}`;
-                            const sectionKey = `home_image_${sectionSlug}`;
-                            const isVisible = sectionSettings[visibilityKey] !== 'false';
-                            const thumbSrc = sectionSettings[sectionKey] || null;
-                            const catCount = categories.filter(c => c.section === section).length;
-
-                            return (
-                                <div key={section} className="bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl flex items-center gap-3 px-4 py-3 shadow-sm hover:shadow-md transition-all group">
-
-                                    {/* Section thumbnail + upload */}
-                                    <div className="relative flex-shrink-0">
-                                        {thumbSrc ? (
-                                            <img src={thumbSrc} alt={section} className="w-11 h-11 rounded-xl object-cover border border-gray-100 dark:border-gray-700" />
-                                        ) : (
-                                            <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-300">
-                                                <ImageIcon className="w-4 h-4" />
-                                            </div>
-                                        )}
-                                        <input
-                                            type="file" accept="image/*" className="hidden"
-                                            ref={el => { categoryImageRefs.current[section] = el; }}
-                                            onChange={e => {
-                                                const file = e.target.files?.[0];
-                                                if (file) { e.target.value = ''; handleSectionImageUpload(file, section); }
-                                            }}
-                                        />
-                                        <button
-                                            onClick={() => categoryImageRefs.current[section]?.click()}
-                                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#008081] text-white flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity hover:bg-teal-600"
-                                        >
-                                            <ImageIcon className="w-2.5 h-2.5" />
-                                        </button>
-                                    </div>
-
-                                    {/* Section info */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wide truncate">{section}</p>
-                                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{catCount} {catCount === 1 ? 'sezione' : 'sezioni'}</p>
-                                    </div>
-
-                                    {/* Visibility toggle */}
-                                    <button
-                                        onClick={() => handleVisibilityToggle(section)}
-                                        title={isVisible ? 'Nascondi reparto' : 'Mostra reparto'}
-                                        className={`w-10 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0 ${isVisible ? 'bg-[#008081]' : 'bg-gray-200 dark:bg-gray-700'}`}
-                                    >
-                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${isVisible ? 'translate-x-4' : ''}`} />
-                                    </button>
-
-                                    {/* Drill into listino */}
-                                    <button
-                                        onClick={onOpenListino}
-                                        className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-[#262626] text-gray-400 hover:text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 flex items-center justify-center transition-colors flex-shrink-0"
-                                        title="Gestisci prodotti"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* ── Action Modules ── */}
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                        <button
-                            onClick={onOpenListino}
-                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-blue-200 dark:hover:border-blue-900/30 hover:shadow-md transition-all text-left"
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                <List className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Listino</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">{totalProducts} prodotti</p>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setView('bundle-editor')}
-                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-amber-200 dark:hover:border-amber-900/30 hover:shadow-md transition-all text-left"
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                <Calendar className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Menù del Giorno</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">{bundles.length} bundle</p>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setView('extras')}
-                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-purple-200 dark:hover:border-purple-900/30 hover:shadow-md transition-all text-left"
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                <Sliders className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Extra & Upsell</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">Suggerimenti rapidi</p>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setView('allergens')}
-                            className="group bg-white dark:bg-[#1C1C1C] border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:border-amber-200 dark:hover:border-amber-900/30 hover:shadow-md transition-all text-left"
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                <ShieldAlert className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-black text-sm text-gray-900 dark:text-white leading-tight">Allergeni</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">Reg. UE 1169/2011</p>
-                            </div>
                         </button>
                     </div>
 
@@ -476,24 +520,18 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 {view === 'bundle-editor' && (
                     <motion.div key="bundle" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto space-y-4">
 
-                        <button onClick={() => { setEditingBundle(null); setView('hub'); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm mb-2">
-                            <ChevronLeft className="w-5 h-5" /> Menù Diretto
-                        </button>
-
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-2xl font-black text-[#1A1A1A] dark:text-white tracking-tight">Menù del Giorno</h2>
-                                <p className="text-xs text-gray-400 font-semibold mt-0.5">Bundle fissi con composizione e prezzo</p>
-                            </div>
-                            {!editingBundle && (
+                        <SubHeader
+                            title="Menù del Giorno"
+                            onBack={() => { setEditingBundle(null); setView('hub'); }}
+                            right={!editingBundle ? (
                                 <button
                                     onClick={() => setEditingBundle(emptyBundle())}
                                     className="flex items-center gap-1.5 bg-[#008081] text-white font-bold px-3 py-2 rounded-xl text-sm shadow-md hover:bg-teal-600 transition-all"
                                 >
                                     <Plus className="w-4 h-4" /> Nuovo
                                 </button>
-                            )}
-                        </div>
+                            ) : undefined}
+                        />
 
                         {/* Undo snackbar */}
                         <AnimatePresence>
@@ -642,9 +680,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             <AnimatePresence mode="wait">
                 {view === 'wizard-1' && (
                     <motion.div key="w1" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
-                        <button onClick={() => setView('hub')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                            <ChevronLeft className="w-5 h-5" /> Indietro
-                        </button>
+                        <SubHeader title="Nuovo Reparto" onBack={() => setView('hub')} />
                         {renderProgressBar(1)}
                         <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-6">
                             <div className="text-center">
@@ -669,9 +705,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 {/* Step 2: Sub-Categories */}
                 {view === 'wizard-2' && (
                     <motion.div key="w2" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
-                        <button onClick={() => setView('wizard-1')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                            <ChevronLeft className="w-5 h-5" /> Indietro
-                        </button>
+                        <SubHeader title="Le Sezioni" onBack={() => setView('wizard-1')} />
                         {renderProgressBar(2)}
                         <div className="bg-white dark:bg-[#1C1C1C] p-8 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm space-y-6">
                             <div className="text-center">
@@ -709,9 +743,7 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
                 {/* Step 3: First Product */}
                 {view === 'wizard-3' && (
                     <motion.div key="w3" variants={slideVariants} initial="initial" animate="animate" exit="exit" className="max-w-xl mx-auto">
-                        <button onClick={() => setView('wizard-2')} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm">
-                            <ChevronLeft className="w-5 h-5" /> Indietro
-                        </button>
+                        <SubHeader title="Aggiungi Prodotti" onBack={() => setView('wizard-2')} />
                         {renderProgressBar(3)}
                         <div className="space-y-4">
                             <div className="text-center mb-2">
@@ -793,18 +825,14 @@ export default function MenuManager({ restaurantId, onOpenListino, onOpenSetting
             ══════════════════════════════════════════════════════════ */}
             {view === 'extras' && (
                 <div className="space-y-4">
-                    <button onClick={() => setView('hub')} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm mb-2">
-                        <ChevronLeft className="w-5 h-5" /> Menù Diretto
-                    </button>
+                    <SubHeader title="Extra & Upsell" onBack={() => setView('hub')} />
                     <ExtrasManager restaurantId={restaurantId} />
                 </div>
             )}
 
             {view === 'allergens' && (
                 <div className="space-y-4">
-                    <button onClick={() => setView('hub')} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-bold text-sm mb-2">
-                        <ChevronLeft className="w-5 h-5" /> Menù Diretto
-                    </button>
+                    <SubHeader title="Allergeni" onBack={() => setView('hub')} />
                     <AllergensManager restaurantId={restaurantId} />
                 </div>
             )}
