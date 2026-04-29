@@ -1,13 +1,14 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Gift, Users, TrendingUp, ScanLine, ArrowLeft, X, Smartphone, Mail, CreditCard } from 'lucide-react';
+import { Gift, Users, TrendingUp, ScanLine, ArrowLeft, X, Smartphone, Mail, CreditCard, Settings2 } from 'lucide-react';
 import db from '../../db';
 import WaiterScanner from './WaiterScanner';
+import FidelityConfigurator from './FidelityConfigurator';
 
 const RewardManager = lazy(() => import('./RewardManager'));
 const ClientClassification = lazy(() => import('./ClientClassification'));
 const FidelityStrategy = lazy(() => import('./FidelityStrategy'));
 
-interface Props { restaurantId: string; }
+interface Props { restaurantId: string; onViewChange?: (v: string | null) => void; }
 
 interface Customer {
   id: string; name: string; whatsapp: string; auth_user_id: string;
@@ -26,7 +27,7 @@ const Spinner = () => (
   </div>
 );
 
-export default function CRMAndAudience({ restaurantId }: Props) {
+export default function CRMAndAudience({ restaurantId, onViewChange }: Props) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,10 @@ export default function CRMAndAudience({ restaurantId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [showOwnerCarousel, setShowOwnerCarousel] = useState(() => !localStorage.getItem(`fidelity_owner_welcome_${restaurantId}`));
   const [ownerSlide, setOwnerSlide] = useState(0);
+  const [showConfigurator, setShowConfigurator] = useState(false);
+
+  const openConfigurator = () => { setShowConfigurator(true); onViewChange?.('configuratore'); };
+  const closeConfigurator = () => { setShowConfigurator(false); onViewChange?.(null); fetchData(); };
 
   const dismissOwnerCarousel = () => {
     localStorage.setItem(`fidelity_owner_welcome_${restaurantId}`, '1');
@@ -77,6 +82,16 @@ export default function CRMAndAudience({ restaurantId }: Props) {
   const greenRev = (greenCohort.reduce((s, c) => s + c.total_points, 0) / 10);
   const goldRev = (goldCohort.reduce((s, c) => s + c.total_points, 0) / 10);
   const reserveRev = (reserveCohort.reduce((s, c) => s + c.total_points, 0) / 10);
+
+  if (showConfigurator) {
+    return (
+      <FidelityConfigurator
+        restaurantId={restaurantId}
+        onBack={closeConfigurator}
+        onSaved={closeConfigurator}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 animate-fade-in relative">
@@ -192,6 +207,20 @@ export default function CRMAndAudience({ restaurantId }: Props) {
                   <p className="text-sm font-bold text-gray-500">Analisi comportamentale e Wallet retention.</p>
                </div>
             </div>
+
+            {/* ── Configura Programma CTA ── */}
+            <button
+              type="button"
+              onClick={openConfigurator}
+              className="w-full flex items-center gap-4 bg-gradient-to-r from-[#0d9488] to-[#0f766e] text-white rounded-2xl px-5 py-4 text-left hover:opacity-95 active:scale-[0.99] transition-all shadow-lg shadow-[#0d9488]/25"
+            >
+              <div className="w-[46px] h-[46px] rounded-[14px] bg-white/20 flex items-center justify-center flex-shrink-0 text-[22px]">🎯</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-[15px] leading-tight">Configura Programma Fedeltà</p>
+                <p className="text-[12px] text-white/75 mt-0.5">Premi, ratio punti, livelli e ROI live</p>
+              </div>
+              <Settings2 className="w-5 h-5 text-white/60 flex-shrink-0" />
+            </button>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white dark:bg-[#1C1C1C] p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">

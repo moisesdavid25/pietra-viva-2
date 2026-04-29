@@ -58,6 +58,7 @@ export default function Gestione() {
   const [settingsView, setSettingsView] = useState<string>('list');
   const [menuManagerView, setMenuManagerView] = useState<string>('hub');
   const [productMacroView, setProductMacroView] = useState<string | null>(null);
+  const [fidelizzazioneView, setFidelizzazioneView] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const location = useLocation();
@@ -112,6 +113,7 @@ export default function Gestione() {
     else {
       if (item.id !== 'settings') setSettingsView('list');
       if (item.id !== 'products') { setMenuManagerView('hub'); setProductMacroView(null); }
+      if (item.id !== 'fidelizzazione') setFidelizzazioneView(null);
       setActiveTab(item.id as any);
     }
   };
@@ -199,7 +201,8 @@ export default function Gestione() {
         <header className={`md:hidden sticky top-0 z-50 bg-white dark:bg-[#141414] border-b border-gray-100 dark:border-gray-800 items-center h-[56px] px-4 ${
           (activeTab === 'settings' && settingsView !== 'list') ||
           (activeTab === 'products' && productView === 'hub' && menuManagerView !== 'hub') ||
-          (activeTab === 'products' && productView === 'listino' && productMacroView !== null)
+          (activeTab === 'products' && productView === 'listino' && productMacroView !== null) ||
+          (activeTab === 'fidelizzazione' && fidelizzazioneView !== null)
             ? 'hidden' : 'flex'
         }`}>
 
@@ -523,7 +526,10 @@ export default function Gestione() {
           )}
 
           {activeTab === 'fidelizzazione' && restaurantId && (
-            <Fidelizzazione restaurantId={restaurantId} />
+            <Fidelizzazione
+              restaurantId={restaurantId}
+              onViewChange={(v) => setFidelizzazioneView(v)}
+            />
           )}
 
           {activeTab === 'personalizzazione' && restaurantId && (
