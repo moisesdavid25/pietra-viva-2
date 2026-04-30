@@ -10,6 +10,7 @@ interface UseRestaurantAuthReturn {
   restaurantName: string;
   setRestaurantName: (name: string) => void;
   subscriptionTier: string;
+  subscriptionStatus: string | null;
   handleLogout: () => Promise<void>;
   handleDeleteAccount: (onError: (msg: string) => void) => Promise<void>;
 }
@@ -22,6 +23,7 @@ export function useRestaurantAuth(): UseRestaurantAuthReturn {
   const [restaurantSlug, setRestaurantSlug] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
   const [subscriptionTier, setSubscriptionTier] = useState('trial');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
 
   useEffect(() => {
     db.auth.getUser().then(({ data }) => {
@@ -38,7 +40,7 @@ export function useRestaurantAuth(): UseRestaurantAuthReturn {
 
       setIsAuthenticated(true);
       db.from('restaurants')
-        .select('id, slug, name, subscription_tier')
+        .select('id, slug, name, subscription_tier, subscription_status')
         .eq('user_id', user.id)
         .neq('slug', 'demo')
         .limit(1)
@@ -49,6 +51,7 @@ export function useRestaurantAuth(): UseRestaurantAuthReturn {
             setRestaurantSlug(resData.slug);
             setRestaurantName(resData.name);
             setSubscriptionTier(resData.subscription_tier || 'trial');
+            setSubscriptionStatus(resData.subscription_status ?? null);
           } else {
             navigate('/onboarding');
           }
@@ -118,6 +121,7 @@ export function useRestaurantAuth(): UseRestaurantAuthReturn {
     restaurantName,
     setRestaurantName,
     subscriptionTier,
+    subscriptionStatus,
     handleLogout,
     handleDeleteAccount,
   };

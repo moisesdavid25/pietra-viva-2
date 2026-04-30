@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { SessionWarningModal } from '../components/SessionWarningModal';
+import SubscriptionGate from '../components/SubscriptionGate';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropperModal from '../components/ImageCropperModal';
 import { useToast } from '../components/Toast';
@@ -41,8 +42,15 @@ export default function Gestione() {
     restaurantSlug,
     restaurantName,
     subscriptionTier,
+    subscriptionStatus,
     handleLogout,
   } = useRestaurantAuth();
+
+  // Statuses that block dashboard access (Stripe lifecycle states)
+  const BLOCKED_STATUSES = ['canceled', 'unpaid', 'incomplete_expired'];
+  const subscriptionBlocked =
+    subscriptionStatus !== null &&
+    BLOCKED_STATUSES.includes(subscriptionStatus);
 
   // ── Hook 2: All Supabase data fetching ───────────────────────────────────
   const {
@@ -139,6 +147,21 @@ export default function Gestione() {
       <div className="bg-[#FBFBFB] dark:bg-[#1A1A1A] font-sans min-h-screen flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-[#008080] border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  // ── Subscription gate ─────────────────────────────────────────────────────
+  if (subscriptionBlocked) {
+    return (
+      <SubscriptionGate
+        status={subscriptionStatus!}
+        tier={subscriptionTier}
+        onUpgrade={() => {
+          // Navigate to billing settings — will work once subscription resolves
+          window.location.href = '/gestione#settings-fatture';
+        }}
+        onLogout={handleLogout}
+      />
     );
   }
 
