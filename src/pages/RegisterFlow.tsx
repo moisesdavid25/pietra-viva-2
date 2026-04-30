@@ -173,8 +173,9 @@ export default function RegisterFlow() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ priceId: plan.priceId, userEmail: email }),
             });
-            if (!res.ok) throw new Error('Errore nella connessione con Stripe.');
-            const { url, error: apiErr } = await res.json();
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || `Errore API (${res.status})`);
+            const { url, error: apiErr } = data;
             if (apiErr) throw new Error(apiErr);
             if (url) { window.location.href = url; return; }
             throw new Error('Nessun URL ricevuto da Stripe.');

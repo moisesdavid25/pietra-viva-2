@@ -1,7 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkRateLimit, getClientIp } from './_rateLimit';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -16,12 +15,27 @@ const PRICE_TO_TIER: Record<string, string> = {
   'price_1TJu7u1OtlBFS4a5zRuVahso': 'annuale',
 };
 
-// ── Extract and verify the Supabase JWT from the Authorization header ────────
+// ── Inline rate limiter (no external imports to avoid Vercel bundling issues) ─
+const rlStore = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  const b = rlStore.get(key);
+  if (!b || now > b.resetAt) { rlStore.set(key, { count: 1, resetAt: now + windowMs }); return true; }
+  if (b.count >= max) return false;
+  b.count += 1;
+  return true;
+}
+function clientIp(req: VercelRequest): string {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return (Array.isArray(fwd) ? fwd[0] : fwd.split(',')[0]).trim();
+  return (req.headers['x-real-ip'] as string | undefined) ?? 'unknown';
+}
+
+// ── JWT verification ──────────────────────────────────────────────────────────
 async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return null;
+  const { data: { user }, error } = await supabase.auth.getUser(auth.slice(7));
   if (error || !user) return null;
   return user.id;
 }
@@ -29,9 +43,8 @@ async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
 
-  // Fix #8 — Rate limit: max 10 checkout attempts per IP per 10 minutes
-  const ip = getClientIp(req.headers as Record<string, string | string[] | undefined>);
-  if (!checkRateLimit(`checkout:${ip}`, 10, 10 * 60 * 1000)) {
+  // Rate limit: max 10 checkout attempts per IP per 10 minutes
+  if (!rateLimit(`checkout:${clientIp(req)}`, 10, 10 * 60 * 1000)) {
     return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche minuto.' });
   }
 
@@ -51,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isRegistration = !restaurantId;
   const appUrl = process.env.APP_URL || 'https://leomenu.it';
 
-  // ── For upgrade flows: verify the caller owns the restaurant ─────────────
+  // For upgrade flows only: verify the caller owns the restaurant
   if (!isRegistration) {
     const userId = await getAuthenticatedUserId(req);
     if (!userId) {
@@ -59,9 +72,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const { data: restaurant, error: ownershipErr } = await supabase
       .from('restaurants')
-      .select('id, user_id')
+      .select('id')
       .eq('id', restaurantId)
-      .eq('user_id', userId)   // ← ownership check
+      .eq('user_id', userId)
       .maybeSingle();
     if (ownershipErr || !restaurant) {
       return res.status(403).json({ error: 'Forbidden: restaurant not owned by this user' });
@@ -72,14 +85,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let customerId: string;
 
     if (isRegistration) {
-      // New registration: create Stripe customer only (no Supabase account yet)
       const customer = await stripe.customers.create({
         email: userEmail,
         metadata: { registration_pending: 'true' },
       });
       customerId = customer.id;
     } else {
-      // Upgrade: reuse existing Stripe customer or create one
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('stripe_customer_id')
