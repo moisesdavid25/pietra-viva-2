@@ -15,39 +15,64 @@ const PRICE_TO_TIER: Record<string, string> = {
   'price_1TJu7u1OtlBFS4a5zRuVahso': 'annuale',
 };
 
+// ── Extract and verify the Supabase JWT from the Authorization header ────────
+async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
 
   const { priceId, restaurantId, userEmail } = req.body as {
     priceId: string;
-    restaurantId?: string;   // optional — absent on new registration
+    restaurantId?: string;
     userEmail: string;
   };
 
   if (!priceId || !userEmail) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-
   if (!PRICE_TO_TIER[priceId]) {
     return res.status(400).json({ error: 'Invalid price ID' });
   }
 
-  const appUrl = process.env.APP_URL || 'https://leomenu.it';
   const isRegistration = !restaurantId;
+  const appUrl = process.env.APP_URL || 'https://leomenu.it';
+
+  // ── For upgrade flows: verify the caller owns the restaurant ─────────────
+  if (!isRegistration) {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { data: restaurant, error: ownershipErr } = await supabase
+      .from('restaurants')
+      .select('id, user_id')
+      .eq('id', restaurantId)
+      .eq('user_id', userId)   // ← ownership check
+      .maybeSingle();
+    if (ownershipErr || !restaurant) {
+      return res.status(403).json({ error: 'Forbidden: restaurant not owned by this user' });
+    }
+  }
 
   try {
     let customerId: string;
 
     if (isRegistration) {
-      // ── New registration: create Stripe customer, DO NOT touch Supabase ──
-      // Account will be created in /register/complete after payment succeeds
+      // New registration: create Stripe customer only (no Supabase account yet)
       const customer = await stripe.customers.create({
         email: userEmail,
         metadata: { registration_pending: 'true' },
       });
       customerId = customer.id;
     } else {
-      // ── Existing restaurant upgrade: reuse customer if present ────────────
+      // Upgrade: reuse existing Stripe customer or create one
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('stripe_customer_id')
@@ -84,7 +109,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? { registration_pending: 'true' }
           : { restaurantId: restaurantId! },
       },
-      // Registration → go to completion page; upgrade → go to gestione
       success_url: isRegistration
         ? `${appUrl}/register/complete?session_id={CHECKOUT_SESSION_ID}`
         : `${appUrl}/gestione?upgrade=success`,
@@ -94,8 +118,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     res.json({ url: session.url });
-  } catch (err: any) {
-    console.error('Stripe checkout error:', err);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Internal server error';
+    console.error('[create-checkout-session]', msg);
+    res.status(500).json({ error: msg });
   }
 }

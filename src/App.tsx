@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Home from './pages/Home';
 import SearchPortal from './pages/SearchPortal';
 import RestaurantHome from './pages/RestaurantHome';
@@ -36,22 +36,27 @@ import ComeFunziona from './pages/Marketing/ComeFunziona';
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  // Prevent flash of protected content before session check completes
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     async function checkAuth() {
-      const { data: { session } } = await db.auth.getSession();
-      if (session?.user) {
-        try {
-          const { data: roleData, error } = await db.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
-          if (error || !roleData) {
-            await db.auth.signOut();
-            return;
-          }
+      try {
+        const { data: { session } } = await db.auth.getSession();
+        if (session?.user) {
+          const { data: roleData, error } = await db
+            .from('user_roles').select('role')
+            .eq('user_id', session.user.id).maybeSingle();
+
+          if (error || !roleData) { await db.auth.signOut(); return; }
 
           if (roleData.role === 'admin') {
             navigate('/leomenu-admin', { replace: true });
           } else if (roleData.role === 'owner') {
-            const { data: resData } = await db.from('restaurants').select('slug').eq('user_id', session.user.id).neq('slug', 'demo').limit(1).maybeSingle();
+            const { data: resData } = await db
+              .from('restaurants').select('slug')
+              .eq('user_id', session.user.id).neq('slug', 'demo')
+              .limit(1).maybeSingle();
             if (resData?.slug) {
               if (window.location.hostname === 'leomenu.it') {
                 window.location.href = 'https://app.leomenu.it/gestione';
@@ -65,13 +70,23 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
           } else {
             navigate('/passport', { replace: true });
           }
-        } catch (e) {
-          await db.auth.signOut();
+          return; // don't setChecking(false) — navigation is in progress
         }
+      } catch {
+        await db.auth.signOut();
       }
+      setChecking(false);
     }
     checkAuth();
   }, [navigate]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f0f]">
+        <div className="w-8 h-8 border-2 border-[#008081] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

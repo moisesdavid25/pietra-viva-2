@@ -5,6 +5,8 @@ import {
   Sliders, Settings2, Plus, Save, Command, Search, Zap, CheckCircle2, AlertCircle,
   LayoutDashboard, QrCode, LogOut, ExternalLink, Receipt,
 } from 'lucide-react';
+import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
+import { SessionWarningModal } from '../components/SessionWarningModal';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropperModal from '../components/ImageCropperModal';
 import { useToast } from '../components/Toast';
@@ -28,6 +30,9 @@ import type { MenuCombo } from '../hooks/useGestioneData';
 export default function Gestione() {
   const navigate = useNavigate();
   const { showToast, ToastContainer } = useToast();
+
+  // ── Inactivity timeout (30 min) ───────────────────────────────────────────
+  const { showWarning, secondsLeft, stayLoggedIn, doLogout } = useInactivityTimeout();
 
   // ── Hook 1: Auth & restaurant profile ────────────────────────────────────
   const {
@@ -561,6 +566,15 @@ export default function Gestione() {
       <div className="md:hidden">
         <BottomNav restaurantSlug={restaurantSlug || ''} />
       </div>
+
+      {/* ── Session inactivity warning ──────────────────────────────────── */}
+      {showWarning && (
+        <SessionWarningModal
+          secondsLeft={secondsLeft}
+          onStay={stayLoggedIn}
+          onLogout={doLogout}
+        />
+      )}
     </>
   );
 }

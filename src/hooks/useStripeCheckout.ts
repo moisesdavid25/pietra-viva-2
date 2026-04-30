@@ -21,9 +21,16 @@ export function useStripeCheckout() {
       const { data: { user } } = await db.auth.getUser();
       if (!user) throw new Error('Non autenticato');
 
+      const { data: { session } } = await db.auth.getSession();
+
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { 'Authorization': `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify({
           priceId: PRICE_IDS[plan],
           restaurantId,

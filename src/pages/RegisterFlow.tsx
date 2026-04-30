@@ -60,8 +60,8 @@ export default function RegisterFlow() {
 
     const navigate = useNavigate();
 
-    // Steps: owner=4, customer=3, oauth-owner=3
-    const totalSteps = isOAuthUser ? 3 : role === 'owner' ? 4 : 3;
+    // Steps: 3 for all roles (owner password collected post-Stripe in RegisterComplete)
+    const totalSteps = 3;
 
     useEffect(() => {
         const savedRole = localStorage.getItem('registerRole');
@@ -152,66 +152,67 @@ export default function RegisterFlow() {
         finally { setLoading(false); }
     };
 
-    // ── Final submit (owner): save to sessionStorage → Stripe (NO Supabase yet)
-    // ── Final submit (customer): create account directly
+    // ── Owner plan submit: save data (NO password) to sessionStorage → Stripe ──
+    // Password is collected AFTER payment in RegisterComplete (security fix)
+    const handleOwnerPlanSubmit = async () => {
+        if (!privacyAccepted) {
+            setError('Devi accettare la Privacy Policy e i Termini per continuare.');
+            return;
+        }
+        setError('');
+        setLoading(true);
+        try {
+            sessionStorage.setItem('pending_registration', JSON.stringify({
+                email, firstName, lastName, phone,
+                businessName, businessType, selectedPlan,
+                // ✅ password intentionally NOT stored here
+            }));
+            const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
+            const res = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priceId: plan.priceId, userEmail: email }),
+            });
+            if (!res.ok) throw new Error('Errore nella connessione con Stripe.');
+            const { url, error: apiErr } = await res.json();
+            if (apiErr) throw new Error(apiErr);
+            if (url) { window.location.href = url; return; }
+            throw new Error('Nessun URL ricevuto da Stripe.');
+        } catch (err: any) {
+            sessionStorage.removeItem('pending_registration');
+            setError(err.message || 'Errore. Riprova.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Final submit (customer only): create account directly ────────────────
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
         try {
-            if (role === 'owner') {
-                // ── Store all data; account is created AFTER Stripe payment ──
-                sessionStorage.setItem('pending_registration', JSON.stringify({
-                    email, password, firstName, lastName, phone,
-                    businessName, businessType, selectedPlan,
-                }));
-
-                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
-                const res = await fetch('/api/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        priceId: plan.priceId,
-                        userEmail: email,
-                        // NO restaurantId → registration flow in the API
-                    }),
-                });
-
-                if (!res.ok) throw new Error('Errore nella connessione con Stripe.');
-                const { url, error: apiErr } = await res.json();
-                if (apiErr) throw new Error(apiErr);
-                if (url) { window.location.href = url; return; }
-                throw new Error('Nessun URL ricevuto da Stripe.');
-
-            } else {
-                // ── Customer: create account directly (no Stripe) ────────────
-                localStorage.setItem('registerRole', role);
-                const { error: signUpError } = await db.auth.signUp({
-                    email, password,
-                    options: { data: { first_name: firstName, last_name: lastName, phone } },
-                });
-                if (signUpError) throw signUpError;
-
-                const { error: signInError } = await db.auth.signInWithPassword({ email, password });
-                if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
-
-                const { data: { user } } = await db.auth.getUser();
-                if (!user) throw new Error('Utente non autenticato');
-
-                await db.from('profiles').upsert({ id: user.id, role, first_name: firstName, last_name: lastName, phone });
-                navigate('/passport?wizard=true');
-            }
+            localStorage.setItem('registerRole', role);
+            const { error: signUpError } = await db.auth.signUp({
+                email, password,
+                options: { data: { first_name: firstName, last_name: lastName, phone } },
+            });
+            if (signUpError) throw signUpError;
+            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+            if (signInError && signInError.message !== 'Email not confirmed') throw signInError;
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) throw new Error('Utente non autenticato');
+            await db.from('profiles').upsert({ id: user.id, role, first_name: firstName, last_name: lastName, phone });
+            navigate('/passport?wizard=true');
         } catch (err: any) {
-            if (role !== 'owner') await db.auth.signOut();
-            sessionStorage.removeItem('pending_registration');
+            await db.auth.signOut();
             setError(err.message === 'User already registered' ? 'Utente già registrato. Accedi.' : (err.message || 'Errore durante la registrazione.'));
         } finally {
             setLoading(false);
         }
     };
 
-    const selectedPlanData = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
-    const passwordStep = role === 'owner' ? 4 : 3;
+    const passwordStep = 3; // customers only (owners go to Stripe from plan step)
 
     return (
         <div className="flex min-h-screen bg-[#FBFBFB] dark:bg-[#1A1A1A] font-sans antialiased text-[#1A1A1A] dark:text-[#FDFCF0]">
@@ -413,16 +414,29 @@ export default function RegisterFlow() {
                                         </button>
                                     ))}
                                 </div>
+                                {/* Privacy consent (standard owner only — OAuth already accepted) */}
+                                {!isOAuthUser && (
+                                    <label className="flex items-start gap-3 mt-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={privacyAccepted}
+                                            onChange={e => setPrivacyAccepted(e.target.checked)}
+                                            className="mt-0.5 w-4 h-4 text-[#008081] rounded focus:ring-[#008081] flex-shrink-0"
+                                        />
+                                        <span>
+                                            Accetto la{' '}
+                                            <Link to="/privacy-policy" className="text-[#008081] underline" target="_blank">Privacy Policy</Link>
+                                            {' '}e i{' '}
+                                            <Link to="/termini-condizioni" className="text-[#008081] underline" target="_blank">Termini di Servizio</Link>
+                                        </span>
+                                    </label>
+                                )}
                                 <button
-                                    onClick={() => isOAuthUser ? handleOAuthStripeRedirect() : setStep(4)}
-                                    disabled={loading}
-                                    className="w-full text-white py-4 rounded-2xl font-bold bg-[#008081] hover:bg-teal-700 transition-colors mt-5 flex items-center justify-center gap-2"
+                                    onClick={() => isOAuthUser ? handleOAuthStripeRedirect() : handleOwnerPlanSubmit()}
+                                    disabled={loading || (!isOAuthUser && !privacyAccepted)}
+                                    className={`w-full text-white py-4 rounded-2xl font-bold transition-colors mt-4 flex items-center justify-center gap-2 ${loading || (!isOAuthUser && !privacyAccepted) ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed' : 'bg-[#008081] hover:bg-teal-700'}`}
                                 >
-                                    {loading
-                                        ? 'Attendi...'
-                                        : isOAuthUser
-                                        ? 'Inizia 14 giorni gratis →'
-                                        : 'Continua →'}
+                                    {loading ? 'Attendi...' : 'Inizia 14 giorni gratis →'}
                                 </button>
                                 <p className="text-center text-[11px] text-gray-400 mt-3">
                                     Nessun addebito oggi. Puoi disdire in qualsiasi momento.
@@ -431,7 +445,7 @@ export default function RegisterFlow() {
                         )}
 
                         {/* ── Password step (step 4 owner / step 3 customer) ─── */}
-                        {step === passwordStep && !isOAuthUser && (
+                        {step === passwordStep && !isOAuthUser && role === 'customer' && (
                             <div className="animate-fade-in flex-1 flex flex-col">
                                 <h2 className="text-3xl font-bold mb-2">Sicurezza</h2>
                                 <p className="text-gray-500 mb-6">Scegli una password per il tuo account.</p>
@@ -449,21 +463,12 @@ export default function RegisterFlow() {
                                         <input type="checkbox" required checked={privacyAccepted} onChange={e => setPrivacyAccepted(e.target.checked)} className="w-5 h-5 text-[#008081] rounded focus:ring-[#008081]" />
                                         Accetto la <Link to="/privacy-policy" className="text-[#008081] underline" target="_blank">Policy</Link> e i <Link to="/termini-condizioni" className="text-[#008081] underline" target="_blank">Termini</Link>
                                     </label>
-                                    {role === 'owner' && (
-                                        <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/20 rounded-xl px-4 py-3 text-xs text-teal-700 dark:text-teal-300 font-medium">
-                                            ✓ Piano <strong>{selectedPlanData.label}</strong> ({selectedPlanData.billing}) — verrai indirizzato a Stripe per inserire la carta. <strong>Nessun addebito per 14 giorni.</strong>
-                                        </div>
-                                    )}
                                     <button
                                         type="submit"
                                         disabled={loading || !privacyAccepted}
                                         className={`w-full text-white py-4 rounded-2xl font-bold transition-colors mt-4 ${!privacyAccepted ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#008081] hover:bg-teal-700'}`}
                                     >
-                                        {loading
-                                            ? 'Attendi...'
-                                            : role === 'owner'
-                                            ? 'Crea account e inserisci carta →'
-                                            : 'Crea account'}
+                                        {loading ? 'Attendi...' : 'Crea account'}
                                     </button>
                                 </form>
                                 <div className="mt-6 text-center text-sm">

@@ -15,6 +15,16 @@ const PRICE_TO_TIER: Record<string, string> = {
   'price_1TJu7u1OtlBFS4a5zRuVahso': 'annuale',
 };
 
+// ── Extract and verify the Supabase JWT from the Authorization header ────────
+async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
 
@@ -27,8 +37,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing sessionId or restaurantId' });
   }
 
+  // ── Verify the caller owns this restaurant ───────────────────────────────
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const { data: owned, error: ownershipErr } = await supabase
+    .from('restaurants')
+    .select('id')
+    .eq('id', restaurantId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (ownershipErr || !owned) {
+    return res.status(403).json({ error: 'Forbidden: restaurant not owned by this user' });
+  }
+
   try {
-    // Retrieve the completed checkout session
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['subscription'],
     });
@@ -44,35 +68,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const priceId = subscription.items.data[0]?.price?.id;
     const tier    = PRICE_TO_TIER[priceId] ?? 'mensile';
-    const endsAt  = new Date((subscription as any).current_period_end * 1000).toISOString();
-    const status  = subscription.status;
+    const endsAt  = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString();
+    const subStatus = subscription.status;
 
-    // Update Stripe subscription + customer metadata with restaurantId
-    // so future webhook events (renewals, failures) are linked correctly
-    await stripe.subscriptions.update(subscription.id, {
-      metadata: { restaurantId },
-    });
-    await stripe.customers.update(session.customer as string, {
-      metadata: { restaurantId },
-    });
+    // Link restaurantId into Stripe metadata for future webhook events
+    await stripe.subscriptions.update(subscription.id, { metadata: { restaurantId } });
+    await stripe.customers.update(session.customer as string, { metadata: { restaurantId } });
 
-    // Update restaurant record with Stripe data
     const { error: updateError } = await supabase
       .from('restaurants')
       .update({
         stripe_customer_id:     session.customer as string,
         stripe_subscription_id: subscription.id,
         subscription_tier:      tier,
-        subscription_status:    status,
+        subscription_status:    subStatus,
         subscription_ends_at:   endsAt,
       })
       .eq('id', restaurantId);
 
     if (updateError) throw updateError;
 
-    res.json({ success: true, tier, status });
-  } catch (err: any) {
-    console.error('complete-registration error:', err);
-    res.status(500).json({ error: err.message });
+    res.json({ success: true, tier, status: subStatus });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Internal server error';
+    console.error('[complete-registration]', msg);
+    res.status(500).json({ error: msg });
   }
 }
