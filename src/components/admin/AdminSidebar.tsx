@@ -1,7 +1,9 @@
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Store,
+  Users,
   TrendingUp,
   Activity,
   Settings,
@@ -27,6 +29,7 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
     heading: 'RISTORANTI',
     items: [
       { label: 'Tutti i ristoranti', to: '/leomenu-admin/restaurants', icon: Store },
+      { label: 'Clienti Loyalty',    to: '/leomenu-admin/customers',   icon: Users },
     ],
   },
   {

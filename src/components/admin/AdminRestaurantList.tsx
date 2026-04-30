@@ -11,6 +11,7 @@ interface Restaurant {
   slug: string;
   created_at: string;
   subscription_tier: SubscriptionTier;
+  customer_count?: number;
 }
 
 const TIER_LABELS: Record<string, { label: string; cls: string }> = {
@@ -47,15 +48,30 @@ export function AdminRestaurantList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    db.from('restaurants')
-      .select('id, name, slug, created_at, subscription_tier')
-      .neq('slug', 'demo')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) console.error('AdminRestaurantList:', error.message);
-        setRestaurants((data as Restaurant[]) ?? []);
-        setLoading(false);
+    async function load() {
+      const [{ data: rests, error }, { data: custRows }] = await Promise.all([
+        db.from('restaurants')
+          .select('id, name, slug, created_at, subscription_tier')
+          .neq('slug', 'demo')
+          .order('created_at', { ascending: false }),
+        db.from('customers').select('restaurant_id'),
+      ]);
+      if (error) console.error('AdminRestaurantList:', error.message);
+
+      // Build per-restaurant customer count map
+      const countMap: Record<string, number> = {};
+      (custRows ?? []).forEach((c: { restaurant_id: string }) => {
+        countMap[c.restaurant_id] = (countMap[c.restaurant_id] || 0) + 1;
       });
+
+      const enriched = (rests ?? []).map((r) => ({
+        ...(r as Restaurant),
+        customer_count: countMap[r.id] ?? 0,
+      }));
+      setRestaurants(enriched);
+      setLoading(false);
+    }
+    load();
   }, []);
 
   const filtered = useMemo(() => {
@@ -154,8 +170,11 @@ export function AdminRestaurantList() {
                         {TIER_LABELS[tierKey(r.subscription_tier)].label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400 font-medium">
-                      —
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-sm font-bold text-[#1A1A1A]">
+                        {r.customer_count ?? 0}
+                        <span className="text-[10px] text-gray-400 font-medium">utenti</span>
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {formatDate(r.created_at)}
