@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { ChevronLeft, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import Logo from '../components/Logo';
 import db from '../db';
+import { registerSession, logAuthEvent } from '../lib/sessionSecurity';
 
 export default function Auth({ type }: { type: 'login' }) {
     const [email, setEmail] = useState('');
@@ -10,7 +11,12 @@ export default function Auth({ type }: { type: 'login' }) {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [sessionRevoked, setSessionRevoked] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // Show inactivity message when redirected from the timeout handler
+    const inactivityReason = searchParams.get('motivo') === 'sessione-scaduta';
 
     const redirectByRole = async (userId: string) => {
         try {
@@ -46,11 +52,18 @@ export default function Auth({ type }: { type: 'login' }) {
             if (signInError) throw signInError;
 
             if (authData?.user) {
-                await redirectByRole(authData.user.id);
+                const userId = authData.user.id;
+
+                // ── Register session + enforce concurrent-session limit ────────
+                const wasRevoked = await registerSession(userId);
+                if (wasRevoked) setSessionRevoked(true);
+
+                // ── Audit log ─────────────────────────────────────────────────
+                await logAuthEvent(userId, 'login');
+
+                await redirectByRole(userId);
             } else {
-                // This case should ideally not happen if signInError is null and data is returned
-                // but as a fallback, navigate to a default management page or sign out.
-                navigate('/gestione'); 
+                navigate('/gestione');
             }
         } catch (err: any) {
             let errorMessage = err.message;
@@ -60,6 +73,7 @@ export default function Auth({ type }: { type: 'login' }) {
                 errorMessage = "Per motivi di sicurezza, devi attendere qualche secondo prima di riprovare.";
             } else if (errorMessage === 'Invalid login credentials') {
                 errorMessage = "Credenziali non valide. Controlla email e password.";
+                await logAuthEvent(null, 'login_failed', { email });
             } else if (errorMessage === 'Email rate limit exceeded' || errorMessage?.includes('rate limit')) {
                 errorMessage = "Hai superato il limite di invio email. Riprova più tardi.";
             } else {
@@ -93,6 +107,22 @@ export default function Auth({ type }: { type: 'login' }) {
 
             {/* RIGHT SIDE: Auth Form */}
             <div className="flex-1 flex flex-col justify-center px-6 pt-6 pb-24 max-w-md mx-auto w-full lg:max-w-xl lg:px-16">
+
+                {/* Inactivity session expiry banner */}
+                {inactivityReason && (
+                    <div className="mb-4 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
+                        <span>La tua sessione è scaduta per inattività. Accedi di nuovo per continuare.</span>
+                    </div>
+                )}
+
+                {/* Concurrent session revocation banner */}
+                {sessionRevoked && (
+                    <div className="mb-4 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
+                        <span>Hai raggiunto il limite di sessioni attive. Le sessioni precedenti sono state revocate.</span>
+                    </div>
+                )}
 
                 {/* Mobile Top bar with back button and Logo */}
                 <div className="flex items-center justify-between mb-10 lg:hidden">

@@ -4,8 +4,9 @@ import {
   Trash2, Save, Phone, Link2, Music, MapPin,
   Clock, Wifi, FileText, Eye, EyeOff, Copy, QrCode, Globe, CreditCard,
   Store, Image, User, Shield, Bell, Receipt, Lock, Mail, Volume2,
-  Smartphone, CheckCircle2, HelpCircle, Calendar, Hash,
+  Smartphone, CheckCircle2, HelpCircle, Calendar, Hash, Monitor,
 } from 'lucide-react';
+import { listActiveSessions, revokeAllOtherSessions, type ActiveSession } from '../../lib/sessionSecurity';
 import { QRCodeSVG } from 'qrcode.react';
 import db from '../../db';
 import ImageCropperModal from '../ImageCropperModal';
@@ -194,6 +195,35 @@ export default function SettingsManager({
   // ── UI state ─────────────────────────────────────────────────────────────
   const [isSaving, setIsSaving] = useState(false);
   const [wifiVisible, setWifiVisible] = useState(false);
+
+  // ── Active sessions (Fix #3) ──────────────────────────────────────────────
+  const [sessions, setSessions] = useState<ActiveSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingAll, setRevokingAll] = useState(false);
+
+  const loadSessions = async () => {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    setSessionsLoading(true);
+    const list = await listActiveSessions(user.id);
+    setSessions(list);
+    setSessionsLoading(false);
+  };
+
+  const handleRevokeAllSessions = async () => {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    setRevokingAll(true);
+    try {
+      await revokeAllOtherSessions(user.id);
+      showToast('✅ Sessioni revocate. Gli altri dispositivi verranno disconnessi.', 'success');
+      await loadSessions();
+    } catch {
+      showToast('❌ Errore durante la revoca', 'error');
+    } finally {
+      setRevokingAll(false);
+    }
+  };
   const [cropperState, setCropperState] = useState<{
     src: string | null; aspect: number; callback: ((b64: string) => void) | null;
   }>({ src: null, aspect: 1, callback: null });
@@ -890,6 +920,11 @@ export default function SettingsManager({
     );
   }
 
+  if (view === 'sicurezza' && sessions.length === 0 && !sessionsLoading) {
+    // Load sessions lazily the first time this view is opened
+    loadSessions();
+  }
+
   if (view === 'sicurezza') {
     const pwdReady = !!currentPassword && !!newPassword && !!confirmPassword;
     return (
@@ -1090,19 +1125,80 @@ export default function SettingsManager({
 
           <div className="border-t border-gray-100 dark:border-white/5" />
 
-          {/* ── Sessione attiva ── */}
+          {/* ── Sessioni attive ── */}
           <div className="space-y-3">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sessione Attiva</p>
-            <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#252525] rounded-2xl px-4 py-3.5 border border-gray-100 dark:border-white/5">
-              <div className="w-9 h-9 rounded-full bg-[#E6F4F4] dark:bg-[#008081]/10 flex items-center justify-center flex-shrink-0">
-                <Smartphone className="w-[18px] h-[18px] text-[#008081]" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-800 dark:text-white">Questo dispositivo</p>
-                <p className="text-xs text-gray-400">Sessione corrente · Attiva ora</p>
-              </div>
-              <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto flex-shrink-0" />
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                Sessioni Attive
+                {sessions.length > 0 && (
+                  <span className="ml-2 bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[9px]">
+                    {sessions.length}
+                  </span>
+                )}
+              </p>
+              {sessions.filter(s => !s.isCurrent).length > 0 && (
+                <button
+                  onClick={handleRevokeAllSessions}
+                  disabled={revokingAll}
+                  className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                >
+                  {revokingAll ? 'Revoca...' : 'Revoca tutte le altre'}
+                </button>
+              )}
             </div>
+
+            {sessionsLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 border-2 border-[#008081] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#252525] rounded-2xl px-4 py-3.5 border border-gray-100 dark:border-white/5">
+                <Smartphone className="w-[18px] h-[18px] text-[#008081]" />
+                <div>
+                  <p className="text-sm font-bold text-gray-800 dark:text-white">Questo dispositivo</p>
+                  <p className="text-xs text-gray-400">Sessione corrente · Attiva ora</p>
+                </div>
+                <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto flex-shrink-0" />
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                {sessions.map((s, i) => {
+                  const lastSeen = new Date(s.last_active_at);
+                  const diffMins = Math.round((Date.now() - lastSeen.getTime()) / 60_000);
+                  const timeStr = diffMins < 1 ? 'Ora'
+                    : diffMins < 60 ? `${diffMins} min fa`
+                    : diffMins < 1440 ? `${Math.round(diffMins / 60)}h fa`
+                    : lastSeen.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+
+                  return (
+                    <div key={s.id}
+                      className={`flex items-center gap-3 px-4 py-3 ${i < sessions.length - 1 ? 'border-b border-gray-100 dark:border-white/[0.04]' : ''}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${s.isCurrent ? 'bg-[#E6F4F4] dark:bg-[#008081]/10' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                        <Monitor className={`w-[18px] h-[18px] ${s.isCurrent ? 'text-[#008081]' : 'text-gray-400'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-800 dark:text-white truncate">
+                          {s.device_label || 'Dispositivo'}
+                          {s.isCurrent && (
+                            <span className="ml-1.5 text-[10px] font-black text-[#008081] bg-[#008081]/10 px-1.5 py-0.5 rounded-full">
+                              Questo
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-400">Ultima attività: {timeStr}</p>
+                      </div>
+                      {s.isCurrent
+                        ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        : <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[10px] text-gray-400">
+              Le sessioni inattive da 30+ giorni vengono rimosse automaticamente.
+            </p>
           </div>
 
           <div className="border-t border-gray-100 dark:border-white/5" />

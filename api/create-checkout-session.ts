@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { checkRateLimit, getClientIp } from './_rateLimit';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -27,6 +28,12 @@ async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
+
+  // Fix #8 — Rate limit: max 10 checkout attempts per IP per 10 minutes
+  const ip = getClientIp(req.headers as Record<string, string | string[] | undefined>);
+  if (!checkRateLimit(`checkout:${ip}`, 10, 10 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche minuto.' });
+  }
 
   const { priceId, restaurantId, userEmail } = req.body as {
     priceId: string;
