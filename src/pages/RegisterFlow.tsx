@@ -108,7 +108,8 @@ export default function RegisterFlow() {
     const makeSlug = (name: string) =>
         `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')}-${Math.random().toString(36).substring(2, 8)}`;
 
-    // ── OAuth owner: business info submit → then go to plan step ─────────────
+    // ── OAuth owner: business info submit → salva in sessionStorage, NON in DB ──
+    // Il ristorante e il ruolo vengono creati solo dopo la conferma del pagamento Stripe.
     const handleOAuthOwnerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -116,14 +117,12 @@ export default function RegisterFlow() {
         try {
             const { data: { user } } = await db.auth.getUser();
             if (!user) throw new Error('Sessione scaduta');
-            const { data: restaurant, error: resError } = await db.from('restaurants')
-                .insert({ user_id: user.id, name: businessName, slug: makeSlug(businessName), type: businessType })
-                .select('id').single();
-            if (resError?.code === '23505') throw new Error('Questo nome esiste già.');
-            if (resError) throw resError;
-            await db.rpc('upgrade_to_owner');
-            sessionStorage.setItem('oauth_restaurant_id', restaurant.id);
-            sessionStorage.setItem('oauth_user_email', user.email ?? '');
+            sessionStorage.setItem('pending_oauth_registration', JSON.stringify({
+                businessName,
+                businessType,
+                email: user.email ?? '',
+                userId: user.id,
+            }));
             setStep(3);
         } catch (err: any) {
             setError(err.message || 'Errore.');
@@ -132,34 +131,22 @@ export default function RegisterFlow() {
         }
     };
 
-    // ── OAuth owner: after plan selection → Stripe (account already exists) ──
+    // ── OAuth owner: dopo la selezione piano → Stripe (senza restaurantId) ─────
+    // Il ristorante viene creato in RegisterComplete dopo la conferma del pagamento.
     const handleOAuthStripeRedirect = async () => {
         setLoading(true);
         try {
-            const restaurantId = sessionStorage.getItem('oauth_restaurant_id');
-            const userEmail    = sessionStorage.getItem('oauth_user_email') ?? '';
-            if (!restaurantId) {
-                const { data: { user } } = await db.auth.getUser();
-                const { data: res } = await db.from('restaurants').select('id').eq('user_id', user!.id).neq('slug', 'demo').single();
-                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
-                const r = await fetch('/api/create-checkout-session', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceId: plan.priceId, restaurantId: res!.id, userEmail: user!.email }),
-                });
-                const { url } = await r.json();
-                if (url) window.location.href = url;
-                else navigate('/gestione?wizard=true');
-            } else {
-                const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
-                const r = await fetch('/api/create-checkout-session', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceId: plan.priceId, restaurantId, userEmail }),
-                });
-                const { url } = await r.json();
-                if (url) window.location.href = url;
-                else navigate('/gestione?wizard=true');
-            }
-        } catch { navigate('/gestione?wizard=true'); }
+            const pending = JSON.parse(sessionStorage.getItem('pending_oauth_registration') || '{}');
+            const userEmail = pending.email ?? '';
+            const plan = PLANS.find(p => p.id === selectedPlan) ?? PLANS[2];
+            const r = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priceId: plan.priceId, userEmail }),
+            });
+            const { url } = await r.json();
+            if (url) window.location.href = url;
+        } catch { navigate('/register'); }
         finally { setLoading(false); }
     };
 

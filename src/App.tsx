@@ -14,6 +14,7 @@ import CronologiaPage from './pages/Cronologia';
 import Auth from './pages/Auth';
 import Cameriere from './pages/Cameriere';
 import RegisterFlow from './pages/RegisterFlow';
+import GoogleSignup from './pages/GoogleSignup';
 import RegisterComplete from './pages/RegisterComplete';
 import Lancio from './pages/Marketing/Lancio';
 import Onboarding from './pages/Onboarding';
@@ -166,6 +167,7 @@ export default function App() {
         {/* Auth & Platform Routes */}
         <Route path="/login" element={<GuestRoute><Auth type="login" /></GuestRoute>} />
         <Route path="/register" element={<RegisterFlow />} />
+        <Route path="/google-signup" element={<GoogleSignup />} />
         <Route path="/register/complete" element={<RegisterComplete />} />
         <Route path="/lancio" element={<Lancio />} />
         <Route path="/passport" element={<CartaFedelta />} />

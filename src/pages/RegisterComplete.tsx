@@ -39,20 +39,72 @@ export default function RegisterComplete() {
     const [pwdLoading, setPwdLoading]     = useState(false);
     const [pwdError, setPwdError]         = useState('');
 
+    // ── OAuth: crea ristorante e linka Stripe dopo pagamento (senza password) ───
+    const completeOAuthRegistration = async (
+        sessionId: string,
+        oauthData: { businessName: string; businessType: string; email: string },
+        accessToken: string,
+    ) => {
+        setStatus('creating');
+        try {
+            const { data: { user } } = await db.auth.getUser();
+            if (!user) throw new Error('Sessione scaduta. Riprova.');
+
+            const { data: restaurant, error: resError } = await db
+                .from('restaurants')
+                .insert({ user_id: user.id, name: oauthData.businessName, slug: makeSlug(oauthData.businessName), type: oauthData.businessType })
+                .select('id').single();
+            if (resError?.code === '23505') throw new Error('Nome già in uso. Contatta il supporto.');
+            if (resError) throw resError;
+
+            await db.rpc('upgrade_to_owner');
+
+            setStatus('linking');
+            const res = await fetch('/api/complete-registration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+                body: JSON.stringify({ sessionId, restaurantId: restaurant.id }),
+            });
+            if (!res.ok) console.warn('complete-registration API failed — relying on webhook');
+
+            sessionStorage.removeItem('pending_oauth_registration');
+            setStatus('done');
+            setTimeout(() => navigate('/gestione?wizard=true'), 2000);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Errore imprevisto.';
+            setError(msg);
+            setStatus('error');
+        }
+    };
+
     useEffect(() => {
         const sessionId = searchParams.get('session_id');
         if (!sessionId) { navigate('/register'); return; }
 
+        // ── Caso OAuth (Google): utente già autenticato, salta il form password ──
+        const oauthRaw = sessionStorage.getItem('pending_oauth_registration');
+        if (oauthRaw) {
+            db.auth.getSession().then(({ data: { session } }) => {
+                if (!session?.user) { navigate('/register'); return; }
+                try {
+                    const oauthData = JSON.parse(oauthRaw) as {
+                        businessName: string; businessType: string; email: string;
+                    };
+                    completeOAuthRegistration(sessionId, oauthData, session.access_token);
+                } catch { navigate('/register'); }
+            });
+            return;
+        }
+
+        // ── Caso normale (email/password) ─────────────────────────────────────
         const raw = sessionStorage.getItem('pending_registration');
         if (!raw) {
-            // Possibly already completed or navigated directly
             db.auth.getSession().then(({ data: { session } }) => {
                 if (session?.user) navigate('/gestione?wizard=true');
                 else navigate('/register');
             });
             return;
         }
-
         try {
             const parsed = JSON.parse(raw) as PendingReg;
             setRegData(parsed);
