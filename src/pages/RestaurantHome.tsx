@@ -176,9 +176,9 @@ export default function RestaurantHome() {
               </div>
             </div>
 
-            {/* Social icons */}
-            {(images.phone_number || images.instagram_url || images.facebook_url || images.tiktok_url || images.google_maps_url || images.tripadvisor_url) && (
-              <div className="flex flex-row items-center justify-center gap-2 mb-5 flex-wrap">
+            {/* Social icons + fidelity */}
+            {(images.phone_number || images.instagram_url || images.facebook_url || images.tiktok_url || images.google_maps_url || images.tripadvisor_url || (restaurant && slug !== 'demo')) && (
+              <div className="flex flex-row items-center justify-center gap-2 mb-4 flex-wrap">
                 {images.phone_number && (
                   <a href={`tel:${images.phone_number.replace(/\s+/g, '')}`} className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
                     <Phone className="w-4 h-4" />
@@ -196,7 +196,7 @@ export default function RestaurantHome() {
                 )}
                 {images.tiktok_url && (
                   <a href={images.tiktok_url} target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.27-1.15 4.14-2.78 5.44-1.61 1.28-3.75 1.83-5.78 1.55-2.58-.33-4.78-1.92-5.75-4.32-.82-1.92-.81-4.08.06-5.96.96-2.18 3.16-3.74 5.51-4.03.22-.03.44-.04.66-.05v4.04c-1.4.15-2.61 1.05-3.07 2.37-.41 1.14-.38 2.45.17 3.53.62 1.26 1.95 2.15 3.36 2.19 1.48.06 2.87-.79 3.53-2.14.39-.77.42-1.65.42-2.5V.02h-4.39z" /></svg>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22.465,9.866c-2.139,0-4.122-0.684-5.74-1.846v8.385c0,4.188-3.407,7.594-7.594,7.594c-1.618,0-3.119-0.51-4.352-1.376c-1.958-1.375-3.242-3.649-3.242-6.218c0-4.188,3.407-7.595,7.595-7.595c0.348,0,0.688,0.029,1.023,0.074v0.977v3.235c-0.324-0.101-0.666-0.16-1.023-0.16c-1.912,0-3.468,1.556-3.468,3.469c0,1.332,0.756,2.489,1.86,3.07c0.481,0.253,1.028,0.398,1.609,0.398c1.868,0,3.392-1.486,3.462-3.338L12.598,0h4.126c0,0.358,0.035,0.707,0.097,1.047c0.291,1.572,1.224,2.921,2.517,3.764c0.9,0.587,1.974,0.93,3.126,0.93V9.866z"/></svg>
                   </a>
                 )}
                 {images.google_maps_url && (
@@ -206,16 +206,12 @@ export default function RestaurantHome() {
                 )}
                 {images.tripadvisor_url && (
                   <a href={images.tripadvisor_url} target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1C1C1C] shadow-sm hover:border-[#008081] hover:text-[#008081] text-gray-500 transition-all">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4c5.302 0 9.6 4.298 9.6 9.6s-4.298 9.6-9.6 9.6S2.4 17.302 2.4 12 6.698 2.4 12 2.4zm-4.2 6.6a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8zm8.4 0a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8zm-4.2-1.8c-2.04 0-3.9.648-5.412 1.74A5.388 5.388 0 014.8 9.6h-.6c.468-.612 1.02-1.152 1.644-1.608C7.5 6.78 9.648 6 12 6s4.5.78 6.156 1.992c.624.456 1.176.996 1.644 1.608h-.6a5.388 5.388 0 01-1.788-.66C15.9 7.848 14.04 7.2 12 7.2zm0 9.6c-1.632 0-3.108-.648-4.188-1.692l1.14-1.14A4.166 4.166 0 0012 14.4c1.128 0 2.148.444 2.904 1.164l1.284 1.284A5.953 5.953 0 0112 18z"/></svg>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22.038,8.783L24,6.649h-4.35c-2.178-1.488-4.808-2.354-7.652-2.354c-2.841,0-5.463,0.868-7.637,2.354H0l1.962,2.134c-1.202,1.097-1.956,2.677-1.956,4.432c0,3.311,2.684,5.995,5.995,5.995c1.573,0,3.006-0.607,4.076-1.598l1.922,2.092l1.922-2.091c1.07,0.992,2.501,1.596,4.074,1.596c3.311,0,5.999-2.684,5.999-5.995C23.995,11.459,23.241,9.879,22.038,8.783z M6.003,17.273c-2.241,0-4.057-1.816-4.057-4.057c0-2.241,1.816-4.058,4.057-4.058s4.057,1.816,4.057,4.058C10.06,15.456,8.244,17.273,6.003,17.273z M12,13.097c0-2.67-1.942-4.962-4.504-5.941c1.386-0.579,2.906-0.901,4.502-0.901c1.596,0,3.118,0.321,4.504,0.901C13.942,8.137,12,10.427,12,13.097z M17.995,17.273c-2.241,0-4.058-1.816-4.058-4.057c0-2.241,1.816-4.058,4.058-4.058s4.057,1.816,4.057,4.058C22.053,15.456,20.237,17.273,17.995,17.273z M17.995,11.086c-1.175,0-2.127,0.952-2.127,2.127c0,1.175,0.952,2.127,2.127,2.127c1.175,0,2.127-0.952,2.127-2.127C20.122,12.04,19.171,11.086,17.995,11.086z M8.13,13.215c0,1.175-0.952,2.127-2.127,2.127c-1.175,0-2.127-0.952-2.127-2.127c0-1.175,0.952-2.127,2.127-2.127C7.178,11.086,8.13,12.04,8.13,13.215z"/></svg>
                   </a>
                 )}
-              </div>
-            )}
-
-            {/* Fidelity card */}
-            {restaurant && slug !== 'demo' && (
-              <div className="mb-2">
-                <FidelityCard restaurantId={restaurant.id} restaurantName={restaurant.name} />
+                {restaurant && slug !== 'demo' && (
+                  <FidelityCard restaurantId={restaurant.id} restaurantName={restaurant.name} />
+                )}
               </div>
             )}
           </div>

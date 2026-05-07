@@ -81,41 +81,34 @@ export default function FidelityCard({ restaurantId, restaurantName }: Props) {
 
   if (session) {
     return (
-      <Link 
+      <Link
         to={`/${slug}/profile`}
-        className="w-full flex items-center justify-between gap-4 p-5 rounded-3xl border border-[#008081]/30 bg-gradient-to-r from-white to-[#008081]/5 dark:from-[#1E1E1E] dark:to-[#008081]/10 shadow-premium hover:shadow-xl hover:border-[#008081]/50 transition-all duration-300 transform hover:-translate-y-1 group"
+        className="flex items-center gap-2.5 h-11 px-4 rounded-xl border border-[#008081]/30 bg-[#008081]/5 dark:bg-[#008081]/10 hover:border-[#008081] hover:bg-[#008081]/10 dark:hover:bg-[#008081]/20 text-[#008081] transition-all shadow-sm"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#008081] shadow-md shadow-[#008081]/20 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Gift className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-black text-lg text-[#1A1A1A] dark:text-white tracking-tight uppercase leading-tight">Area Fidelity</span>
-            <span className="text-sm font-semibold text-[#008081]">Mostra il tuo QR & Stelle &rarr;</span>
-          </div>
-        </div>
+        <Gift className="w-4 h-4 flex-shrink-0" />
+        <span className="text-xs font-black uppercase tracking-wide whitespace-nowrap">Area Fidelity →</span>
       </Link>
     );
   }
 
   return (
-    <div className="w-full rounded-3xl border border-[#008081]/20 bg-white dark:bg-[#1E1E1E] overflow-hidden shadow-premium transition-all duration-300">
+    <div className="w-full rounded-2xl border border-[#008081]/20 bg-white dark:bg-[#1E1E1E] overflow-hidden shadow-sm transition-all duration-300">
       {/* Header toggle */}
       <button
         onClick={() => setIsOpen(v => !v)}
-        className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors"
+        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#008081] shadow-md shadow-[#008081]/20 flex items-center justify-center">
-            <Gift className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#008081] shadow-sm shadow-[#008081]/20 flex items-center justify-center flex-shrink-0">
+            <Gift className="w-4 h-4 text-white" />
           </div>
           <div className="text-left flex flex-col">
-            <span className="font-black text-base text-[#1A1A1A] dark:text-white uppercase tracking-tight leading-tight">Area Fidelity</span>
-            <span className="text-xs text-[#008081] font-bold">ACCEDI PER GUADAGNARE STELLE</span>
+            <span className="font-black text-sm text-[#1A1A1A] dark:text-white uppercase tracking-tight leading-tight">Area Fidelity</span>
+            <span className="text-[10px] text-[#008081] font-bold leading-snug">Accedi per guadagnare stelle</span>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-          {isOpen ? <ChevronUp className="w-4 h-4 text-[#008081]" /> : <ChevronDown className="w-4 h-4 text-[#008081]" />}
+        <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+          {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-[#008081]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#008081]" />}
         </div>
       </button>
 
