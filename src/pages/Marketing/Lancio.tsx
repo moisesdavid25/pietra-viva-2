@@ -371,27 +371,23 @@ export default function Lancio() {
             </h2>
           </div>
 
-          {/* Dashboard — desktop sidebar layout */}
+          {/* Desktop: tablet mockup */}
           <div className="hidden md:block rounded-3xl overflow-hidden shadow-2xl border border-gray-100 mb-10">
-            <iframe
-              src="/assets/dashboard-mockup.html"
-              title="LeoMenu Dashboard Desktop"
-              className="w-full border-0 block"
-              style={{ height: '520px', pointerEvents: 'none' }}
-              scrolling="no"
+            <img
+              src="/Mockup tablet.webp"
+              alt="LeoMenu — Pannello di gestione su tablet"
+              className="w-full h-auto block"
               loading="lazy"
             />
           </div>
 
-          {/* Dashboard — mobile app layout */}
+          {/* Mobile: phone mockup */}
           <div className="md:hidden flex justify-center mb-10">
-            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 w-full max-w-sm">
-              <iframe
-                src="/assets/dashboard-mobile-mockup.html"
-                title="LeoMenu Dashboard Mobile"
-                className="w-full border-0 block"
-                style={{ height: '640px', pointerEvents: 'none' }}
-                scrolling="no"
+            <div className="w-full max-w-xs">
+              <img
+                src="/MOCKUP MOVIL LEOMENU.webp"
+                alt="LeoMenu — Vista cliente su iPhone"
+                className="w-full h-auto block drop-shadow-2xl"
                 loading="lazy"
               />
             </div>

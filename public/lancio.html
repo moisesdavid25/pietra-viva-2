@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Il tuo menù online in 48 ore. Lo carichiamo noi. €204/anno. Zero app per i clienti. 14 giorni gratis.">
+<title>Offerta Fondatori — LeoMenu · Menù Digitale per Ristoranti</title>
+<link rel="canonical" href="https://leomenu.it/lancio">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', sans-serif; color: #111827; background: #fff; line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+/* ── Utils ── */
+.container { max-width: 1024px; margin: 0 auto; padding: 0 24px; }
+a { color: inherit; text-decoration: none; }
+
+/* ── Sticky header ── */
+#sticky-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(255,255,255,0.96); backdrop-filter: blur(12px);
+  border-bottom: 1px solid #f3f4f6; padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: transform 0.3s, opacity 0.3s;
+  transform: translateY(-100%); opacity: 0;
+}
+#sticky-header.visible { transform: translateY(0); opacity: 1; }
+.sh-brand { font-size: 18px; font-weight: 900; color: #111827; display: flex; align-items: center; gap: 8px; }
+.sh-brand-dot { width: 8px; height: 8px; background: #008081; border-radius: 50%; }
+.sh-badge { font-size: 11px; font-weight: 700; color: #d97706; background: #fef3c7; padding: 4px 10px; border-radius: 100px; }
+.sh-cta { background: #008081; color: #fff; font-weight: 700; font-size: 13px; padding: 8px 18px; border-radius: 100px; }
+.sh-cta:hover { background: #006666; }
+
+/* ── Hero ── */
+.hero {
+  background: #0f172a;
+  padding: 80px 24px 96px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute;
+  top: -100px; left: 50%; transform: translateX(-50%);
+  width: 700px; height: 500px;
+  background: radial-gradient(ellipse, rgba(0,128,129,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.scarcity-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+  color: #fbbf24; padding: 8px 18px; border-radius: 100px;
+  font-size: 13px; font-weight: 700; margin-bottom: 32px;
+}
+.hero h1 {
+  font-size: clamp(38px, 7vw, 72px);
+  font-weight: 900; color: #fff;
+  line-height: 1.06; letter-spacing: -2px; margin-bottom: 20px;
+}
+.hero h1 .accent { color: #008081; }
+.hero h1 .sub { font-size: clamp(28px, 5vw, 54px); color: rgba(255,255,255,0.85); }
+.hero-sub1 { font-size: clamp(17px, 2.5vw, 22px); color: #d1d5db; font-weight: 500; max-width: 580px; margin: 0 auto 10px; }
+.hero-sub2 { font-size: 16px; color: #6b7280; max-width: 460px; margin: 0 auto 36px; }
+.cta-main {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #008081; color: #fff;
+  font-size: clamp(16px, 2vw, 19px); font-weight: 800;
+  padding: 18px 40px; border-radius: 100px;
+  box-shadow: 0 0 0 0 rgba(0,128,129,0.5);
+  animation: pulse 2s infinite;
+  transition: background 0.2s, transform 0.15s;
+}
+.cta-main:hover { background: #006e6e; transform: translateY(-2px); }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,128,129,0.4)} 70%{box-shadow:0 0 0 14px rgba(0,128,129,0)} }
+.cta-note { font-size: 12px; color: #6b7280; margin-top: 12px; }
+.deadline { margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.deadline-date { font-weight: 900; color: #fbbf24; }
+
+/* ── Section commons ── */
+.section { padding: 88px 0; }
+.sec-eyebrow { font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #008081; margin-bottom: 12px; display: block; }
+.sec-h2 { font-size: clamp(28px, 4vw, 42px); font-weight: 800; color: #111827; letter-spacing: -1px; line-height: 1.15; margin-bottom: 16px; }
+.sec-sub { font-size: 17px; color: #6b7280; line-height: 1.65; max-width: 580px; }
+.text-center { text-align: center; }
+.text-teal { color: #008081; }
+
+/* ── S2 Pain points ── */
+.bg-grey { background: #f1f5f9; }
+.pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 48px; }
+.pain-card { background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0; }
+.pain-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+.pain-title { font-size: 16px; font-weight: 800; color: #111827; margin-bottom: 8px; line-height: 1.3; }
+.pain-desc { font-size: 14px; color: #6b7280; line-height: 1.65; }
+.pain-footer { text-align: center; margin-top: 40px; font-size: clamp(20px, 3vw, 28px); font-weight: 900; color: #008081; }
+
+/* ── S3 Comparison ── */
+.compare-wrap { margin-top: 48px; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+.compare-head { display: grid; grid-template-columns: 1fr 1fr; }
+.ch-before { background: #fafafa; padding: 14px 24px; font-size: 12px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 1px; }
+.ch-after  { background: #008081; padding: 14px 24px; font-size: 12px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+.compare-row { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #f1f5f9; }
+.compare-row:nth-child(even) .cb { background: #fafafa; }
+.compare-row:nth-child(even) .ca { background: #f0fdf4; }
+.cb { padding: 16px 24px; font-size: 13.5px; color: #ef4444; border-right: 1px solid #f1f5f9; line-height: 1.5; }
+.cb small { display: block; font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.ca { padding: 16px 24px; font-size: 13.5px; color: #15803d; font-weight: 600; line-height: 1.5; display: flex; gap: 6px; align-items: flex-start; }
+.ca::before { content: '✓'; color: #008081; font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+.compare-cta { background: #e0f2f1; padding: 20px 24px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+/* ── S4 Steps ── */
+.bg-teal-light { background: #e0f2f1; }
+.steps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 52px; }
+.step-card { background: #fff; border-radius: 16px; padding: 28px; text-align: center; border: 1px solid #b2dfdb; }
+.step-num { width: 52px; height: 52px; background: #008081; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.step-icon { width: 80px; height: 80px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px; }
+.step-title { font-size: 16px; font-weight: 800; color: #111827; margin-bottom: 8px; }
+.step-desc { font-size: 14px; color: #6b7280; line-height: 1.65; }
+.lancio-box { background: #0f172a; border: 1.5px solid #008081; border-radius: 16px; padding: 28px; margin-top: 36px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; }
+.lancio-box h3 { font-size: 20px; font-weight: 900; color: #008081; margin-bottom: 10px; }
+.lancio-box p { font-size: 15px; color: #94a3b8; line-height: 1.65; margin-bottom: 20px; }
+.btn-teal { display: inline-flex; align-items: center; gap: 8px; background: #008081; color: #fff; font-weight: 800; font-size: 15px; padding: 14px 30px; border-radius: 12px; transition: background 0.2s; }
+.btn-teal:hover { background: #006666; }
+
+/* ── S5 Prodotto (mockup images) ── */
+.mockup-desktop { border-radius: 20px; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.15); border: 1px solid #f1f5f9; margin-bottom: 32px; }
+.mockup-desktop img { width: 100%; height: auto; display: block; }
+.mockup-mobile { display: none; justify-content: center; margin-bottom: 32px; }
+.mockup-mobile img { width: 100%; max-width: 300px; height: auto; display: block; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2)); }
+.modules { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.module-chip { display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 100px; font-size: 13px; font-weight: 700; color: #374151; }
+.module-chip span { color: #008081; font-size: 15px; }
+
+/* ── S6 Storia ── */
+.bg-warm { background: #fffbeb; border-top: 1px solid #fde68a; border-bottom: 1px solid #fde68a; }
+.storia-inner { max-width: 720px; margin: 0 auto; }
+.storia-eyebrow { font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #d97706; margin-bottom: 24px; display: block; }
+.storia-h2 { font-size: clamp(24px, 3.5vw, 36px); font-weight: 900; color: #111827; letter-spacing: -0.5px; margin-bottom: 24px; line-height: 1.2; }
+.storia-body p { font-size: 16px; color: #6b7280; line-height: 1.85; margin-bottom: 16px; }
+.storia-body strong { color: #111827; }
+.storia-body .teal { color: #008081; font-weight: 900; }
+.storia-author { display: flex; align-items: center; gap: 12px; margin-top: 32px; }
+.storia-avatar { width: 48px; height: 48px; border-radius: 50%; background: #008081; color: #fff; font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── S7 Offerta ── */
+.bg-dark { background: #0f172a; }
+.offerta-inner { max-width: 780px; margin: 0 auto; }
+.offerta-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; padding: clamp(24px, 5vw, 48px); }
+.price-row { display: flex; flex-direction: column; gap: 4px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+@media (min-width: 480px) { .price-row { flex-direction: row; align-items: flex-start; justify-content: space-between; } }
+.price-main { display: flex; align-items: baseline; gap: 6px; }
+.price-big { font-size: clamp(48px, 8vw, 64px); font-weight: 900; color: #fff; line-height: 1; }
+.price-period { font-size: 20px; color: #9ca3af; }
+.price-year { font-size: 14px; color: #9ca3af; margin-top: 4px; }
+.price-saving { color: #34d399; font-weight: 700; font-size: 13px; }
+.price-right { text-align: right; }
+.price-old { font-size: 13px; color: #6b7280; text-decoration: line-through; }
+.price-total { font-size: 22px; font-weight: 900; color: #fff; }
+.price-save { font-size: 13px; color: #34d399; font-weight: 700; }
+.included-label { font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; margin-bottom: 12px; display: block; }
+.check-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.check-row { display: flex; align-items: flex-start; gap: 10px; }
+.check-icon { color: #008081; font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+.check-text { font-size: 14px; color: #e2e8f0; line-height: 1.4; }
+.check-text small { display: block; font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+.bonus-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.bonus-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border-radius: 14px; }
+.bonus-item.highlight { background: rgba(0,128,129,0.15); border: 1px solid rgba(0,128,129,0.3); }
+.bonus-item.normal { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+.bonus-num { width: 30px; height: 30px; background: #008081; color: #fff; border-radius: 8px; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bonus-body { flex: 1; }
+.bonus-badge { font-size: 9px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: #008081; display: block; margin-bottom: 3px; }
+.bonus-item.normal .bonus-badge { color: #6b7280; }
+.bonus-title { font-size: 14px; font-weight: 900; color: #fff; margin-bottom: 3px; }
+.bonus-desc { font-size: 13px; color: #9ca3af; line-height: 1.5; }
+.bonus-value { font-size: 14px; font-weight: 900; color: #008081; white-space: nowrap; margin-top: 6px; text-align: right; }
+.bonus-value-old { font-size: 10px; color: #6b7280; text-decoration: line-through; display: block; }
+.guarantee-box { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); border-radius: 16px; padding: 20px; margin-bottom: 28px; }
+.gar-label { font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #34d399; margin-bottom: 12px; display: block; }
+.gar-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; font-size: 13px; color: #d1d5db; }
+.gar-row:last-child { margin-bottom: 0; }
+.gar-row strong { color: #fff; }
+.gar-shield { color: #34d399; flex-shrink: 0; }
+.value-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 24px; font-size: 14px; }
+.value-label { color: #9ca3af; font-weight: 700; }
+.value-right { text-align: right; }
+.value-old { font-size: 12px; color: #6b7280; text-decoration: line-through; }
+.value-pay { display: flex; align-items: center; gap: 8px; }
+.value-pay-label { font-size: 18px; font-weight: 900; color: #fff; }
+.value-pay-price { font-size: 22px; font-weight: 900; color: #008081; }
+.cta-big { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: #008081; color: #fff; font-weight: 900; font-size: clamp(16px, 2vw, 19px); padding: 18px 32px; border-radius: 14px; text-align: center; transition: background 0.2s, transform 0.15s; }
+.cta-big:hover { background: #006e6e; transform: translateY(-1px); }
+.offerta-meta { text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.offerta-meta span { font-size: 12px; color: #6b7280; }
+.offerta-meta .alert { color: #fbbf24; font-weight: 700; }
+.plans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+.plan-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; opacity: 0.7; }
+.plan-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px; }
+.plan-price { font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+.plan-note { font-size: 12px; color: #6b7280; }
+.plan-badge { display: inline-block; margin-top: 6px; font-size: 10px; background: #1e293b; color: #9ca3af; padding: 2px 8px; border-radius: 100px; font-weight: 700; }
+.offerta-footnote { text-align: center; font-size: 11px; color: #4b5563; margin-top: 14px; }
+
+/* ── S8 Garanzia ── */
+.shield-wrap { width: 80px; height: 80px; background: #d1fae5; border: 1px solid #a7f3d0; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px; }
+.garanzia-text { font-size: 17px; color: #6b7280; line-height: 1.85; max-width: 600px; margin: 0 auto; }
+.garanzia-chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px; }
+.gar-chip { display: flex; align-items: center; gap: 8px; padding: 12px 20px; background: #d1fae5; border: 1px solid #a7f3d0; border-radius: 14px; font-size: 13px; font-weight: 700; color: #065f46; }
+
+/* ── S9 FAQ ── */
+.bg-faq { background: #f8fafc; border-top: 1px solid #f1f5f9; }
+.faq-list { margin-top: 40px; display: flex; flex-direction: column; gap: 10px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.faq-item { background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; overflow: hidden; }
+.faq-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; text-align: left; gap: 12px; }
+.faq-q { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.4; }
+.faq-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #008081; transition: transform 0.2s; }
+.faq-item.open .faq-icon { transform: rotate(180deg); }
+.faq-body { display: none; padding: 0 24px 20px; font-size: 14px; color: #6b7280; line-height: 1.7; border-top: 1px solid #f1f5f9; padding-top: 14px; }
+.faq-item.open .faq-body { display: block; }
+.whatsapp-btn { display: inline-flex; align-items: center; gap: 8px; background: #25d366; color: #fff; font-weight: 800; font-size: 14px; padding: 12px 24px; border-radius: 100px; margin-top: 32px; }
+.whatsapp-btn:hover { background: #1fb855; }
+
+/* ── S10 CTA Finale ── */
+.cta-section { background: linear-gradient(135deg, #006666, #008081); padding: 100px 24px; text-align: center; position: relative; overflow: hidden; }
+.cta-section::before { content: ''; position: absolute; top: -50px; left: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.04); border-radius: 50%; }
+.cta-section::after { content: ''; position: absolute; bottom: -80px; right: -80px; width: 400px; height: 400px; background: rgba(0,0,0,0.08); border-radius: 50%; }
+.cta-section-inner { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+.cta-section h2 { font-size: clamp(32px, 5vw, 52px); font-weight: 900; color: #fff; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 12px; }
+.cta-section p { font-size: 20px; color: rgba(255,255,255,0.75); margin-bottom: 36px; }
+.cta-white { display: inline-flex; align-items: center; gap: 10px; background: #fff; color: #008081; font-weight: 900; font-size: 18px; padding: 18px 40px; border-radius: 100px; margin-bottom: 14px; transition: background 0.2s, transform 0.15s; }
+.cta-white:hover { background: #e0f2f1; transform: translateY(-2px); }
+.cta-outline { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); border: 1.5px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 15px; padding: 12px 28px; border-radius: 100px; margin-left: 12px; transition: background 0.2s; }
+.cta-outline:hover { background: rgba(255,255,255,0.1); }
+.cta-meta { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 18px; }
+.cta-meta .alert { color: #fbbf24; font-weight: 700; }
+
+/* ── Footer ── */
+.footer { background: #080e1a; padding: 36px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; max-width: 100%; }
+.footer-brand { font-size: 17px; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 8px; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: #64748b; transition: color 0.15s; }
+.footer-links a:hover { color: #94a3b8; }
+.footer-copy { font-size: 12px; color: #475569; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pain-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .plans-grid { grid-template-columns: 1fr; }
+  .compare-head, .compare-row { grid-template-columns: 1fr; }
+  .cb { border-right: none; border-bottom: 1px solid #f1f5f9; }
+  .mockup-desktop { display: none; }
+  .mockup-mobile { display: flex; }
+  .footer { flex-direction: column; align-items: center; text-align: center; }
+  .price-right { text-align: left; }
+  .cta-outline { display: none; }
+}
+@media (max-width: 480px) {
+  .hero { padding: 60px 20px 72px; }
+  .section { padding: 64px 0; }
+  .offerta-box { padding: 24px 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sticky header -->
+<header id="sticky-header">
+  <div class="sh-brand">
+    <div class="sh-brand-dot"></div>
+    Leomenu
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="sh-badge">⚡ 23 posti rimasti</span>
+    <a href="https://app.leomenu.it/register" class="sh-cta">Inizia gratis →</a>
+  </div>
+</header>
+
+<!-- S1 HERO -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="scarcity-badge">
+      ⚡ Offerta Fondatori — Rimangono solo <strong style="margin:0 4px">23 posti</strong> su 30
+    </div>
+    <h1>
+      Il tuo menù online<br>
+      in <span class="accent">48 ore.</span><br>
+      <span class="sub">Lo carichiamo noi.</span>
+    </h1>
+    <p class="hero-sub1">€204/anno. Meno di una ristampa del menù cartaceo.</p>
+    <p class="hero-sub2">Zero app da scaricare per i tuoi clienti — solo scan del QR.</p>
+    <a href="https://app.leomenu.it/register" class="cta-main">
+      Inizia gratis 14 giorni →
+    </a>
+    <p class="cta-note">Nessun impegno. Carta richiesta solo per attivare il trial.</p>
+    <div class="deadline">
+      <span style="color:#6b7280">Offerta valida fino al</span>
+      <span class="deadline-date">31 maggio 2026</span>
+      <span style="color:#6b7280">o fino a esaurimento posti</span>
+    </div>
+  </div>
+</section>
+
+<!-- S2 PROBLEMA -->
+<section class="section bg-grey">
+  <div class="container">
+    <div class="text-center">
+      <span class="sec-eyebrow">Il Problema</span>
+      <h2 class="sec-h2">Riconosci questa situazione?</h2>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon" style="background:#fff1f2">🖨️</div>
+        <div class="pain-title">Ristampi il menù ogni volta che cambia un prezzo</div>
+        <p class="pain-desc">€150–300 per modifica + giorni di attesa. Poi il grafico sbaglia il font e si ricomincia.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon" style="background:#fff7ed">📢</div>
+        <div class="pain-title">I camerieri trasmettono gli ordini a voce</div>
+        <p class="pain-desc">Errori in cucina, clienti insoddisfatti, tavoli che aspettano. E ogni serata è una roulette.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon" style="background:#fffbeb">📊</div>
+        <div class="pain-title">Non sai quali piatti vendono di più</div>
+        <p class="pain-desc">Decidi a intuizione cosa tenere in carta. Il risultato? Metà frigo sprecato ogni settimana.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon" style="background:#fff1f2">👻</div>
+        <div class="pain-title">I tuoi clienti non tornano — e non sai perché</div>
+        <p class="pain-desc">Nessun sistema di fidelizzazione. Nessun dato. Solo sperare che si ricordino di te.</p>
+      </div>
+    </div>
+    <p class="pain-footer">È il 2026. Puoi fare meglio.</p>
+  </div>
+</section>
+
+<!-- S3 SOLUZIONE -->
+<section class="section" style="background:#f0fdf4">
+  <div class="container">
+    <div class="text-center">
+      <span class="sec-eyebrow">La Soluzione</span>
+      <h2 class="sec-h2">Con LeoMenu, tutto cambia.</h2>
+    </div>
+    <div class="compare-wrap">
+      <div class="compare-head">
+        <div class="ch-before">❌ Prima</div>
+        <div class="ch-after">✅ Con LeoMenu</div>
+      </div>
+      <div class="compare-row"><div class="cb">Agenzia grafica — €150–300 ogni modifica<small>+ giorni di attesa</small></div><div class="ca">30 secondi dal tuo telefono, gratis, sempre</div></div>
+      <div class="compare-row"><div class="cb">Ordini a voce → errori → clienti irritati</div><div class="ca">Ordini digitali diretti in cucina, in tempo reale</div></div>
+      <div class="compare-row"><div class="cb">Nessun dato sulle vendite — decisioni a intuizione</div><div class="ca">Dashboard: bestseller, ora di punta, ticket medio</div></div>
+      <div class="compare-row"><div class="cb">Zero contatto coi clienti dopo che escono</div><div class="ca">Carta Fedeltà + CRM: sai chi sono, quando tornare</div></div>
+      <div class="compare-row"><div class="cb">€200–400/anno solo in stampe</div><div class="ca">€204/anno tutto incluso</div></div>
+      <div class="compare-cta">
+        <a href="https://app.leomenu.it/register" class="btn-teal">Inizia gratis 14 giorni →</a>
+        <span style="font-size:13px;color:#6b7280">Carta richiesta solo per attivare il trial</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S4 COME FUNZIONA -->
+<section class="section bg-teal-light">
+  <div class="container">
+    <div class="text-center">
+      <span class="sec-eyebrow">Come Funziona</span>
+      <h2 class="sec-h2">Tre passi. Poi sei online.</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-title">Manda il tuo menù in PDF via WhatsApp</div>
+        <p class="step-desc">Una foto, un file, qualsiasi formato. Anche una foto con il telefono va bene.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-title">Noi lo carichiamo entro 48 ore</div>
+        <p class="step-desc">Tu non tocchi nulla. Pensiamo a tutto noi — categorie, prodotti, prezzi, foto.</p>
+        <span style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:100px;font-size:11px;font-weight:700;color:#e65100;">Solo con il Piano Annuale Fondatori</span>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-title">Apri domani con il menù digitale attivo</div>
+        <p class="step-desc">I tuoi clienti scansionano, ordinano, tornano. Tutto funziona dal giorno uno.</p>
+      </div>
+    </div>
+    <div class="lancio-box">
+      <h3>Il Metodo Lancio 48h.</h3>
+      <p>Il tuo menù online domani — senza che tu carichi nulla.</p>
+      <a href="https://app.leomenu.it/register" class="btn-teal">Attiva l'Offerta Fondatori →</a>
+    </div>
+  </div>
+</section>
+
+<!-- S5 PRODOTTO (mockup images) -->
+<section class="section" style="background:#fff">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:40px">
+      <span class="sec-eyebrow">Il Prodotto</span>
+      <h2 class="sec-h2">Tutto quello che ti serve,<br>in un'unica dashboard.</h2>
+    </div>
+
+    <!-- Desktop: tablet mockup -->
+    <div class="mockup-desktop">
+      <img src="Mockup%20tablet.webp" alt="LeoMenu — Pannello di gestione su tablet" loading="lazy">
+    </div>
+
+    <!-- Mobile: phone mockup -->
+    <div class="mockup-mobile">
+      <img src="MOCKUP%20MOVIL%20LEOMENU.webp" alt="LeoMenu — Vista cliente su iPhone" loading="lazy">
+    </div>
+
+    <div class="modules">
+      <div class="module-chip"><span>🛒</span> Ordini</div>
+      <div class="module-chip"><span>📋</span> Menù</div>
+      <div class="module-chip"><span>📈</span> Analitiche</div>
+      <div class="module-chip"><span>👥</span> CRM</div>
+      <div class="module-chip"><span>⭐</span> Carta Fedeltà</div>
+      <div class="module-chip"><span>📱</span> LeoPOS</div>
+      <div class="module-chip"><span>🔲</span> QR</div>
+    </div>
+  </div>
+</section>
+
+<!-- S6 STORIA -->
+<section class="section bg-warm">
+  <div class="container">
+    <div class="storia-inner">
+      <span class="storia-eyebrow">Perché Esiste LeoMenu</span>
+      <h2 class="storia-h2">LeoMenu non è nato in una startup valley.<br>È nato in un ristorante di Cassino.</h2>
+      <div class="storia-body">
+        <p>Un ristoratore ci ha chiesto una cosa semplice: un menù digitale che i clienti potessero leggere dal telefono, senza app, senza ristampare ogni stagione, senza chiamare un grafico ogni volta che cambia un prezzo.</p>
+        <p>Mentre costruivamo quella soluzione, abbiamo capito che poteva essere molto di più. Abbiamo aggiunto gli ordini dal tavolo. Poi la Carta Fedeltà. Poi il CRM. Poi le analitiche. Poi LeoPOS.</p>
+        <p><strong>Oggi LeoMenu è il sistema completo che quel ristoratore — e migliaia di ristoratori come lui — avrebbe voluto avere dall'inizio.</strong></p>
+        <p class="teal">Lo abbiamo costruito per voi. E il prezzo riflette questa scelta.</p>
+      </div>
+      <div class="storia-author">
+        <div class="storia-avatar">L</div>
+        <div>
+          <strong style="color:#111827;font-size:15px">Il Team Leomenu</strong><br>
+          <span style="font-size:13px;color:#6b7280">Cassino, Italia 🇮🇹</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S7 OFFERTA FONDATORI -->
+<section class="section bg-dark">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:40px">
+      <span style="font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#008081;display:block;margin-bottom:12px">Solo per i primi 30 ristoranti</span>
+      <h2 style="font-size:clamp(32px,5vw,48px);font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:8px">Offerta Fondatori</h2>
+      <p style="color:#6b7280;font-size:17px">Il prezzo più basso che esisterà mai per LeoMenu</p>
+    </div>
+
+    <div class="offerta-inner">
+      <div class="offerta-box">
+        <!-- Price -->
+        <div class="price-row">
+          <div>
+            <span style="font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#008081;display:block;margin-bottom:8px">Piano Annuale Fondatori</span>
+            <div class="price-main">
+              <span class="price-big">€17</span>
+              <span class="price-period">/mese</span>
+            </div>
+            <div class="price-year">€204 all'anno · <span class="price-saving">Risparmio 41%</span></div>
+          </div>
+          <div class="price-right">
+            <div class="price-old">€348/anno (piano mensile)</div>
+            <div class="price-total">€204/anno</div>
+            <div class="price-save">Risparmi €144 all'anno</div>
+          </div>
+        </div>
+
+        <!-- Incluso -->
+        <span class="included-label">Tutto incluso:</span>
+        <div class="check-list">
+          <div class="check-row"><span class="check-icon">✓</span><span class="check-text">Tutto LeoMenu senza limitazioni</span></div>
+        </div>
+
+        <!-- Bonus -->
+        <span class="included-label">Bonus esclusivi:</span>
+        <div class="bonus-list">
+          <div class="bonus-item highlight">
+            <div class="bonus-num">1</div>
+            <div class="bonus-body">
+              <span class="bonus-badge">BONUS 1 — ESCLUSIVO</span>
+              <div class="bonus-title">Metodo Lancio 48h</div>
+              <div class="bonus-desc">Mandi il tuo menù in PDF via WhatsApp. Noi carichiamo tutto — categorie, prodotti, prezzi e foto — entro 48 ore. Tu non tocchi nulla.</div>
+            </div>
+            <div>
+              <div class="bonus-value-old">valore</div>
+              <div class="bonus-value">€150</div>
+            </div>
+          </div>
+          <div class="bonus-item normal">
+            <div class="bonus-num">2</div>
+            <div class="bonus-body">
+              <span class="bonus-badge">BONUS 2</span>
+              <div class="bonus-title">Guida Carta Fedeltà</div>
+              <div class="bonus-desc">Video tutorial + PDF con tabella ranghi punti e premi calcolati per essere redditizi in base al tuo scontrino medio.</div>
+            </div>
+            <div>
+              <div class="bonus-value-old">valore</div>
+              <div class="bonus-value">€80</div>
+            </div>
+          </div>
+          <div class="bonus-item normal">
+            <div class="bonus-num">3</div>
+            <div class="bonus-body">
+              <span class="bonus-badge">BONUS 3</span>
+              <div class="bonus-title">Template WhatsApp di lancio</div>
+              <div class="bonus-desc">Il messaggio già scritto per annunciare il tuo menù digitale. Copi, incolli, invii.</div>
+            </div>
+            <div>
+              <div class="bonus-value-old">valore</div>
+              <div class="bonus-value">€30</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Garanzie -->
+        <div class="guarantee-box">
+          <span class="gar-label">Garanzie incluse:</span>
+          <div class="gar-row"><span class="gar-shield">🛡</span><span><strong>14 giorni soddisfatti o rimborsati.</strong> Cancelliamo tutto, nessuna domanda.</span></div>
+          <div class="gar-row"><span class="gar-shield">🛡</span><span><strong>Garanzia Esecuzione.</strong> Menù online in 48h o il primo mese è gratis.</span></div>
+        </div>
+
+        <!-- Value -->
+        <div class="value-row">
+          <span class="value-label">Totale valore incluso</span>
+          <div class="value-right">
+            <div class="value-old">€430+</div>
+            <div class="value-pay">
+              <span class="value-pay-label">Tu paghi:</span>
+              <span class="value-pay-price">€204/anno</span>
+            </div>
+          </div>
+        </div>
+
+        <a href="https://app.leomenu.it/register" class="cta-big">Attiva l'Offerta Fondatori →</a>
+        <div class="offerta-meta">
+          <span class="alert">⚡ Rimangono solo 23 posti</span>
+          <span>Offerta valida fino al 31 maggio 2026</span>
+        </div>
+      </div>
+
+      <!-- Piani alternativi -->
+      <div class="plans-grid" style="margin-top:20px">
+        <div class="plan-card">
+          <div class="plan-label">Piano Semestrale</div>
+          <div class="plan-price">€22/mese</div>
+          <div class="plan-note">€132 ogni 6 mesi</div>
+          <span class="plan-badge">-24%</span>
+          <div class="plan-note" style="margin-top:8px">Senza i bonus Fondatori</div>
+        </div>
+        <div class="plan-card">
+          <div class="plan-label">Piano Mensile</div>
+          <div class="plan-price">€29/mese</div>
+          <div class="plan-note" style="margin-top:8px">Senza i bonus Fondatori</div>
+        </div>
+      </div>
+      <p class="offerta-footnote">I bonus del Metodo Lancio 48h sono esclusivi del Piano Annuale Fondatori.</p>
+    </div>
+  </div>
+</section>
+
+<!-- S8 GARANZIA -->
+<section class="section" style="background:#fff">
+  <div class="container text-center">
+    <div class="shield-wrap">🛡️</div>
+    <h2 class="sec-h2">Rischio zero per te.</h2>
+    <p class="garanzia-text">
+      Se entro 14 giorni non sei completamente soddisfatto, <strong>cancelliamo tutto e non ti addebitiamo nulla.</strong> Nessuna domanda, nessuna burocrazia.<br><br>
+      E se non carichiamo il tuo menù entro 48 ore dalla ricezione del PDF, <strong>il tuo primo mese è completamente gratis.</strong>
+    </p>
+    <div class="garanzia-chips">
+      <div class="gar-chip">✓ 14 giorni soddisfatti o rimborsati</div>
+      <div class="gar-chip">✓ 48h garanzia esecuzione</div>
+    </div>
+  </div>
+</section>
+
+<!-- S9 FAQ -->
+<section class="section bg-faq">
+  <div class="container text-center">
+    <h2 class="sec-h2">Hai domande? Abbiamo risposte.</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">I miei clienti devono scaricare un'app?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">No. Zero app. Scansionano il QR con la fotocamera del telefono e il menù si apre direttamente nel browser. Nessun attrito, nessun download.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">E se cambio il menù ogni settimana?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Lo modifichi tu in 30 secondi dal tuo telefono, gratis, ogni volta che vuoi. Nessun costo aggiuntivo, mai.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">Non ho tempo di caricare 150 piatti.</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Per questo esiste il Metodo Lancio 48h. Mandi il PDF via WhatsApp, noi carichiamo tutto entro 48 ore. Tu non tocchi nulla — neanche un prodotto.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">Ho già un sistema. Perché cambiare?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Il tuo sistema attuale ha ordini dal tavolo, CRM, Carta Fedeltà e analytics tutto integrato a €17/mese? Se sì, tienilo. Se no, parliamoci.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">Siete una startup nuova. Mi posso fidare?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Il nostro software è attivo, funzionante, con ristoranti reali che lo usano oggi. Hai 14 giorni gratis per vederlo con i tuoi occhi. Zero rischio da parte tua.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">Cosa succede dopo i 14 giorni di trial?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Ti addebitiamo il piano che hai scelto. Se non vuoi continuare, cancelli prima del giorno 14 e non ti costa nulla. Nessuna domanda, nessuna burocrazia.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">
+          <span class="faq-q">Posso cambiare piano in seguito?</span>
+          <span class="faq-icon">▾</span>
+        </button>
+        <div class="faq-body">Sì, quando vuoi. Puoi passare da mensile ad annuale (o viceversa) dalla tua area personale, senza chiamare nessuno.</div>
+      </div>
+    </div>
+    <div style="margin-top:32px">
+      <p style="color:#6b7280;margin-bottom:14px">Hai altre domande?</p>
+      <a href="https://wa.me/393661100408" target="_blank" rel="noopener" class="whatsapp-btn">
+        💬 Scrivici su WhatsApp
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- S10 CTA FINALE -->
+<section class="cta-section">
+  <div class="cta-section-inner">
+    <h2>Il tuo menù online in 48 ore.</h2>
+    <p>Manda il PDF. Pensiamo a tutto noi.</p>
+    <div>
+      <a href="https://app.leomenu.it/register" class="cta-white">Inizia gratis 14 giorni →</a>
+      <a href="https://leomenu.it" class="cta-outline">← Torna alla home</a>
+    </div>
+    <p class="cta-meta">
+      <span class="alert">⚡ 23 posti rimasti</span> · Nessuna carta · Cancelli quando vuoi
+    </p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-brand">
+    <div style="width:7px;height:7px;background:#008081;border-radius:50%"></div>
+    Leomenu
+    <span style="font-size:12px;color:#475569;margin-left:6px">Made in Italy 🇮🇹</span>
+  </div>
+  <div class="footer-links">
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/cookie">Cookie Policy</a>
+    <a href="/termini">Termini di Servizio</a>
+  </div>
+  <p class="footer-copy">© 2026 LeoMenu</p>
+</footer>
+
+<script>
+// Sticky header on scroll past hero
+const header = document.getElementById('sticky-header');
+const hero   = document.getElementById('hero');
+const obs = new IntersectionObserver(([e]) => {
+  header.classList.toggle('visible', !e.isIntersecting);
+}, { threshold: 0.1 });
+obs.observe(hero);
+
+// FAQ accordion
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+</script>
+</body>
+</html>
