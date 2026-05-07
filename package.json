@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && tsx scripts/prerender.ts",
+    "build:hostinger": "npm run build && tsx scripts/hostinger-postbuild.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
