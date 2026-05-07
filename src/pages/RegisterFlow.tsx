@@ -67,8 +67,19 @@ export default function RegisterFlow() {
         const savedRole = localStorage.getItem('registerRole');
         if (savedRole === 'owner' || savedRole === 'customer') setRole(savedRole);
 
+        const params = new URLSearchParams(window.location.search);
         const pendingOAuth = localStorage.getItem('pending_oauth_register');
+
         db.auth.getSession().then(async ({ data: { session } }) => {
+            // Viene dalla landing leomenu.it con ?provider=google e nessuna sessione attiva
+            if (!session?.user && params.get('provider') === 'google') {
+                localStorage.setItem('pending_oauth_register', 'true');
+                await db.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.origin + '/register' },
+                });
+                return;
+            }
             if (!session?.user) return;
             if (pendingOAuth) {
                 localStorage.removeItem('pending_oauth_register');
