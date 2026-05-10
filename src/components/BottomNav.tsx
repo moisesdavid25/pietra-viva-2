@@ -59,8 +59,8 @@ export default function BottomNav({ restaurantSlug }: { restaurantSlug?: string 
     navigate(`/${slug}`);
   };
 
-  const thirdLinkDest  = role === 'owner' ? (slug ? `/${slug}/gestione` : '/gestione') : (role === 'customer' ? '/passport' : '/login');
-  const thirdLinkLabel = role === 'customer' ? 'Passport' : (role === 'owner' ? 'Gestione' : 'Accedi');
+  const thirdLinkDest  = role === 'owner' ? (slug ? `/${slug}/gestione` : '/gestione') : (role === 'customer' ? '/fidelity' : '/login');
+  const thirdLinkLabel = role === 'customer' ? 'Fidelity' : (role === 'owner' ? 'Gestione' : 'Accedi');
 
   const tabCls = (active: boolean) =>
     clsx('flex flex-col items-center justify-center space-y-1 transition-colors',

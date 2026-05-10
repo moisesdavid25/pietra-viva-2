@@ -100,7 +100,7 @@ export default function RegisterFlow() {
                 const { data: res } = await db.from('restaurants').select('slug').eq('user_id', userId).neq('slug', 'demo').limit(1).maybeSingle();
                 navigate(res?.slug ? `/${res.slug}/gestione` : '/gestione?wizard=true');
             } else {
-                navigate('/passport?wizard=true');
+                navigate('/fidelity?wizard=true');
             }
         } catch { await db.auth.signOut(); }
     };
@@ -202,7 +202,7 @@ export default function RegisterFlow() {
             const { data: { user } } = await db.auth.getUser();
             if (!user) throw new Error('Utente non autenticato');
             await db.from('profiles').upsert({ id: user.id, role, first_name: firstName, last_name: lastName, phone });
-            navigate('/passport?wizard=true');
+            navigate('/fidelity?wizard=true');
         } catch (err: any) {
             await db.auth.signOut();
             setError(err.message === 'User already registered' ? 'Utente già registrato. Accedi.' : (err.message || 'Errore durante la registrazione.'));

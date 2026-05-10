@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import SearchPortal from './pages/SearchPortal';
 import RestaurantHome from './pages/RestaurantHome';
 import Profile from './pages/Profile';
-import CartaFedelta from './pages/CartaFedelta';
+import Fidelity from './pages/Fidelity';
 import MenuPage from './pages/Menu';
 import MenuDelGiorno from './pages/MenuDelGiorno';
 import Gestione from './pages/Gestione';
@@ -69,7 +69,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
               navigate('/register', { replace: true });
             }
           } else {
-            navigate('/passport', { replace: true });
+            navigate('/fidelity', { replace: true });
           }
           return; // don't setChecking(false) — navigation is in progress
         }
@@ -109,7 +109,7 @@ function GlobalThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemeParams = async () => {
       const pathParts = location.pathname.split('/').filter(Boolean);
       const firstPart = pathParts[0];
-      const staticRoutes = ['login', 'register', 'passport', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', 'lancio', ''];
+      const staticRoutes = ['login', 'register', 'fidelity', 'reset-password', 'update-password', 'privacy-policy', 'termini-condizioni', 'onboarding', 'gestione', 'trova', 'funzionalita', 'prezzi', 'sicurezza', 'come-funziona', 'leomenu-admin', 'contatti', 'privacy', 'terms', 'contact', 'lancio', ''];
 
       if (firstPart && !staticRoutes.includes(firstPart)) {
         // Customer viewing a specific restaurant
@@ -170,7 +170,7 @@ export default function App() {
         <Route path="/google-signup" element={<GoogleSignup />} />
         <Route path="/register/complete" element={<RegisterComplete />} />
         <Route path="/lancio" element={<Lancio />} />
-        <Route path="/passport" element={<CartaFedelta />} />
+        <Route path="/fidelity" element={<Fidelity />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

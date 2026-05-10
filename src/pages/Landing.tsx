@@ -104,7 +104,7 @@ export default function Landing() {
                 </div>
                 <div className="flex gap-4">
                     {user ? (
-                        <Link to="/passport" className="px-4 py-2 font-bold text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-colors flex items-center gap-2">
+                        <Link to="/fidelity" className="px-4 py-2 font-bold text-[#008081] hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-colors flex items-center gap-2">
                              <Award className="w-5 h-5" /> Area Fedeltà
                         </Link>
                     ) : (

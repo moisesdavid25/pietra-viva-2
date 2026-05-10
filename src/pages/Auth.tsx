@@ -35,7 +35,7 @@ export default function Auth({ type }: { type: 'login' }) {
                     navigate('/gestione');
                 }
             } else {
-                navigate('/passport');
+                navigate('/fidelity');
             }
         } catch (err) {
             await db.auth.signOut();
