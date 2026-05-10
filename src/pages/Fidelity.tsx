@@ -429,7 +429,7 @@ export default function Fidelity() {
     })();
 
     return (
-        <div className="min-h-screen flex" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="min-h-screen flex overflow-x-hidden" style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
         {/* ── DESKTOP SIDEBAR ──────────────────────────────────────── */}
         <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen z-40" style={{ width: 256, background: '#fff', borderRight: '1px solid #e8ecf0' }}>
@@ -478,7 +478,7 @@ export default function Fidelity() {
         </aside>
 
         {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
-        <div className="flex-1 md:ml-64 min-h-screen flex flex-col relative" style={{ background: '#f2f4f7' }}>
+        <div className="flex-1 md:ml-64 min-h-screen flex flex-col relative overflow-x-hidden" style={{ background: '#f2f4f7' }}>
 
             {/* ── TAB: HOME ─────────────────────────────────────────── */}
             {activeTab === 'home' && (
@@ -545,7 +545,7 @@ export default function Fidelity() {
                                     <p className="text-sm font-medium" style={{ color: '#8492a6' }}>Nessuna fidelity ancora. Scopri i ristoranti!</p>
                                 </div>
                             ) : (
-                                <div className="flex gap-3.5 overflow-x-auto pb-2 -mx-6 px-6" style={{ scrollbarWidth: 'none' }}>
+                                <div className="flex gap-3.5 overflow-x-auto pb-2 -mx-4 md:-mx-8 px-4 md:px-8" style={{ scrollbarWidth: 'none' }}>
                                     {myRestaurants.map(r => {
                                         const lv = getLevel(r.points);
                                         const avail = r.rewards.filter(rw => r.points >= rw.points_required).length;
