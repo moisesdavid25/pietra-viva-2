@@ -130,6 +130,8 @@ export default function Fidelity() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [removeModal, setRemoveModal] = useState<{ open: boolean; rid: string; rname: string }>({ open: false, rid: '', rname: '' });
+    const [addModal, setAddModal] = useState<{ open: boolean; rid: string; rname: string; logo: string }>({ open: false, rid: '', rname: '', logo: '' });
+    const [addingRestaurant, setAddingRestaurant] = useState(false);
 
     // ── Avatar
     const [avatarSrc, setAvatarSrc] = useState('');
@@ -160,18 +162,52 @@ export default function Fidelity() {
         setSubTasteProfile(tasteProfile);
     }, [tasteProfile]);
 
+    // Load customer phone and scopri restaurants
     useEffect(() => {
-        if (!isAuthLoading && !isDataLoading) {
+        if (!isAuthLoading && !isDataLoading && user) {
+            // Load phone from customers table
+            db.from('customers').select('whatsapp').eq('auth_user_id', user.id).limit(1).maybeSingle()
+                .then(({ data }) => { if (data?.whatsapp) setTelefono(data.whatsapp); });
+
+            // Load all restaurants with logo for Scopri
             db.from('restaurants').select('id,name,slug,citta')
-                .neq('slug', 'demo').limit(10)
-                .then(({ data }) => {
-                    if (data) {
-                        const myIds = new Set(myRestaurants.map(r => r.id));
-                        setAllRestaurants(data.filter((r: any) => !myIds.has(r.id)));
-                    }
+                .neq('slug', 'demo').limit(20)
+                .then(async ({ data: rests }) => {
+                    if (!rests) return;
+                    const myIds = new Set(myRestaurants.map(r => r.id));
+                    const others = rests.filter((r: any) => !myIds.has(r.id));
+                    if (others.length === 0) return;
+                    // Load logos
+                    const { data: logoSettings } = await db.from('settings')
+                        .select('restaurant_id,value').eq('key', 'logo_url')
+                        .in('restaurant_id', others.map((r: any) => r.id));
+                    const logoMap: Record<string, string> = {};
+                    logoSettings?.forEach((s: any) => { logoMap[s.restaurant_id] = s.value; });
+                    setAllRestaurants(others.map((r: any) => ({ ...r, logo_url: logoMap[r.id] || '' })));
                 });
         }
-    }, [isAuthLoading, isDataLoading, myRestaurants]);
+    }, [isAuthLoading, isDataLoading, myRestaurants, user]);
+
+    const handleConfirmAddRestaurant = async () => {
+        if (!user || !addModal.rid) return;
+        setAddingRestaurant(true);
+        try {
+            await db.from('customers').insert({
+                auth_user_id: user.id,
+                restaurant_id: addModal.rid,
+                name: `${firstName} ${lastName}`.trim() || user.email,
+                total_points: 0,
+            });
+            setAddModal({ open: false, rid: '', rname: '', logo: '' });
+            showToast(`✓ "${addModal.rname}" aggiunta alle tue Fidelity!`);
+            // Remove from allRestaurants list
+            setAllRestaurants(prev => prev.filter(r => r.id !== addModal.rid));
+        } catch {
+            showToast('Errore durante l\'aggiunta. Riprova.');
+        } finally {
+            setAddingRestaurant(false);
+        }
+    };
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -383,7 +419,8 @@ export default function Fidelity() {
     })();
 
     return (
-        <div className="min-h-screen flex flex-col" style={{ background: '#f2f4f7', fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="min-h-screen" style={{ background: '#e5e7eb', fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="w-full max-w-[430px] mx-auto min-h-screen flex flex-col relative" style={{ background: '#f2f4f7', boxShadow: '0 0 60px rgba(0,0,0,0.15)' }}>
 
             {/* ── TAB: HOME ─────────────────────────────────────────── */}
             {activeTab === 'home' && (
@@ -519,9 +556,10 @@ export default function Fidelity() {
                                             <div className="text-sm font-bold truncate" style={{ color: '#1a1f2e' }}>{r.name}</div>
                                             <div className="text-xs mt-0.5" style={{ color: '#8492a6' }}>{r.citta || 'Italia'}</div>
                                         </div>
-                                        <Link to={`/${r.slug}`} className="text-xs font-semibold px-2.5 py-1.5 rounded-lg flex-shrink-0" style={{ background: '#e6f4f4', color: '#008080' }}>
+                                        <button onClick={() => setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' })}
+                                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg flex-shrink-0" style={{ background: '#e6f4f4', color: '#008080' }}>
                                             + Aggiungi
-                                        </Link>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -618,19 +656,24 @@ export default function Fidelity() {
                             const isMy = myRestaurants.some(mr => mr.id === r.id);
                             return (
                                 <div key={r.id} className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-                                    <div className="h-28 flex items-end p-3" style={{ background: 'linear-gradient(135deg,#005f5f,#008080)' }}>
-                                        <span className="text-4xl">{r.logo_url ? '' : '🍽️'}</span>
-                                        {r.logo_url && <img src={r.logo_url} className="w-10 h-10 object-contain rounded-xl bg-white/20 p-1" />}
+                                    <div className="h-28 flex items-end p-3 relative overflow-hidden" style={{ background: r.logo_url ? undefined : 'linear-gradient(135deg,#005f5f,#008080)' }}>
+                                        {r.logo_url ? (
+                                            <img src={r.logo_url} className="absolute inset-0 w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-4xl relative z-10">🍽️</span>
+                                        )}
                                     </div>
                                     <div className="p-4">
                                         <div className="font-bold text-base mb-1" style={{ color: '#1a1f2e' }}>{r.name}</div>
-                                        <div className="text-xs mb-2.5" style={{ color: '#8492a6' }}>🍽️ Cucina · {r.citta || 'Italia'}</div>
+                                        <div className="text-xs mb-2.5" style={{ color: '#8492a6' }}>🍽️ · {r.citta || 'Italia'}</div>
                                         <div className="flex gap-1.5 flex-wrap">
-                                            {isMy && (
+                                            {isMy ? (
                                                 <span className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>✓ Fidelity attiva</span>
-                                            )}
-                                            {!isMy && (
-                                                <Link to={`/${r.slug}`} className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>+ Aggiungi Fidelity</Link>
+                                            ) : (
+                                                <button onClick={() => setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' })}
+                                                    className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>
+                                                    + Aggiungi Fidelity
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -741,10 +784,10 @@ export default function Fidelity() {
                         'dati', 'password', 'notifiche', 'lingua', 'idglobale',
                         'gusto', 'dieta', 'supporto', 'condividi', 'privacy'
                     ] as SubScreen[]).map(sub => (
-                        <div key={sub} className="absolute inset-0 overflow-y-auto transition-transform duration-300 flex flex-col"
+                        <div key={sub} className="absolute inset-0 overflow-y-auto transition-transform duration-300"
                             style={{ transform: activeSubScreen === sub ? 'translateX(0)' : 'translateX(100%)', background: '#f2f4f7', scrollbarWidth: 'none' }}>
                             {/* Sub topbar */}
-                            <div className="flex items-center gap-3 px-4 h-14 bg-white border-b flex-shrink-0 sticky top-0 z-10" style={{ borderColor: '#e8ecf0', paddingTop: 36 }}>
+                            <div className="flex items-center gap-3 px-4 bg-white border-b sticky top-0 z-10" style={{ borderColor: '#e8ecf0', paddingTop: 48, paddingBottom: 12 }}>
                                 <button onClick={() => setActiveSubScreen(null)} className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#f2f4f7' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1f2e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                                 </button>
@@ -755,7 +798,7 @@ export default function Fidelity() {
                             </div>
 
                             {/* Sub body */}
-                            <div className="p-5 flex flex-col gap-4 flex-1">
+                            <div className="p-5 flex flex-col gap-4 pb-28">
 
                                 {/* ── DATI ── */}
                                 {sub === 'dati' && <>
@@ -826,8 +869,12 @@ export default function Fidelity() {
                                             <div className="flex overflow-hidden rounded-xl" style={{ border: '1.5px solid #e8ecf0' }}>
                                                 <input type={f.show ? 'text' : 'password'} value={f.val} onChange={e => f.set(e.target.value)} placeholder="••••••••"
                                                     className="flex-1 p-3.5 text-sm outline-none bg-white" style={{ color: '#1a1f2e', fontFamily: "'DM Sans', sans-serif" }} />
-                                                <button onClick={f.toggle} className="px-3.5 text-base" style={{ background: '#f2f4f7', borderLeft: '1.5px solid #e8ecf0' }}>
-                                                    {f.show ? '🙈' : '👁'}
+                                                <button onClick={f.toggle} className="px-3.5 flex items-center justify-center" style={{ background: '#f2f4f7', borderLeft: '1.5px solid #e8ecf0' }}>
+                                                    {f.show ? (
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8492a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                                    ) : (
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8492a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    )}
                                                 </button>
                                             </div>
                                             {i === 1 && pwNew && (
@@ -1042,7 +1089,7 @@ export default function Fidelity() {
             )}
 
             {/* ── BOTTOM NAV ─────────────────────────────────────────── */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50" style={{ borderColor: '#e8ecf0', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t z-50" style={{ borderColor: '#e8ecf0', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
                 <div className="flex">
                     {([
                         { id: 'home' as Tab, icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, label: 'HOME' },
@@ -1127,6 +1174,39 @@ export default function Fidelity() {
                         <button onClick={() => showToast('🚀 Google Wallet disponibile prossimamente!')} className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2" style={{ background: '#1a1f2e' }}>
                             💳 Aggiungi a Google Wallet
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── ADD RESTAURANT CONFIRM ────────────────────── */}
+            {addModal.open && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6" style={{ background: 'rgba(10,15,25,0.7)', backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s' }}>
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm" style={{ animation: 'scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                        <div className="flex flex-col items-center mb-5">
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-3 overflow-hidden" style={{ background: '#e6f4f4', border: '1px solid #e8ecf0' }}>
+                                {addModal.logo ? <img src={addModal.logo} className="w-full h-full object-contain p-1" /> : '🍽️'}
+                            </div>
+                            <div className="text-lg font-black text-center" style={{ color: '#1a1f2e' }}>Aggiungi Fidelity?</div>
+                            <div className="text-sm text-center mt-2 leading-relaxed" style={{ color: '#8492a6' }}>
+                                Vuoi unirti al programma fedeltà di <strong style={{ color: '#1a1f2e' }}>{addModal.rname}</strong>?
+                                Inizierai ad accumulare Stelle ad ogni visita.
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2.5">
+                            <button
+                                onClick={handleConfirmAddRestaurant}
+                                disabled={addingRestaurant}
+                                className="w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2"
+                                style={{ background: '#008080' }}>
+                                {addingRestaurant
+                                    ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    : '✓ Sì, aggiungi'}
+                            </button>
+                            <button onClick={() => setAddModal({ open: false, rid: '', rname: '', logo: '' })}
+                                className="w-full py-3.5 rounded-xl font-semibold" style={{ background: '#f2f4f7', color: '#1a1f2e' }}>
+                                Annulla
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1223,6 +1303,7 @@ export default function Fidelity() {
                 ::-webkit-scrollbar { display:none }
             `}</style>
         </div>
+        </div>
     );
 }
 
@@ -1230,10 +1311,24 @@ export default function Fidelity() {
 
 function MiniToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
     return (
-        <button onClick={() => onChange(!on)} className="relative flex-shrink-0 transition-colors duration-250"
-            style={{ width: 40, height: 24, borderRadius: 12, background: on ? '#008080' : '#e8ecf0' }}>
-            <span className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-transform duration-250"
-                style={{ transform: on ? 'translateX(19px)' : 'translateX(3px)', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
+        <button
+            onClick={() => onChange(!on)}
+            className="relative flex-shrink-0"
+            style={{ width: 44, height: 26, borderRadius: 13, background: on ? '#008080' : '#d1d5db', transition: 'background 0.25s ease', border: 'none', outline: 'none', cursor: 'pointer', overflow: 'hidden' }}
+        >
+            <span
+                style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: on ? 21 : 3,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    transition: 'left 0.25s ease',
+                }}
+            />
         </button>
     );
 }
