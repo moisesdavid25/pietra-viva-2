@@ -77,7 +77,7 @@ const NOTIF_EMAIL = ['Newsletter mensile', 'Riepilogo stelle mensile'];
 export default function Fidelity() {
     const location = useLocation();
 
-    const { user, firstName, setFirstName, lastName, setLastName, isSavingProfile, isAuthLoading, handleLogout, handleSaveProfile, handleDeleteCustomerAccount } = useFidelityAuth();
+    const { user, firstName, setFirstName, lastName, setLastName, isSavingProfile, isAuthLoading, handleLogout, handleSaveFullProfile, handleDeleteCustomerAccount } = useFidelityAuth();
     const { myRestaurants, isDataLoading, handleRemoveAffiliation } = useFidelityData(user?.id);
     const { globalSearch, setGlobalSearch, globalSearchResults, isSearchingGlobal } = useFidelitySearch();
 
@@ -177,13 +177,17 @@ export default function Fidelity() {
                     const myIds = new Set(myRestaurants.map(r => r.id));
                     const others = rests.filter((r: any) => !myIds.has(r.id));
                     if (others.length === 0) return;
-                    // Load logos
-                    const { data: logoSettings } = await db.from('settings')
-                        .select('restaurant_id,value').eq('key', 'logo_url')
+                    // Load logos + cover images
+                    const { data: imgSettings } = await db.from('settings')
+                        .select('restaurant_id,key,value').in('key', ['logo_url', 'cover_image_url'])
                         .in('restaurant_id', others.map((r: any) => r.id));
                     const logoMap: Record<string, string> = {};
-                    logoSettings?.forEach((s: any) => { logoMap[s.restaurant_id] = s.value; });
-                    setAllRestaurants(others.map((r: any) => ({ ...r, logo_url: logoMap[r.id] || '' })));
+                    const coverMap: Record<string, string> = {};
+                    imgSettings?.forEach((s: any) => {
+                        if (s.key === 'logo_url') logoMap[s.restaurant_id] = s.value;
+                        if (s.key === 'cover_image_url') coverMap[s.restaurant_id] = s.value;
+                    });
+                    setAllRestaurants(others.map((r: any) => ({ ...r, logo_url: logoMap[r.id] || '', cover_url: coverMap[r.id] || '' })));
                 });
         }
     }, [isAuthLoading, isDataLoading, myRestaurants, user]);
@@ -196,7 +200,13 @@ export default function Fidelity() {
                 auth_user_id: user.id,
                 restaurant_id: addModal.rid,
                 name: `${firstName} ${lastName}`.trim() || user.email,
+                whatsapp: telefono || null,
                 total_points: 0,
+                preferences: {
+                    email: user.email ?? null,
+                    sesso: sesso || null,
+                    data_nascita: dataNascita || null,
+                },
             });
             setAddModal({ open: false, rid: '', rname: '', logo: '' });
             showToast(`✓ "${addModal.rname}" aggiunta alle tue Fidelity!`);
@@ -419,14 +429,62 @@ export default function Fidelity() {
     })();
 
     return (
-        <div className="min-h-screen" style={{ background: '#e5e7eb', fontFamily: "'DM Sans', sans-serif" }}>
-        <div className="w-full max-w-[430px] mx-auto min-h-screen flex flex-col relative" style={{ background: '#f2f4f7', boxShadow: '0 0 60px rgba(0,0,0,0.15)' }}>
+        <div className="min-h-screen flex" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+
+        {/* ── DESKTOP SIDEBAR ──────────────────────────────────────── */}
+        <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen z-40" style={{ width: 256, background: '#fff', borderRight: '1px solid #e8ecf0' }}>
+            <div className="flex items-center gap-3 px-5 pt-6 pb-5" style={{ borderBottom: '1px solid #e8ecf0' }}>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 text-xl" style={{ background: 'linear-gradient(135deg,#008080,#00a898)' }}>
+                    {avatarSrc ? <img src={avatarSrc} className="w-full h-full object-cover" style={{ transform: `scale(${cropZoom/100}) translateY(${cropOffsetY}px)`, transformOrigin: 'center' }} /> : '🤩'}
+                </div>
+                <div className="min-w-0">
+                    <div className="font-bold text-sm truncate" style={{ color: '#1a1f2e' }}>{firstName ? `${firstName} ${lastName}`.trim() : 'Il mio profilo'}</div>
+                    <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 ${globalLevel.pillClass}`}>{globalLevel.emoji} {globalLevel.label}</div>
+                </div>
+            </div>
+            <div className="mx-4 mt-4 p-4 rounded-xl" style={{ background: 'linear-gradient(135deg,#005f5f,#008080)' }}>
+                <div className="text-xs mb-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>Stelle totali</div>
+                <div className="text-2xl font-black text-white">{totalStelle} ⭐</div>
+                {globalLevel.next && (
+                    <div className="mt-2">
+                        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                            <div className="h-full rounded-full" style={{ background: '#4ade80', width: `${Math.min((totalStelle/globalLevel.next!)*100,100)}%`, transition: 'width 1s ease' }} />
+                        </div>
+                        <div className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Mancano {globalLevel.next!-totalStelle} per {globalLevel.nextLabel}</div>
+                    </div>
+                )}
+            </div>
+            <nav className="flex-1 px-3 py-4 overflow-y-auto">
+                {([
+                    { id: 'home' as Tab, label: 'Home', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+                    { id: 'premi' as Tab, label: 'I miei Premi', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> },
+                    { id: 'scopri' as Tab, label: 'Scopri Ristoranti', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
+                    { id: 'profilo' as Tab, label: 'Profilo', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+                ] as const).map(tab => (
+                    <button key={tab.id} onClick={() => { setActiveTab(tab.id); setActiveSubScreen(null); }}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium mb-1 transition-all text-left"
+                        style={{ background: activeTab===tab.id ? '#008080' : 'transparent', color: activeTab===tab.id ? '#fff' : '#8492a6' }}>
+                        {tab.icon}
+                        {tab.label}
+                    </button>
+                ))}
+            </nav>
+            <div className="px-4 pb-5 pt-3" style={{ borderTop: '1px solid #e8ecf0' }}>
+                <button onClick={() => setShowLogoutConfirm(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors text-left" style={{ color: '#8492a6' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Esci dall'app
+                </button>
+            </div>
+        </aside>
+
+        {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
+        <div className="flex-1 md:ml-64 min-h-screen flex flex-col relative" style={{ background: '#f2f4f7' }}>
 
             {/* ── TAB: HOME ─────────────────────────────────────────── */}
             {activeTab === 'home' && (
-                <div className="flex flex-col flex-1 pb-24">
+                <div className="flex flex-col flex-1 pb-24 md:pb-8">
                     {/* Header */}
-                    <div className="relative overflow-hidden" style={{ background: 'linear-gradient(150deg,#005f5f,#008080,#00a898)', padding: '52px 24px 28px' }}>
+                    <div className="relative overflow-hidden pt-14 md:pt-10 px-6 pb-7" style={{ background: 'linear-gradient(150deg,#005f5f,#008080,#00a898)' }}>
                         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
                         <div className="absolute -bottom-16 -left-5 w-40 h-40 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
                         <div className="text-sm mb-0.5 relative z-10" style={{ color: 'rgba(255,255,255,0.7)' }}>Ciao di nuovo 👋</div>
@@ -454,7 +512,7 @@ export default function Fidelity() {
                         )}
                     </div>
 
-                    <div className="px-6 pt-5 flex flex-col gap-6">
+                    <div className="px-4 md:px-8 pt-5 flex flex-col gap-6 max-w-5xl md:mx-auto w-full">
                         {/* QR Button */}
                         <button onClick={() => setShowQRSelector(true)}
                             className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform"
@@ -494,7 +552,12 @@ export default function Fidelity() {
                                         const next = lv.next;
                                         const pct = next ? Math.min((r.points / next) * 100, 100) : 100;
                                         return (
-                                            <div key={r.id} className="bg-white rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer active:scale-[0.98] transition-transform" style={{ width: 260, boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+                                            <div key={r.id} className="bg-white rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer active:scale-[0.98] transition-transform relative" style={{ width: 260, boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+                                                <button onClick={e => { e.stopPropagation(); setRemoveModal({ open: true, rid: r.id, rname: r.name }); }}
+                                                    className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center z-10 transition-opacity hover:opacity-80"
+                                                    style={{ background: 'rgba(0,0,0,0.15)' }}>
+                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                </button>
                                                 <div className="p-3.5 flex items-center gap-2.5">
                                                     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg font-bold" style={{ background: '#e6f4f4', border: '1px solid #e8ecf0' }}>
                                                         {r.logo_url ? <img src={r.logo_url} className="w-full h-full object-contain rounded-xl p-0.5" /> : r.name.charAt(0)}
@@ -546,21 +609,21 @@ export default function Fidelity() {
                                 <h3 className="text-[17px] font-bold" style={{ color: '#1a1f2e' }}>Scopri nuovi posti</h3>
                                 <button onClick={() => setActiveTab('scopri')} className="text-sm font-medium" style={{ color: '#008080' }}>Tutti →</button>
                             </div>
-                            <div className="flex flex-col gap-2.5">
-                                {(globalSearchResults.length > 0 ? globalSearchResults : allRestaurants).slice(0, 3).map((r: any) => (
-                                    <div key={r.id} className="bg-white rounded-xl p-3.5 flex items-center gap-3" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-                                        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style={{ background: '#e6f4f4', border: '1px solid #e8ecf0' }}>
-                                            {r.logo_url ? <img src={r.logo_url} className="w-full h-full object-contain rounded-xl p-0.5" /> : '🍽️'}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                {(globalSearchResults.length > 0 ? globalSearchResults : allRestaurants).slice(0, 6).map((r: any) => (
+                                    <Link key={r.id} to={`/${r.slug}`} className="bg-white rounded-xl p-3.5 flex items-center gap-3" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+                                        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl overflow-hidden" style={{ background: '#e6f4f4', border: '1px solid #e8ecf0' }}>
+                                            {r.logo_url ? <img src={r.logo_url} className="w-full h-full object-contain p-0.5" /> : '🍽️'}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-sm font-bold truncate" style={{ color: '#1a1f2e' }}>{r.name}</div>
                                             <div className="text-xs mt-0.5" style={{ color: '#8492a6' }}>{r.citta || 'Italia'}</div>
                                         </div>
-                                        <button onClick={() => setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' })}
+                                        <button onClick={e => { e.preventDefault(); e.stopPropagation(); setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' }); }}
                                             className="text-xs font-semibold px-2.5 py-1.5 rounded-lg flex-shrink-0" style={{ background: '#e6f4f4', color: '#008080' }}>
                                             + Aggiungi
                                         </button>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         </div>
@@ -570,8 +633,8 @@ export default function Fidelity() {
 
             {/* ── TAB: PREMI ─────────────────────────────────────────── */}
             {activeTab === 'premi' && (
-                <div className="flex flex-col flex-1 pb-24">
-                    <div className="pt-14 pb-6 px-6" style={{ background: 'linear-gradient(150deg,#1f1218,#3d1f2d)' }}>
+                <div className="flex flex-col flex-1 pb-24 md:pb-8">
+                    <div className="pt-14 md:pt-10 pb-6 px-6" style={{ background: 'linear-gradient(150deg,#1f1218,#3d1f2d)' }}>
                         <div className="text-2xl font-black text-white mb-1" style={{ letterSpacing: '-0.4px' }}>I miei Premi 🎁</div>
                         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{availableRewards.length} premi disponibili tra tutti i ristoranti</div>
                     </div>
@@ -584,7 +647,7 @@ export default function Fidelity() {
                             </button>
                         ))}
                     </div>
-                    <div className="px-6 pt-4 flex flex-col gap-3">
+                    <div className="px-4 md:px-6 pt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                         {premiFilter === 'Riscattati' ? (
                             <div className="bg-white rounded-2xl p-8 text-center" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
                                 <p className="text-sm" style={{ color: '#8492a6' }}>Nessun premio riscattato ancora.</p>
@@ -633,8 +696,8 @@ export default function Fidelity() {
 
             {/* ── TAB: SCOPRI ─────────────────────────────────────────── */}
             {activeTab === 'scopri' && (
-                <div className="flex flex-col flex-1 pb-24">
-                    <div className="bg-white pt-14 pb-4 px-6 border-b" style={{ borderColor: '#e8ecf0' }}>
+                <div className="flex flex-col flex-1 pb-24 md:pb-8">
+                    <div className="bg-white pt-14 md:pt-10 pb-4 px-6 border-b" style={{ borderColor: '#e8ecf0' }}>
                         <div className="text-xl font-black mb-3" style={{ color: '#1a1f2e', letterSpacing: '-0.3px' }}>Scopri Ristoranti</div>
                         <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl" style={{ background: '#f2f4f7', border: '1.5px solid #e8ecf0' }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8492a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -651,35 +714,41 @@ export default function Fidelity() {
                             </div>
                         ))}
                     </div>
-                    <div className="px-6 pt-4 flex flex-col gap-3">
-                        {(globalSearchResults.length > 0 ? globalSearchResults : [...myRestaurants, ...allRestaurants]).map((r: any) => {
-                            const isMy = myRestaurants.some(mr => mr.id === r.id);
-                            return (
-                                <div key={r.id} className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-                                    <div className="h-28 flex items-end p-3 relative overflow-hidden" style={{ background: r.logo_url ? undefined : 'linear-gradient(135deg,#005f5f,#008080)' }}>
-                                        {r.logo_url ? (
-                                            <img src={r.logo_url} className="absolute inset-0 w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="text-4xl relative z-10">🍽️</span>
-                                        )}
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="font-bold text-base mb-1" style={{ color: '#1a1f2e' }}>{r.name}</div>
-                                        <div className="text-xs mb-2.5" style={{ color: '#8492a6' }}>🍽️ · {r.citta || 'Italia'}</div>
-                                        <div className="flex gap-1.5 flex-wrap">
-                                            {isMy ? (
-                                                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>✓ Fidelity attiva</span>
-                                            ) : (
-                                                <button onClick={() => setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' })}
-                                                    className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>
-                                                    + Aggiungi Fidelity
-                                                </button>
-                                            )}
+                    <div className="px-4 md:px-6 pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {(globalSearchResults.length > 0
+                            ? globalSearchResults.filter((r: any) => !myRestaurants.some(mr => mr.id === r.id))
+                            : allRestaurants
+                        ).map((r: any) => (
+                            <Link key={r.id} to={`/${r.slug}`} className="bg-white rounded-2xl overflow-hidden block" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+                                {/* Copertina */}
+                                <div className="h-28 relative overflow-hidden" style={{ background: r.cover_url ? undefined : 'linear-gradient(135deg,#005f5f,#008080)' }}>
+                                    {r.cover_url
+                                        ? <img src={r.cover_url} className="absolute inset-0 w-full h-full object-cover" />
+                                        : <span className="absolute bottom-3 left-3 text-4xl">🍽️</span>
+                                    }
+                                    {/* Logo badge in portada */}
+                                    {r.logo_url && (
+                                        <div className="absolute bottom-3 left-3 w-10 h-10 rounded-xl overflow-hidden z-10 bg-white flex items-center justify-center" style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                                            <img src={r.logo_url} className="w-full h-full object-contain p-0.5" />
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
-                            );
-                        })}
+                                <div className="p-4">
+                                    <div className="font-bold text-base mb-1" style={{ color: '#1a1f2e' }}>{r.name}</div>
+                                    <div className="text-xs mb-2.5" style={{ color: '#8492a6' }}>🍽️ · {r.citta || 'Italia'}</div>
+                                    <button
+                                        onClick={e => { e.preventDefault(); e.stopPropagation(); setAddModal({ open: true, rid: r.id, rname: r.name, logo: r.logo_url || '' }); }}
+                                        className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ background: '#e6f4f4', color: '#008080' }}>
+                                        + Aggiungi Fidelity
+                                    </button>
+                                </div>
+                            </Link>
+                        ))}
+                        {allRestaurants.length === 0 && globalSearchResults.length === 0 && (
+                            <div className="col-span-full bg-white rounded-2xl p-8 text-center" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+                                <p className="text-sm" style={{ color: '#8492a6' }}>Sei già iscritto a tutti i ristoranti disponibili!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -688,11 +757,11 @@ export default function Fidelity() {
             {activeTab === 'profilo' && (
                 <div className="flex-1 relative overflow-hidden" style={{ minHeight: '100vh' }}>
                     {/* Main profilo view */}
-                    <div className="absolute inset-0 overflow-y-auto transition-transform duration-300 pb-24"
+                    <div className="absolute inset-0 overflow-y-auto transition-transform duration-300 pb-24 md:pb-8"
                         style={{ transform: activeSubScreen ? 'translateX(-100%)' : 'translateX(0)', scrollbarWidth: 'none' }}>
 
                         {/* Header */}
-                        <div className="pt-14 pb-7 px-6 relative" style={{ background: 'linear-gradient(150deg,#005f5f,#008080)' }}>
+                        <div className="pt-14 md:pt-10 pb-7 px-6 relative" style={{ background: 'linear-gradient(150deg,#005f5f,#008080)' }}>
                             <div className="relative inline-block mb-3">
                                 <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)', border: '3px solid rgba(255,255,255,0.3)', fontSize: 36 }}>
                                     {avatarSrc ? <img src={avatarSrc} className="w-full h-full object-cover" style={{ transform: `scale(${cropZoom / 100}) translateY(${cropOffsetY}px)`, transformOrigin: 'center' }} /> : '🤩'}
@@ -715,7 +784,7 @@ export default function Fidelity() {
                         </div>
 
                         {/* Stats */}
-                        <div className="grid grid-cols-3 gap-3 px-6 py-4">
+                        <div className="grid grid-cols-3 gap-3 px-4 md:px-8 py-4 max-w-2xl md:mx-auto w-full">
                             {[{ val: totalStelle, lbl: 'Stelle totali' }, { val: myRestaurants.length, lbl: 'Fidelity attive' }, { val: availableRewards.length, lbl: 'Premi disp.' }].map((s, i) => (
                                 <div key={i} className="bg-white rounded-xl p-3 text-center" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
                                     <div className="text-xl font-black" style={{ color: '#1a1f2e', letterSpacing: '-0.5px' }}>{s.val}</div>
@@ -750,7 +819,7 @@ export default function Fidelity() {
                                 ]
                             }
                         ].map(section => (
-                            <div key={section.title} className="px-6 mb-4">
+                            <div key={section.title} className="px-4 md:px-8 mb-4 max-w-2xl md:mx-auto w-full">
                                 <div className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: '#8492a6' }}>{section.title}</div>
                                 <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
                                     {section.items.map((item, i) => (
@@ -768,8 +837,8 @@ export default function Fidelity() {
                             </div>
                         ))}
 
-                        <div className="px-6 mb-3">
-                            <button onClick={() => setShowLogoutConfirm(true)} className="w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 mb-2.5 transition-colors hover:bg-gray-200" style={{ background: '#e8ecf0', color: '#1a1f2e' }}>
+                        <div className="px-4 md:px-8 mb-3 max-w-2xl md:mx-auto w-full">
+                            <button onClick={() => setShowLogoutConfirm(true)} className="md:hidden w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 mb-2.5 transition-colors hover:bg-gray-200" style={{ background: '#e8ecf0', color: '#1a1f2e' }}>
                                 👋 Esci dall'app
                             </button>
                             <button onClick={() => setShowDeleteConfirm(true)} className="w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors" style={{ background: '#fdf0f0', color: '#e05252' }}>
@@ -787,18 +856,18 @@ export default function Fidelity() {
                         <div key={sub} className="absolute inset-0 overflow-y-auto transition-transform duration-300"
                             style={{ transform: activeSubScreen === sub ? 'translateX(0)' : 'translateX(100%)', background: '#f2f4f7', scrollbarWidth: 'none' }}>
                             {/* Sub topbar */}
-                            <div className="flex items-center gap-3 px-4 bg-white border-b sticky top-0 z-10" style={{ borderColor: '#e8ecf0', paddingTop: 48, paddingBottom: 12 }}>
+                            <div className="flex items-center gap-3 px-4 bg-white border-b sticky top-0 z-10 pt-12 md:pt-4 pb-3" style={{ borderColor: '#e8ecf0' }}>
                                 <button onClick={() => setActiveSubScreen(null)} className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#f2f4f7' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1f2e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                                 </button>
                                 <span className="flex-1 text-[17px] font-bold" style={{ color: '#1a1f2e' }}>
                                     {{ dati: 'I miei dati', password: 'Cambia Password', notifiche: 'Notifiche', lingua: 'Lingua', idglobale: 'ID Globale', gusto: 'Profilo Gusto', dieta: 'Preferenze dieta', supporto: 'Contatta supporto', condividi: 'Invita un amico', privacy: 'Privacy & GDPR' }[sub!]}
                                 </span>
-                                {sub === 'dati' && <button onClick={() => { handleSaveProfile(); showToast('✓ Dati salvati'); }} className="text-sm font-semibold" style={{ color: '#008080' }}>Salva</button>}
+                                {sub === 'dati' && <button onClick={() => { handleSaveFullProfile({ telefono, dataNascita, sesso }); showToast('✓ Dati salvati'); }} className="text-sm font-semibold" style={{ color: '#008080' }}>Salva</button>}
                             </div>
 
                             {/* Sub body */}
-                            <div className="p-5 flex flex-col gap-4 pb-28">
+                            <div className="p-5 md:p-8 flex flex-col gap-4 pb-28 md:pb-12 max-w-2xl md:mx-auto w-full">
 
                                 {/* ── DATI ── */}
                                 {sub === 'dati' && <>
@@ -847,7 +916,7 @@ export default function Fidelity() {
                                             ))}
                                         </div>
                                     </div>
-                                    <button onClick={() => { handleSaveProfile(); showToast('✓ Dati salvati!'); }} className="w-full py-4 rounded-xl font-bold text-white" style={{ background: '#008080', marginTop: 4 }}>
+                                    <button onClick={() => { handleSaveFullProfile({ telefono, dataNascita, sesso }); showToast('✓ Dati salvati!'); }} className="w-full py-4 rounded-xl font-bold text-white" style={{ background: '#008080', marginTop: 4 }}>
                                         {isSavingProfile ? <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Salva modifiche'}
                                     </button>
                                 </>}
@@ -1088,8 +1157,8 @@ export default function Fidelity() {
                 </div>
             )}
 
-            {/* ── BOTTOM NAV ─────────────────────────────────────────── */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t z-50" style={{ borderColor: '#e8ecf0', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+            {/* ── BOTTOM NAV — mobile only ───────────────────────────── */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50" style={{ borderColor: '#e8ecf0', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
                 <div className="flex">
                     {([
                         { id: 'home' as Tab, icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, label: 'HOME' },
@@ -1171,9 +1240,6 @@ export default function Fidelity() {
                             <span>💡</span>
                             <span>Questo QR è valido <strong>solo per {qrRestaurant.name}</strong>. Le Stelle non si mescolano.</span>
                         </div>
-                        <button onClick={() => showToast('🚀 Google Wallet disponibile prossimamente!')} className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2" style={{ background: '#1a1f2e' }}>
-                            💳 Aggiungi a Google Wallet
-                        </button>
                     </div>
                 </div>
             )}
@@ -1253,7 +1319,13 @@ export default function Fidelity() {
                         </p>
                         <div className="flex gap-3">
                             <button onClick={() => setRemoveModal({ open: false, rid: '', rname: '' })} className="flex-1 py-3.5 rounded-xl font-bold" style={{ background: '#f2f4f7', color: '#8492a6' }}>Annulla</button>
-                            <button onClick={() => { handleRemoveAffiliation(removeModal.rid); setRemoveModal({ open: false, rid: '', rname: '' }); showToast('Affiliazione rimossa'); }}
+                            <button onClick={() => {
+                                const removed = myRestaurants.find(r => r.id === removeModal.rid);
+                                handleRemoveAffiliation(removeModal.rid);
+                                if (removed) setAllRestaurants(prev => [...prev, { id: removed.id, name: removed.name, slug: removed.slug, citta: removed.citta, logo_url: removed.logo_url, cover_url: '' }]);
+                                setRemoveModal({ open: false, rid: '', rname: '' });
+                                showToast('Affiliazione rimossa');
+                            }}
                                 className="flex-1 py-3.5 rounded-xl font-bold text-white" style={{ background: '#008080' }}>Rimuovi</button>
                         </div>
                     </div>
@@ -1290,7 +1362,7 @@ export default function Fidelity() {
 
             {/* ── TOAST ──────────────────────────────────────── */}
             {toast && (
-                <div className="fixed z-[500] bottom-24 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium text-white whitespace-nowrap" style={{ background: '#1a1f2e', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease' }}>
+                <div className="fixed z-[500] bottom-24 md:bottom-8 left-1/2 md:left-[calc(50%+8rem)] -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium text-white whitespace-nowrap" style={{ background: '#1a1f2e', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease' }}>
                     {toast}
                 </div>
             )}

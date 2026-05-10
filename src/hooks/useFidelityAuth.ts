@@ -50,6 +50,53 @@ export function useFidelityAuth() {
     }
   };
 
+  const handleSaveFullProfile = async (extra: {
+    telefono: string;
+    dataNascita: string;
+    sesso: string;
+  }) => {
+    setIsSavingProfile(true);
+    try {
+      const { data: authData } = await db.auth.getUser();
+      const currentUser = authData.user;
+
+      // 1. Save name to Supabase Auth metadata
+      await db.auth.updateUser({
+        data: { first_name: firstName, last_name: lastName }
+      });
+
+      if (!currentUser) return;
+
+      const displayName = `${firstName} ${lastName}`.trim() || firstName || currentUser.email || '';
+
+      // 2. Update ALL customer records for this user (one per restaurant)
+      const { data: rows } = await db
+        .from('customers')
+        .select('id, preferences')
+        .eq('auth_user_id', currentUser.id);
+
+      if (rows && rows.length > 0) {
+        for (const row of rows) {
+          const existing = (row.preferences as Record<string, unknown>) || {};
+          await db.from('customers').update({
+            name: displayName,
+            whatsapp: extra.telefono || null,
+            preferences: {
+              ...existing,
+              email: currentUser.email ?? null,
+              data_nascita: extra.dataNascita || null,
+              sesso: extra.sesso || null,
+            },
+          }).eq('id', row.id);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving full profile:', err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const handleDeleteCustomerAccount = async () => {
     const firstConfirm = window.confirm('Sei sicuro di voler eliminare il tuo account? Questa azione è irreversibile e perderai tutti i tuoi punti.');
     if (!firstConfirm) return;
@@ -76,6 +123,7 @@ export function useFidelityAuth() {
     isAuthLoading,
     handleLogout,
     handleSaveProfile,
+    handleSaveFullProfile,
     handleDeleteCustomerAccount
   };
 }
