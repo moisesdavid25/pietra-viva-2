@@ -301,11 +301,20 @@ export default function OrdiniManager({ restaurantId }: OrdiniManagerProps) {
                                 <span className="bg-blue-50 border border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
                                   🛍️ {order.customer_name || 'Asporto'}
                                 </span>
-                              ) : order.table_number ? (
-                                <span className="bg-orange-50 border border-orange-100 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800/50 dark:text-orange-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                                  🪑 {order.table_number}
-                                </span>
-                              ) : null}
+                              ) : (
+                                <>
+                                  {order.table_number && (
+                                    <span className="bg-orange-50 border border-orange-100 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800/50 dark:text-orange-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                      🪑 {order.table_number}
+                                    </span>
+                                  )}
+                                  {order.customer_name && (
+                                    <span className="bg-gray-50 border border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                      👤 {order.customer_name}
+                                    </span>
+                                  )}
+                                </>
+                              )}
                               {order.auth_user_id && (
                                 <span className="bg-teal-50 border border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/50 dark:text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
                                   🌿 Fidelity
@@ -392,14 +401,29 @@ export default function OrdiniManager({ restaurantId }: OrdiniManagerProps) {
                           </span>
                           <span className="font-bold text-sm text-gray-500 dark:text-gray-400">€{order.total_price.toFixed(2)}</span>
                         </div>
-                        <div className="flex items-center gap-1 mb-2">
+                        <div className="flex items-center gap-1 flex-wrap mb-2">
                           <span className="text-xs font-bold text-gray-400">
                             {new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <span className="mx-1 text-gray-300">•</span>
                           <span className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-[10px] font-bold px-1.5 py-0.5 rounded truncate max-w-[120px]">
-                            {order.order_type === 'asporto' ? `🛍️ ${order.customer_name}` : `🪑 ${order.table_number}`}
+                            {order.order_type === 'asporto' ? `🛍️ ${order.customer_name || 'Asporto'}` : `🪑 ${order.table_number}`}
                           </span>
+                          {order.customer_name && order.order_type === 'tavolo' && (
+                            <span className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-[10px] font-bold px-1.5 py-0.5 rounded truncate max-w-[100px]">
+                              👤 {order.customer_name}
+                            </span>
+                          )}
+                          {order.pickup_code && (
+                            <span className="bg-[#008081]/10 text-[#008081] dark:bg-teal-900/30 dark:text-teal-300 text-[10px] font-black px-2 py-0.5 rounded font-mono tracking-widest">
+                              🎟️ {order.pickup_code}
+                            </span>
+                          )}
+                          {order.auth_user_id && (
+                            <span className="bg-teal-50 border border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              🌿
+                            </span>
+                          )}
                         </div>
                         {isExpanded && (
                           <div className="space-y-1.5 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
