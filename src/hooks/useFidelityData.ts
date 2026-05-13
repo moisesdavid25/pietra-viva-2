@@ -73,11 +73,14 @@ export function useFidelityData(userId: string | undefined) {
                     });
                     setTierBenefitsMap(bMap);
 
-                    const { data: rewardsData } = await db
+                    const { data: rewardsData, error: rewardsError } = await db
                         .from('rewards')
                         .select('id,restaurant_id,name,points_required,description,image_url')
                         .in('restaurant_id', restIds)
                         .order('points_required', { ascending: true });
+
+                    if (rewardsError) console.error('[useFidelityData] rewards fetch error:', rewardsError.message, rewardsError.code);
+                    console.debug('[useFidelityData] rewards fetched:', rewardsData?.length ?? 0, 'for restaurants:', restIds);
 
                     const formatted: RestaurantCard[] = customersData.map(cust => {
                         const r = cust.restaurants as any;
