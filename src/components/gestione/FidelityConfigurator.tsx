@@ -506,7 +506,7 @@ export default function FidelityConfigurator({ restaurantId, onBack, onSaved }: 
       await db.from('rewards').delete().eq('restaurant_id', restaurantId);
       const validPremi = config.premi.filter(p => p.nome.trim() && p.stelle > 0);
       if (validPremi.length > 0) {
-        await db.from('rewards').insert(validPremi.map(p => ({
+        const { error: insertError } = await db.from('rewards').insert(validPremi.map(p => ({
           restaurant_id: restaurantId,
           name: p.nome.trim(),
           points_required: Math.round(p.stelle),
@@ -514,6 +514,7 @@ export default function FidelityConfigurator({ restaurantId, onBack, onSaved }: 
           cost_value: p.costo,
           image_url: '',
         })));
+        if (insertError) throw new Error(`Salvataggio premi fallito: ${insertError.message}`);
       }
       showToast('✅ Configurazione salvata!', 'success');
       onSaved();

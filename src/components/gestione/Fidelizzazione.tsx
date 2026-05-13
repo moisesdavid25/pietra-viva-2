@@ -250,7 +250,7 @@ function TabPremi({ restaurantId, rewards, onRefresh }: {
   const saveReward = async () => {
     if (!form.nome || !form.stelle) return;
     setSaving(true);
-    await db.from('rewards').insert({
+    const { error } = await db.from('rewards').insert({
       restaurant_id: restaurantId,
       name: form.nome,
       points_required: parseInt(form.stelle),
@@ -259,6 +259,10 @@ function TabPremi({ restaurantId, rewards, onRefresh }: {
       image_url: '',
     });
     setSaving(false);
+    if (error) {
+      console.error('[saveReward] INSERT failed:', error.message, error.code);
+      return;
+    }
     setModal(false);
     setForm({ nome: '', stelle: '', costo: '' });
     onRefresh();
