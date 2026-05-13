@@ -26,6 +26,8 @@ export default function OrdinePage() {
     const [tableNumber, setTableNumber] = useState('');
     const [tableFromQR, setTableFromQR] = useState(false);
     const [customerName, setCustomerName] = useState('');
+    const [copertoPrice, setCopertoPrice] = useState(0);
+    const [numCoperti, setNumCoperti] = useState(1);
     const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; shortId: string; dailyNumber: number; queue: number; status: string; pickup_code?: string; order_type?: string } | null>(null);
 
     // ── Fidelity session detection ───────────────────────────────────────
@@ -88,8 +90,10 @@ export default function OrdinePage() {
     useEffect(() => {
         if (!slug) return;
         db.from('restaurants').select('id').eq('slug', slug).single().then(({ data }) => {
-            if (!data) setNotFound(true);
-            else setRestaurantId(data.id);
+            if (!data) { setNotFound(true); return; }
+            setRestaurantId(data.id);
+            db.from('settings').select('value').eq('restaurant_id', data.id).eq('key', 'coperto_price').limit(1).maybeSingle()
+                .then(({ data: s }) => { if (s?.value) setCopertoPrice(parseFloat(String(s.value)) || 0); });
         });
     }, [slug]);
 
@@ -142,6 +146,7 @@ export default function OrdinePage() {
 
             // Pickup code only for asporto orders
             const pickupCode = orderType === 'asporto' ? generatePickupCode() : null;
+            const copertoTotal = orderType === 'tavolo' && copertoPrice > 0 ? numCoperti * copertoPrice : 0;
 
             const { data: orderData, error: orderError } = await db.from('orders').insert({
                 restaurant_id: restaurantId,
@@ -149,7 +154,7 @@ export default function OrdinePage() {
                 customer_name: fidelityUser?.name || (orderType === 'asporto' ? customerName : null),
                 order_type: orderType,
                 daily_order_number: nextOrderNumber,
-                total_price: totalPrice,
+                total_price: totalPrice + copertoTotal,
                 auth_user_id: fidelityUser?.id || null,
                 pickup_code: pickupCode,
             }).select().single();
@@ -455,16 +460,30 @@ export default function OrdinePage() {
                         </div>
 
                         {/* Summary */}
-                        <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm mb-4">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Subtotale ({totalItems} {totalItems === 1 ? 'prodotto' : 'prodotti'})</span>
-                                <span className="font-bold text-[#1A1A1A] dark:text-white">€{totalPrice.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-gray-800 mt-3">
-                                <span className="font-black text-[#1A1A1A] dark:text-white">Totale</span>
-                                <span className="text-2xl font-black text-[#008081]">€{totalPrice.toFixed(2)}</span>
-                            </div>
-                        </div>
+                        {(() => {
+                            const copertoTotal = orderType === 'tavolo' && copertoPrice > 0 ? numCoperti * copertoPrice : 0;
+                            const grandTotal = totalPrice + copertoTotal;
+                            return (
+                                <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm mb-4">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Subtotale ({totalItems} {totalItems === 1 ? 'prodotto' : 'prodotti'})</span>
+                                        <span className="font-bold text-[#1A1A1A] dark:text-white">€{totalPrice.toFixed(2)}</span>
+                                    </div>
+                                    {copertoTotal > 0 && (
+                                        <div className="flex justify-between items-center py-2 border-t border-gray-50 dark:border-gray-800 mt-2">
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                Coperto · {numCoperti} pers. × €{copertoPrice.toFixed(2)}
+                                            </span>
+                                            <span className="font-bold text-[#1A1A1A] dark:text-white">€{copertoTotal.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-gray-800 mt-2">
+                                        <span className="font-black text-[#1A1A1A] dark:text-white">Totale</span>
+                                        <span className="text-2xl font-black text-[#008081]">€{grandTotal.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Order type */}
                         <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm mb-4">
@@ -508,6 +527,27 @@ export default function OrdinePage() {
                                                 <p className="text-xs font-bold text-red-500 mt-1.5">⚠ Obbligatorio — inserisci il numero del tuo tavolo</p>
                                             )}
                                         </>
+                                    )}
+
+                                    {/* Coperti — only shown when restaurant charges cover */}
+                                    {copertoPrice > 0 && (
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                                                Coperti · €{copertoPrice.toFixed(2)} / pers.
+                                            </label>
+                                            <div className="flex items-center gap-4 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3.5">
+                                                <button
+                                                    onClick={() => setNumCoperti(n => Math.max(1, n - 1))}
+                                                    className="w-9 h-9 rounded-full bg-white dark:bg-[#252525] border border-gray-200 dark:border-gray-700 flex items-center justify-center font-black text-gray-600 dark:text-gray-300 text-xl shadow-sm active:scale-95 transition-transform"
+                                                >−</button>
+                                                <span className="flex-1 text-center font-black text-2xl text-[#1A1A1A] dark:text-white">{numCoperti}</span>
+                                                <button
+                                                    onClick={() => setNumCoperti(n => Math.min(20, n + 1))}
+                                                    className="w-9 h-9 rounded-full bg-[#008081] flex items-center justify-center font-black text-white text-xl shadow-sm active:scale-95 transition-transform"
+                                                >+</button>
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1.5">Quante persone siete al tavolo?</p>
+                                        </div>
                                     )}
                                 </div>
                             ) : (
@@ -567,7 +607,9 @@ export default function OrdinePage() {
                             ) : (
                                 <>
                                     <span>Conferma ed Invia</span>
-                                    <span className="bg-white/20 px-3 py-1.5 rounded-xl text-sm font-black">€{totalPrice.toFixed(2)}</span>
+                                    <span className="bg-white/20 px-3 py-1.5 rounded-xl text-sm font-black">
+                                        €{(totalPrice + (orderType === 'tavolo' && copertoPrice > 0 ? numCoperti * copertoPrice : 0)).toFixed(2)}
+                                    </span>
                                 </>
                             )}
                         </button>

@@ -10,7 +10,7 @@ import { useSwipeBack } from '../hooks/useSwipeBack';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tab = 'home' | 'premi' | 'scopri' | 'profilo';
-type SubScreen = 'dati' | 'password' | 'notifiche' | 'lingua' | 'idglobale' | 'gusto' | 'dieta' | 'supporto' | 'condividi' | 'privacy' | null;
+type SubScreen = 'dati' | 'password' | 'notifiche' | 'lingua' | 'idglobale' | 'gusto' | 'dieta' | 'supporto' | 'condividi' | 'privacy' | 'ordini' | null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -150,6 +150,10 @@ export default function Fidelity() {
     // ── Scopri: all restaurants
     const [allRestaurants, setAllRestaurants] = useState<any[]>([]);
 
+    // ── I miei Ordini
+    const [myOrders, setMyOrders] = useState<any[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
+
     // ── Computed
     const totalStelle = myRestaurants.reduce((s, r) => s + r.points, 0);
     const globalLevel = getLevel(totalStelle);
@@ -198,6 +202,24 @@ export default function Fidelity() {
                 });
         }
     }, [isAuthLoading, isDataLoading, myRestaurants, user]);
+
+    // ── Load orders when "I miei Ordini" sub-screen opens ──────────────
+    useEffect(() => {
+        if (activeSubScreen !== 'ordini' || !user) return;
+        setOrdersLoading(true);
+        db.from('orders')
+            .select(`id, daily_order_number, order_type, table_number, customer_name,
+                     total_price, status, pickup_code, created_at, restaurant_id,
+                     restaurant:restaurants(name),
+                     order_items(quantity, price_at_time, product:products(name))`)
+            .eq('auth_user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(30)
+            .then(({ data }) => {
+                if (data) setMyOrders(data as any[]);
+                setOrdersLoading(false);
+            });
+    }, [activeSubScreen, user]);
 
     const handleConfirmAddRestaurant = async () => {
         if (!user || !addModal.rid) return;
@@ -804,6 +826,7 @@ export default function Fidelity() {
                         {[
                             {
                                 title: 'Il mio account', items: [
+                                    { icon: '📋', bg: '#e6f4f4', label: 'I miei Ordini', val: '', sub: 'ordini' as SubScreen },
                                     { icon: '👤', bg: '#e8f4ff', label: 'I miei dati', val: `${firstName || 'Modifica'}`, sub: 'dati' as SubScreen },
                                     { icon: '🔐', bg: '#f0e8ff', label: 'Cambia Password', val: '', sub: 'password' as SubScreen },
                                     { icon: '🔔', bg: '#fff3e0', label: 'Notifiche', val: 'Attive', sub: 'notifiche' as SubScreen },
@@ -857,7 +880,7 @@ export default function Fidelity() {
 
                     {/* ── SUB-SCREENS ─────────────────────────── */}
                     {([
-                        'dati', 'password', 'notifiche', 'lingua', 'idglobale',
+                        'ordini', 'dati', 'password', 'notifiche', 'lingua', 'idglobale',
                         'gusto', 'dieta', 'supporto', 'condividi', 'privacy'
                     ] as SubScreen[]).map(sub => (
                         <div key={sub} className="absolute inset-0 overflow-y-auto transition-transform duration-300"
@@ -868,13 +891,116 @@ export default function Fidelity() {
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1f2e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                                 </button>
                                 <span className="flex-1 text-[17px] font-bold" style={{ color: '#1a1f2e' }}>
-                                    {{ dati: 'I miei dati', password: 'Cambia Password', notifiche: 'Notifiche', lingua: 'Lingua', idglobale: 'ID Globale', gusto: 'Profilo Gusto', dieta: 'Preferenze dieta', supporto: 'Contatta supporto', condividi: 'Invita un amico', privacy: 'Privacy & GDPR' }[sub!]}
+                                    {{ ordini: 'I miei Ordini', dati: 'I miei dati', password: 'Cambia Password', notifiche: 'Notifiche', lingua: 'Lingua', idglobale: 'ID Globale', gusto: 'Profilo Gusto', dieta: 'Preferenze dieta', supporto: 'Contatta supporto', condividi: 'Invita un amico', privacy: 'Privacy & GDPR' }[sub!]}
                                 </span>
                                 {sub === 'dati' && <button onClick={() => { handleSaveFullProfile({ telefono, dataNascita, sesso }); showToast('✓ Dati salvati'); }} className="text-sm font-semibold" style={{ color: '#008080' }}>Salva</button>}
                             </div>
 
                             {/* Sub body */}
                             <div className="p-5 md:p-8 flex flex-col gap-4 pb-28 md:pb-12 max-w-2xl md:mx-auto w-full">
+
+                                {/* ── ORDINI ── */}
+                                {sub === 'ordini' && <>
+                                    {ordersLoading ? (
+                                        <div className="flex items-center justify-center py-16">
+                                            <div className="w-8 h-8 border-[3px] border-[#008080] border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    ) : myOrders.length === 0 ? (
+                                        <div className="text-center py-16">
+                                            <div className="text-5xl mb-3">📋</div>
+                                            <p className="font-bold text-base" style={{ color: '#1a1f2e' }}>Nessun ordine effettuato</p>
+                                            <p className="text-sm mt-1" style={{ color: '#8492a6' }}>I tuoi ordini appariranno qui dopo averli confermati al ristorante</p>
+                                        </div>
+                                    ) : (<>
+                                        {/* Active orders */}
+                                        {myOrders.some(o => o.status !== 'consegnato') && (
+                                            <div>
+                                                <div className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#8492a6' }}>Ordini Attivi</div>
+                                                {myOrders.filter(o => o.status !== 'consegnato').map((order: any) => {
+                                                    const statusMap: Record<string, { label: string; color: string; bg: string }> = {
+                                                        in_attesa:       { label: 'In Attesa',       color: '#c47f00', bg: '#fff8e6' },
+                                                        in_preparazione: { label: 'In Preparazione', color: '#e05252', bg: '#fdf0f0' },
+                                                        pronto:          { label: '🛎️ Pronto!',       color: '#22c47a', bg: '#edfaf3' },
+                                                    };
+                                                    const st = statusMap[order.status] || { label: order.status, color: '#8492a6', bg: '#f2f4f7' };
+                                                    return (
+                                                        <div key={order.id} className="bg-white rounded-2xl overflow-hidden mb-3" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1.5px solid #e8ecf0' }}>
+                                                            {/* Header row */}
+                                                            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-lg" style={{ color: '#1a1f2e' }}>#{order.daily_order_number}</span>
+                                                                    <span className="text-xs" style={{ color: '#8492a6' }}>{new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                </div>
+                                                                <span className="font-black text-base" style={{ color: '#008080' }}>€{Number(order.total_price).toFixed(2)}</span>
+                                                            </div>
+                                                            {/* Restaurant + type */}
+                                                            <div className="flex items-center gap-2 px-4 pb-3">
+                                                                <span className="text-xs font-medium" style={{ color: '#8492a6' }}>{(order.restaurant as any)?.name}</span>
+                                                                <span className="text-gray-300">·</span>
+                                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: order.order_type === 'asporto' ? '#e8f4ff' : '#fff3e0', color: order.order_type === 'asporto' ? '#3b82f6' : '#c47f00' }}>
+                                                                    {order.order_type === 'asporto' ? '🛍️ Da Asporto' : `🪑 Tavolo ${order.table_number}`}
+                                                                </span>
+                                                            </div>
+                                                            {/* Pickup code — asporto only, not yet delivered */}
+                                                            {order.pickup_code && order.order_type === 'asporto' && (
+                                                                <div className="mx-4 mb-3 rounded-2xl p-4 text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg,#005f5f,#008080)' }}>
+                                                                    <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                                                                    <p className="text-[10px] font-black uppercase tracking-widest mb-1.5 relative z-10" style={{ color: 'rgba(255,255,255,0.65)' }}>🎟️ Codice Ritiro</p>
+                                                                    <p className="text-5xl font-black font-mono tracking-[0.25em] relative z-10" style={{ color: '#fff', letterSpacing: '0.2em' }}>{order.pickup_code}</p>
+                                                                    <p className="text-xs mt-2 relative z-10" style={{ color: 'rgba(255,255,255,0.6)' }}>Mostra al bancone per ritirare il tuo ordine</p>
+                                                                </div>
+                                                            )}
+                                                            {/* Items */}
+                                                            <div className="px-4 pb-3 space-y-1.5">
+                                                                {(order.order_items as any[]).map((item: any, i: number) => (
+                                                                    <div key={i} className="flex items-center justify-between text-sm">
+                                                                        <span style={{ color: '#1a1f2e' }}><span className="font-bold">{item.quantity}×</span> {item.product?.name || '—'}</span>
+                                                                        <span style={{ color: '#8492a6' }}>€{(item.price_at_time * item.quantity).toFixed(2)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            {/* Status badge */}
+                                                            <div className="px-4 pb-4">
+                                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: st.bg, color: st.color }}>
+                                                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: st.color }} />
+                                                                    {st.label}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {/* Past orders */}
+                                        {myOrders.some(o => o.status === 'consegnato') && (
+                                            <div>
+                                                <div className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#8492a6' }}>Storico</div>
+                                                {myOrders.filter(o => o.status === 'consegnato').map((order: any) => (
+                                                    <div key={order.id} className="bg-white rounded-2xl mb-2 overflow-hidden" style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.05)', border: '1px solid #e8ecf0', opacity: 0.75 }}>
+                                                        <div className="flex items-center justify-between px-4 py-3">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <span className="font-black" style={{ color: '#8492a6' }}>#{order.daily_order_number}</span>
+                                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: order.order_type === 'asporto' ? '#f2f4f7' : '#fff3e0', color: '#8492a6' }}>
+                                                                    {order.order_type === 'asporto' ? '🛍️ Asporto' : `🪑 T.${order.table_number}`}
+                                                                </span>
+                                                                <span className="text-xs" style={{ color: '#8492a6' }}>{new Date(order.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} · {new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            </div>
+                                                            <span className="font-bold text-sm" style={{ color: '#8492a6' }}>€{Number(order.total_price).toFixed(2)}</span>
+                                                        </div>
+                                                        <div className="px-4 pb-3 space-y-1 border-t" style={{ borderColor: '#f2f4f7' }}>
+                                                            {(order.order_items as any[]).map((item: any, i: number) => (
+                                                                <div key={i} className="flex items-center justify-between text-xs">
+                                                                    <span style={{ color: '#8492a6' }}>{item.quantity}× {item.product?.name || '—'}</span>
+                                                                    <span style={{ color: '#b0bec5' }}>€{(item.price_at_time * item.quantity).toFixed(2)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>)}
+                                </>}
 
                                 {/* ── DATI ── */}
                                 {sub === 'dati' && <>
