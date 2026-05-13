@@ -7,6 +7,12 @@ import db from '../db';
 import BottomNav from '../components/BottomNav';
 import NotFound from '../components/NotFound';
 
+// Generates a 4-char pickup code avoiding ambiguous characters (0/O, 1/I/l)
+function generatePickupCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export default function OrdinePage() {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -21,7 +27,19 @@ export default function OrdinePage() {
     const [tableNumber, setTableNumber] = useState('');
     const [tableFromQR, setTableFromQR] = useState(false);
     const [customerName, setCustomerName] = useState('');
-    const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; shortId: string; dailyNumber: number; queue: number; status: string } | null>(null);
+    const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; shortId: string; dailyNumber: number; queue: number; status: string; pickup_code?: string; order_type?: string } | null>(null);
+
+    // ── Fidelity session detection ───────────────────────────────────────
+    const [fidelityUser, setFidelityUser] = useState<{ id: string; name: string } | null>(null);
+    useEffect(() => {
+        db.auth.getUser().then(({ data }) => {
+            if (!data.user) return;
+            const first = data.user.user_metadata?.first_name || '';
+            const last  = data.user.user_metadata?.last_name  || '';
+            const name  = `${first} ${last}`.trim() || data.user.email?.split('@')[0] || '';
+            setFidelityUser({ id: data.user.id, name });
+        });
+    }, []);
     const [publicOrders, setPublicOrders] = useState<any[]>([]);
 
     // Note modal state
@@ -107,7 +125,8 @@ export default function OrdinePage() {
             if (slug && (slug.toLowerCase() === 'demo' || slug === import.meta.env.VITE_DEMO_SLUG)) {
                 await new Promise(res => setTimeout(res, 1500));
                 clearCart();
-                setOrderConfirmed({ id: 'DEMO-' + Date.now(), shortId: 'DEMO', dailyNumber: Math.floor(Math.random() * 50) + 1, queue: Math.floor(Math.random() * 5), status: 'in_attesa' });
+                const demoCode = orderType === 'asporto' ? generatePickupCode() : undefined;
+                setOrderConfirmed({ id: 'DEMO-' + Date.now(), shortId: 'DEMO', dailyNumber: Math.floor(Math.random() * 50) + 1, queue: Math.floor(Math.random() * 5), status: 'in_attesa', pickup_code: demoCode, order_type: orderType });
                 return;
             }
 
@@ -122,13 +141,18 @@ export default function OrdinePage() {
             const nextOrderNumber = (todayOrders && todayOrders.length > 0 && todayOrders[0].daily_order_number)
                 ? todayOrders[0].daily_order_number + 1 : 1;
 
+            // Pickup code only for asporto orders
+            const pickupCode = orderType === 'asporto' ? generatePickupCode() : null;
+
             const { data: orderData, error: orderError } = await db.from('orders').insert({
                 restaurant_id: restaurantId,
                 table_number: orderType === 'tavolo' ? tableNumber : null,
-                customer_name: orderType === 'asporto' ? customerName : null,
+                customer_name: orderType === 'asporto' ? (fidelityUser?.name || customerName) : null,
                 order_type: orderType,
                 daily_order_number: nextOrderNumber,
-                total_price: totalPrice
+                total_price: totalPrice,
+                auth_user_id: fidelityUser?.id || null,
+                pickup_code: pickupCode,
             }).select().single();
 
             if (orderError) throw orderError;
@@ -150,7 +174,7 @@ export default function OrdinePage() {
                 .lt('created_at', orderData.created_at);
 
             clearCart();
-            setOrderConfirmed({ id: orderData.id, shortId: orderData.id.split('-')[0].toUpperCase(), dailyNumber: nextOrderNumber, queue: queueCount || 0, status: 'in_attesa' });
+            setOrderConfirmed({ id: orderData.id, shortId: orderData.id.split('-')[0].toUpperCase(), dailyNumber: nextOrderNumber, queue: queueCount || 0, status: 'in_attesa', pickup_code: pickupCode || undefined, order_type: orderType });
 
             // Save session to localStorage for Cronologia
             if (slug && orderType === 'tavolo' && tableNumber) {
@@ -211,7 +235,7 @@ export default function OrdinePage() {
                         </div>
 
                         {/* Order number card */}
-                        <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-8 mb-6 shadow-sm border border-gray-100 dark:border-gray-800 text-center">
+                        <div className="bg-white dark:bg-[#1C1C1C] rounded-3xl p-8 mb-4 shadow-sm border border-gray-100 dark:border-gray-800 text-center">
                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Numero Ordine</p>
                             <p className="text-7xl font-black text-[#008081] tracking-tighter">
                                 <span className="text-3xl text-[#008081]/40 align-top mr-1">#</span>
@@ -219,6 +243,23 @@ export default function OrdinePage() {
                             </p>
                             <p className="text-xs text-gray-400 mt-4 uppercase tracking-widest">Ref: {orderConfirmed.shortId}</p>
                         </div>
+
+                        {/* Pickup code — only for asporto */}
+                        {orderConfirmed.pickup_code && orderConfirmed.order_type === 'asporto' && (
+                            <div className="bg-[#008081] rounded-3xl p-7 mb-6 text-center shadow-lg relative overflow-hidden">
+                                <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10" />
+                                <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full bg-white/5" />
+                                <p className="text-xs font-black text-white/70 uppercase tracking-widest mb-3 relative z-10">
+                                    🎟️ Codice Ritiro
+                                </p>
+                                <p className="text-6xl font-black text-white tracking-[0.35em] mb-4 relative z-10 font-mono">
+                                    {orderConfirmed.pickup_code}
+                                </p>
+                                <p className="text-sm text-white/75 leading-relaxed relative z-10">
+                                    Mostra questo codice al bancone<br />per ritirare il tuo ordine
+                                </p>
+                            </div>
+                        )}
 
                         {/* Status */}
                         <div className="mb-8">
@@ -472,18 +513,35 @@ export default function OrdinePage() {
                                 </div>
                             ) : (
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Nome per il ritiro</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Es. Mario Rossi"
-                                        value={customerName}
-                                        onChange={e => setCustomerName(e.target.value)}
-                                        className={`w-full p-4 bg-gray-50 dark:bg-[#111] border rounded-2xl outline-none focus:ring-2 dark:text-white font-bold transition-all ${
-                                            !customerName.trim() ? 'border-red-300 dark:border-red-800 focus:ring-red-400/30' : 'border-gray-100 dark:border-gray-800 focus:ring-[#008081]'
-                                        }`}
-                                    />
-                                    {!customerName.trim() && (
-                                        <p className="text-xs font-bold text-red-500 mt-1.5">⚠ Obbligatorio — inserisci il tuo nome per il ritiro</p>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                                        Nome per il ritiro
+                                    </label>
+                                    {fidelityUser ? (
+                                        /* Authenticated fidelity user — locked field */
+                                        <div className="w-full p-4 bg-[#008081]/5 border border-[#008081]/30 rounded-2xl flex items-center gap-3">
+                                            <span className="text-[#008081] text-xl">🌿</span>
+                                            <div className="flex-1">
+                                                <p className="font-black text-[#1A1A1A] dark:text-white text-base">{fidelityUser.name}</p>
+                                                <p className="text-[10px] text-[#008081] font-bold uppercase tracking-wider mt-0.5">Profilo Fidelity verificato</p>
+                                            </div>
+                                            <Lock className="w-4 h-4 text-[#008081] flex-shrink-0" />
+                                        </div>
+                                    ) : (
+                                        /* Anonymous user — editable field */
+                                        <>
+                                            <input
+                                                type="text"
+                                                placeholder="Es. Mario Rossi"
+                                                value={customerName}
+                                                onChange={e => setCustomerName(e.target.value)}
+                                                className={`w-full p-4 bg-gray-50 dark:bg-[#111] border rounded-2xl outline-none focus:ring-2 dark:text-white font-bold transition-all ${
+                                                    !customerName.trim() ? 'border-red-300 dark:border-red-800 focus:ring-red-400/30' : 'border-gray-100 dark:border-gray-800 focus:ring-[#008081]'
+                                                }`}
+                                            />
+                                            {!customerName.trim() && (
+                                                <p className="text-xs font-bold text-red-500 mt-1.5">⚠ Obbligatorio — inserisci il tuo nome per il ritiro</p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             )}
@@ -499,7 +557,7 @@ export default function OrdinePage() {
 
                         <button
                             onClick={handleConfirmOrder}
-                            disabled={isConfirming || (orderType === 'tavolo' ? !tableNumber.trim() : !customerName.trim())}
+                            disabled={isConfirming || (orderType === 'tavolo' ? !tableNumber.trim() : (!fidelityUser && !customerName.trim()))}
                             className="w-full bg-[#008081] hover:bg-[#006666] text-white font-black py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-between px-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                             {isConfirming ? (

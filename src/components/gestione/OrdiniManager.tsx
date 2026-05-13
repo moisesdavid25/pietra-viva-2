@@ -19,6 +19,8 @@ interface Order {
   customer_name?: string;
   order_type?: string;
   daily_order_number?: number;
+  pickup_code?: string | null;
+  auth_user_id?: string | null;
   order_items: OrderItem[];
 }
 
@@ -74,11 +76,11 @@ export default function OrdiniManager({ restaurantId }: OrdiniManagerProps) {
     if (!restaurantId) return;
     const [{ data: activeOrdersRes }, { data: storicoOrdersRes }] = await Promise.all([
       db.from('orders').select(`
-        id, table_number, status, total_price, created_at, customer_name, order_type, daily_order_number,
+        id, table_number, status, total_price, created_at, customer_name, order_type, daily_order_number, pickup_code, auth_user_id,
         order_items ( id, quantity, notes, price_at_time, product:products(name) )
       `).eq('restaurant_id', restaurantId).neq('status', 'consegnato').order('created_at', { ascending: true }),
       db.from('orders').select(`
-        id, table_number, status, total_price, created_at, customer_name, order_type, daily_order_number,
+        id, table_number, status, total_price, created_at, customer_name, order_type, daily_order_number, pickup_code, auth_user_id,
         order_items ( id, quantity, notes, price_at_time, product:products(name) )
       `).eq('restaurant_id', restaurantId).eq('status', 'consegnato').order('created_at', { ascending: false }).limit(100),
     ]);
@@ -304,10 +306,24 @@ export default function OrdiniManager({ restaurantId }: OrdiniManagerProps) {
                                   🪑 {order.table_number}
                                 </span>
                               ) : null}
+                              {order.auth_user_id && (
+                                <span className="bg-teal-50 border border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800/50 dark:text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                  🌿 Fidelity
+                                </span>
+                              )}
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${isUrgent ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-300' : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400'}`}>
                                 🕒 {minutesElapsed} min
                               </span>
                             </div>
+
+                            {/* Pickup code — asporto only */}
+                            {order.order_type === 'asporto' && order.pickup_code && (
+                              <div className="flex items-center gap-2 bg-[#008081]/8 border border-[#008081]/25 rounded-xl px-3 py-2 mb-2">
+                                <span className="text-[10px] font-black text-[#008081] uppercase tracking-widest">Codice</span>
+                                <span className="font-black text-[#008081] text-base tracking-[0.2em] font-mono flex-1">{order.pickup_code}</span>
+                                <span className="text-[10px] text-[#008081]/60">🎟️</span>
+                              </div>
+                            )}
 
                             <p className="text-[11px] font-medium text-gray-400 mb-1">
                               {new Date(order.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} · {order.order_items.reduce((acc, i) => acc + i.quantity, 0)} Pz
