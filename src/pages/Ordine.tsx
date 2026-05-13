@@ -103,36 +103,6 @@ export default function OrdinePage() {
         setTableFromQR(true);
     }, [searchParams, slug]);
 
-    // ── Restore asporto pickup code from localStorage on mount ──────────
-    useEffect(() => {
-        if (!slug) return;
-        const raw = localStorage.getItem(`leomenu_pickup_${slug}`);
-        if (!raw) return;
-        try {
-            const saved = JSON.parse(raw);
-            if (!saved?.orderId || !saved?.pickup_code) { localStorage.removeItem(`leomenu_pickup_${slug}`); return; }
-            // Fetch current status — only restore if order is still active
-            db.from('orders').select('id, status, daily_order_number').eq('id', saved.orderId).maybeSingle()
-                .then(({ data }) => {
-                    if (data && data.status !== 'consegnato') {
-                        setOrderConfirmed({ id: data.id, shortId: data.id.split('-')[0].toUpperCase(), dailyNumber: data.daily_order_number || saved.dailyNumber, queue: 0, status: data.status, pickup_code: saved.pickup_code, order_type: 'asporto' });
-                    } else {
-                        localStorage.removeItem(`leomenu_pickup_${slug}`);
-                    }
-                });
-        } catch { localStorage.removeItem(`leomenu_pickup_${slug}`); }
-    }, [slug]); // runs once on mount
-
-    // ── Save / clear pickup code in localStorage when orderConfirmed changes
-    useEffect(() => {
-        if (!slug || !orderConfirmed?.pickup_code) return;
-        if (orderConfirmed.status === 'consegnato') {
-            localStorage.removeItem(`leomenu_pickup_${slug}`);
-        } else {
-            localStorage.setItem(`leomenu_pickup_${slug}`, JSON.stringify({ orderId: orderConfirmed.id, pickup_code: orderConfirmed.pickup_code, dailyNumber: orderConfirmed.dailyNumber }));
-        }
-    }, [orderConfirmed?.status, orderConfirmed?.pickup_code, slug]);
-
     if (notFound) return <NotFound />;
 
     // ── Note helpers ─────────────────────────────────────────────────────
