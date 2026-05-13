@@ -27,6 +27,7 @@ import { useRestaurantAuth } from '../hooks/useRestaurantAuth';
 import { useGestioneData } from '../hooks/useGestioneData';
 import { useMenuCombo } from '../hooks/useMenuCombo';
 import type { MenuCombo } from '../hooks/useGestioneData';
+import { useSwipeBack } from '../hooks/useSwipeBack';
 
 export default function Gestione() {
   const navigate = useNavigate();
@@ -140,6 +141,31 @@ export default function Gestione() {
       navigate('/');
     }
   };
+
+  // Swipe-back interception: when the user is in any sub-section,
+  // intercept the mobile swipe-back gesture so it goes back within
+  // the app instead of navigating to the previous URL.
+  const gestBack = () => {
+    if (activeTab === 'products' && productView === 'listino') {
+      setProductView('hub'); setMenuManagerView('hub'); setProductMacroView(null);
+    } else if (activeTab === 'products' && menuManagerView !== 'hub') {
+      setMenuManagerView('hub');
+    } else if (activeTab === 'fidelizzazione' && fidelizzazioneView !== null) {
+      setFidelizzazioneView(null);
+    } else if (activeTab === 'settings' && settingsView !== 'list') {
+      setSettingsView('list');
+    } else {
+      // Back from any main section → dashboard
+      setSettingsView('list'); setMenuManagerView('hub');
+      setProductMacroView(null); setFidelizzazioneView(null);
+      setActiveTab('dashboard');
+    }
+  };
+
+  const { closeViaUI: gestCloseViaUI } = useSwipeBack(
+    activeTab !== 'dashboard',
+    gestBack
+  );
 
   // ── Loading guard ─────────────────────────────────────────────────────────
   if (!isAuthenticated || !restaurantId) {
@@ -262,10 +288,7 @@ export default function Gestione() {
             /* Sub-section: back button + section title + vedi menù */
             <>
               <button
-                onClick={() => {
-                  if (activeTab === 'products' && productView === 'listino') setProductView('hub');
-                  else setActiveTab('dashboard');
-                }}
+                onClick={gestCloseViaUI}
                 className="w-[34px] h-[34px] rounded-[10px] bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 flex-shrink-0 mr-3"
               >
                 <ChevronLeft className="w-4 h-4 text-[#374151] dark:text-gray-300" />

@@ -5,6 +5,7 @@ import db from '../db';
 import { useFidelityAuth } from '../hooks/useFidelityAuth';
 import { useFidelityData } from '../hooks/useFidelityData';
 import { useFidelitySearch } from '../hooks/useFidelitySearch';
+import { useSwipeBack } from '../hooks/useSwipeBack';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,12 @@ export default function Fidelity() {
     const [activeSubScreen, setActiveSubScreen] = useState<SubScreen>(null);
     const [toast, setToast] = useState<string | null>(null);
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ── Swipe-back: intercept mobile back gesture when inside a sub-screen
+    const { closeViaUI: closeSubScreenViaUI } = useSwipeBack(
+        activeSubScreen !== null,
+        () => setActiveSubScreen(null)
+    );
 
     // ── Onboarding
     const [showOnboarding, setShowOnboarding] = useState(() =>
@@ -857,7 +864,7 @@ export default function Fidelity() {
                             style={{ transform: activeSubScreen === sub ? 'translateX(0)' : 'translateX(100%)', background: '#f2f4f7', scrollbarWidth: 'none' }}>
                             {/* Sub topbar */}
                             <div className="flex items-center gap-3 px-4 bg-white border-b sticky top-0 z-10 pt-12 md:pt-4 pb-3" style={{ borderColor: '#e8ecf0' }}>
-                                <button onClick={() => setActiveSubScreen(null)} className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#f2f4f7' }}>
+                                <button onClick={closeSubScreenViaUI} className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#f2f4f7' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1f2e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                                 </button>
                                 <span className="flex-1 text-[17px] font-bold" style={{ color: '#1a1f2e' }}>
